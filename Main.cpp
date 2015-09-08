@@ -1,10 +1,14 @@
 #include <iostream>
 #include <SDL.h>
 #include <math.h>
+#include "Vector2.h"
+#include "FixedMath.h"
 
 #define LCDWIDTH 84
 #define LCDHEIGHT 48
-#define ZOOM_SCALE 4
+#define HALF_LCDWIDTH (LCDWIDTH >> 1)
+#define HALF_LCDHEIGHT (LCDHEIGHT >> 1)
+#define ZOOM_SCALE 1
 #define PROGMEM
 
 typedef bool boolean;
@@ -69,6 +73,61 @@ void Render()
 	}
 }
 
+#define BTN_SR	   2048
+#define BTN_SL	   1024
+#define BTN_X	   512
+#define BTN_A	   256
+#define BTN_RIGHT  128
+#define BTN_LEFT   64
+#define BTN_DOWN   32
+#define BTN_UP     16
+#define BTN_START  8
+#define BTN_SELECT 4
+#define BTN_Y      2
+#define BTN_B      1
+
+int SDL_KeyboardButtonMappings[] = 
+{
+	SDLK_x, BTN_A, 
+	SDLK_z, BTN_B, 
+	SDLK_s, BTN_X, 
+	SDLK_a, BTN_Y, 
+	SDLK_q, BTN_SL, 
+	SDLK_w, BTN_SR, 
+	SDLK_LEFT, BTN_LEFT,
+	SDLK_RIGHT, BTN_RIGHT,
+	SDLK_UP, BTN_UP,
+	SDLK_DOWN, BTN_DOWN,
+	SDLK_RETURN, BTN_START,
+	SDLK_TAB, BTN_SELECT
+};
+
+unsigned int JoypadState = 0;
+
+unsigned int ReadJoypad(unsigned char joypadNo = 0) 
+{ 
+	return JoypadState; 
+}
+
+void UpdateJoypad(unsigned int* state, int* mappings, int numMappings, int eventType, bool pressed)
+{
+	for(int n = 0; n < numMappings; n++)
+	{
+		if(mappings[n * 2] == eventType)
+		{
+			if(pressed)
+			{
+				*state |= mappings[n * 2 + 1];
+			}
+			else
+			{
+				*state &= ~(mappings[n * 2 + 1]);
+			}
+		}
+	}
+}
+
+
 int main(int, char**)
 {
 	Init();
@@ -84,6 +143,12 @@ int main(int, char**)
 			{
 				case SDL_QUIT:
 				App_Running = false;
+				break;
+				case SDL_KEYDOWN:
+				UpdateJoypad(&JoypadState, SDL_KeyboardButtonMappings, sizeof(SDL_KeyboardButtonMappings) / 2, event.key.keysym.sym, true);
+				break;
+				case SDL_KEYUP:
+				UpdateJoypad(&JoypadState, SDL_KeyboardButtonMappings, sizeof(SDL_KeyboardButtonMappings) / 2, event.key.keysym.sym, false);
 				break;
 			}
 
@@ -104,26 +169,39 @@ int main(int, char**)
 }
 
 
-#define FOV  30
-#define NEAR_PLANE (0.5/tan(PI*FOV/180))
+#define CELL_SIZE 32
+#define FOV 60
+#define NEAR_PLANE 73
+//#define NEAR_PLANE (LCDWIDTH * (0.5/tan(PI*(FOV / 2)/180)))
+//#define NEAR_PLANE 145
 #define CLIP_PLANE 0.01f
-#define CAMERA_SCALE 50
+//#define CLIP_PLANE 1
+#define CAMERA_SCALE 1
+//#define WALL_HEIGHT 1.0f
 #define WALL_HEIGHT 0.8f
 #define OBJECT_SIZE 0.8f
 #define BLOCKING_DIST 0.1f       // how close the player is allowed to walk up to walls
-#define MOVEMENT 0.1f
-#define TURN 0.1f
+#define MOVEMENT 512
+#define TURN 3
 #define PI 3.141592654
 
-float xpos, zpos, lastx, lastz;
 int xcell = 1;
 int zcell = 1;
+
+#if 0
+float xpos, zpos, lastx, lastz;
 float dir = 0.0f;
 float cos_dir;
 float sin_dir;
+#else
+int16_t xpos, zpos, lastx, lastz;
+uint8_t dir = 0;
+int16_t cos_dir;
+int16_t sin_dir;
+#endif
 
 //extern uint8_t _displayBuffer[LCDWIDTH * LCDHEIGHT / 8];
-float wbuffer[LCDWIDTH];
+uint8_t wbuffer[LCDWIDTH];
 int numColumns;
 
 // this is a very inefficient way of storing the map, it
@@ -248,8 +326,9 @@ void drawLayer(int layer);
 void drawCell(int cellX, int cellZ);
 void setPixel(int x, int y);
 void clearPixel(int x, int y);
-void drawWall(float _x1, float _z1, float _x2, float _z2);
+//void drawWall(float _x1, float _z1, float _x2, float _z2);
 void drawSprite(float _x, float _z, const byte * sprite, const byte * mask);
+void drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2);
 
 
 
@@ -263,9 +342,9 @@ void initGame() {
   gb.display.persistence = false;
   gb.battery.show = false;
   */
-  lastx = xpos = 1.5f;
-  lastz = zpos = 1.5f;
-  dir = 0.0f;
+  lastx = xpos = 48;//(int16_t)(1.5f * CELL_SIZE);
+  lastz = zpos = 48;//(int16_t)(1.5f * CELL_SIZE);
+  dir = 0;
 }
 
 // the loop routine runs over and over again forever
@@ -275,60 +354,60 @@ void loop(){
 /*    if(gb.buttons.pressed(BTN_C)){
       initGame();
     }
-    
-    boolean strafe = (digitalRead(BTN_A_PIN)==LOW);
-    float movement = MOVEMENT;
-    float turn = TURN;
-    if (digitalRead(BTN_B_PIN)==LOW)
+    */
+    boolean strafe = ReadJoypad() & BTN_A;
+    int16_t movement = MOVEMENT;
+    int16_t turn = TURN;
+    if (ReadJoypad() & BTN_B)
     {
-      movement *= 2.0f;
-      turn *= 2.0f;
+      movement *= 2;
+      turn *= 2;
     }
     
-    if (digitalRead(BTN_DOWN_PIN)==LOW)
+    if (ReadJoypad() & BTN_DOWN)
     {
-      xpos -= movement * sin_dir;
-      zpos -= movement * cos_dir;
+      xpos -= (movement * sin_dir) >> (FIXED_SHIFT * 2);
+      zpos -= (movement * cos_dir) >> (FIXED_SHIFT * 2);
     }
     
-    if (digitalRead(BTN_UP_PIN)==LOW)
+    if (ReadJoypad() & BTN_UP)
     {
-      xpos += movement * sin_dir;
-      zpos += movement * cos_dir;
+      xpos += (movement * sin_dir) >> (FIXED_SHIFT * 2);
+      zpos += (movement * cos_dir) >> (FIXED_SHIFT * 2);
     }
     
-    if (digitalRead(BTN_LEFT_PIN)==LOW)
+    if (ReadJoypad() & BTN_LEFT)
     {
       if (strafe)
       {
-        xpos -= movement * cos_dir;
-        zpos += movement * sin_dir;
+        xpos -= (movement * cos_dir) >> (FIXED_SHIFT * 2);
+        zpos += (movement * sin_dir) >> (FIXED_SHIFT * 2);
       }
       else
         dir -= turn;
     }
     
-    if (digitalRead(BTN_RIGHT_PIN)==LOW)
+    if (ReadJoypad() & BTN_RIGHT)
     {
       if (strafe)
       {
-        xpos += movement * cos_dir;
-        zpos -= movement * sin_dir;
+        xpos += (movement * cos_dir) >> (FIXED_SHIFT * 2);
+        zpos -= (movement * sin_dir) >> (FIXED_SHIFT * 2);
       }
       else
         dir += turn;
     }
-  */  
+  
     xpos = max(xpos, 0);
     zpos = max(zpos, 0);
-    xpos = min(xpos, MAP_SIZE);
-    zpos = min(zpos, MAP_SIZE);
+    xpos = min(xpos, MAP_SIZE * CELL_SIZE);
+    zpos = min(zpos, MAP_SIZE * CELL_SIZE);
     
     // don't let the player walk through walls    
-    if ((lastx != xpos) || (lastz != zpos))
+    /*if ((lastx != xpos) || (lastz != zpos))
     {
-      int cellX = (int)lastx;
-      int cellZ = (int)lastz;
+      int cellX = (int)lastx / CELL_SIZE;
+      int cellZ = (int)lastz / CELL_SIZE;
       if ((!isValid(cellX-1, cellZ) || isBlocked(cellX-1, cellZ)) && ((xpos-cellX)<BLOCKING_DIST))
         xpos = cellX + BLOCKING_DIST;
       if ((!isValid(cellX+1, cellZ) || isBlocked(cellX+1, cellZ)) && ((1-xpos+cellX)<BLOCKING_DIST))
@@ -337,11 +416,13 @@ void loop(){
         zpos = cellZ + BLOCKING_DIST;
       if ((!isValid(cellX, cellZ+1) || isBlocked(cellX, cellZ+1)) && ((1-zpos+cellZ)<BLOCKING_DIST))
         zpos = cellZ + 1 - BLOCKING_DIST;
-    }
+    }*/
     lastx = xpos;
     lastz = zpos;
     
     drawFrame();
+
+	SDL_Delay(1000 / 30);
   }
 }
 
@@ -366,10 +447,12 @@ boolean isBlocked(int cellX, int cellZ)
 
 void drawFrame()
 {
-  cos_dir = cos(dir);
-  sin_dir = sin(dir);
-  xcell = floor(xpos);
-  zcell = floor(zpos);
+	// TODO: move this into a LUT
+  cos_dir = (int16_t)((FIXED_ONE * cos(dir * PI / 128.0f)) + 0.5f);
+  sin_dir = (int16_t)((FIXED_ONE * sin(dir * PI / 128.0f)) + 0.5f);
+
+  xcell = xpos / CELL_SIZE;
+  zcell = zpos / CELL_SIZE;
   initWBuffer();
   drawFloorAndCeiling();  
   for (int layer=1; (layer<MAP_SIZE) && (numColumns<LCDWIDTH); layer++)
@@ -381,7 +464,7 @@ void drawFrame()
 void initWBuffer()
 {
   for (int i=0; i<LCDWIDTH; i++)
-    wbuffer[i] = 0.0f;
+    wbuffer[i] = 0;
   numColumns = 0;
 }
 
@@ -423,48 +506,54 @@ void drawLayer(int layer)
   drawCell(xcell+layer, zcell-layer);
 }
 
+inline void drawCellWall(int x1, int z1, int x2, int z2)
+{
+	drawWall(x1 * CELL_SIZE, z1 * CELL_SIZE, x2 * CELL_SIZE, z2 * CELL_SIZE);
+	//drawWall(x2 * CELL_SIZE, z2 * CELL_SIZE, x1 * CELL_SIZE, z1 * CELL_SIZE);
+}
+
 void drawCell(int cellX, int cellZ)
 {
   if (!isValid(cellX, cellZ))
     return;
   if (!isBlocked(cellX, cellZ))
     return;
-  if (zpos < cellZ)
+  if (zpos < cellZ * CELL_SIZE)
   {
-    if (xpos > cellX)
+    if (xpos > cellX * CELL_SIZE)
     {
       // north west quadrant
-      if ((zpos < cellZ) && !isBlocked(cellX, cellZ-1))
-        drawWall(cellX, cellZ, cellX+1, cellZ);  // south wall
-      if ((xpos > cellX+1) && (!isBlocked(cellX+1, cellZ)))
-        drawWall(cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+      if ((zpos < cellZ * CELL_SIZE) && !isBlocked(cellX, cellZ-1))
+        drawCellWall(cellX, cellZ, cellX+1, cellZ);  // south wall
+      if ((xpos > (cellX+1) * CELL_SIZE) && (!isBlocked(cellX+1, cellZ)))
+        drawCellWall(cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
     }
     else
     {
       // north east quadrant
-      if ((zpos < cellZ) && !isBlocked(cellX, cellZ-1))
-        drawWall(cellX, cellZ, cellX+1, cellZ);  // south wall
-      if ((xpos< cellX) && !isBlocked(cellX-1, cellZ))
-        drawWall(cellX, cellZ+1, cellX, cellZ);  // west wall
+      if ((zpos < cellZ * CELL_SIZE) && !isBlocked(cellX, cellZ-1))
+        drawCellWall(cellX, cellZ, cellX+1, cellZ);  // south wall
+      if ((xpos< cellX * CELL_SIZE) && !isBlocked(cellX-1, cellZ))
+        drawCellWall(cellX, cellZ+1, cellX, cellZ);  // west wall
     }
   }
   else
   {
-    if (xpos > cellX)
+    if (xpos > cellX * CELL_SIZE)
     {
       // south west quadrant
-      if ((zpos > cellZ+1) && !isBlocked(cellX, cellZ+1))
-        drawWall(cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
-      if ((xpos > cellX+1) && !isBlocked(cellX+1, cellZ))
-        drawWall(cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+      if ((zpos > (cellZ+1) * CELL_SIZE) && !isBlocked(cellX, cellZ+1))
+        drawCellWall(cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+      if ((xpos > (cellX+1) * CELL_SIZE) && !isBlocked(cellX+1, cellZ))
+        drawCellWall(cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
     }
     else
     {
       // south east quadrant
-      if ((zpos > cellZ+1) && !isBlocked(cellX, cellZ+1))
-        drawWall(cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
-      if ((xpos< cellX) && !isBlocked(cellX-1, cellZ))
-        drawWall(cellX, cellZ+1, cellX, cellZ);  // west wall
+      if ((zpos > (cellZ+1) * CELL_SIZE) && !isBlocked(cellX, cellZ+1))
+        drawCellWall(cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+      if ((xpos< cellX * CELL_SIZE) && !isBlocked(cellX-1, cellZ))
+        drawCellWall(cellX, cellZ+1, cellX, cellZ);  // west wall
     }
   }
 }
@@ -486,6 +575,154 @@ inline void clearPixel(int x, int y)
 //  _displayBuffer[y_lut[y] + x] &= ~(0x01 << (y & 7));
 }
 
+#if 0
+#define CELL_SIZE 32
+
+void drawWall(Vector2& _a, Vector2& _b);
+Vector2 cameraPosition;
+int16_t cameraSinDir, cameraCosDir;
+
+void drawWall(float _x1, float _z1, float _x2, float _z2)
+{
+	Vector2 a((int16_t)(_x1 * CELL_SIZE), (int16_t)(_z1 * CELL_SIZE));
+	Vector2 b((int16_t)(_x2 * CELL_SIZE), (int16_t)(_z2 * CELL_SIZE));
+	
+	cameraPosition.x = (int16_t)(xpos * CELL_SIZE);
+	cameraPosition.y = (int16_t)(zpos * CELL_SIZE);
+	cameraSinDir = (int16_t)(sin_dir * FIXED_ONE + 0.5f);
+	cameraCosDir = (int16_t)(cos_dir * FIXED_ONE + 0.5f);
+	
+	drawWall(a, b);
+}
+
+inline Vector2 transformToEye(Vector2& in)
+{
+	Vector2 output = in - cameraPosition;
+	output.x = FIXED_TO_INT(cameraCosDir * output.x) - FIXED_TO_INT(cameraSinDir * output.y);
+	output.y = FIXED_TO_INT(cameraSinDir * output.x) + FIXED_TO_INT(cameraCosDir * output.y);
+
+	return output;
+}
+
+void drawStrip(int16_t x, int16_t w)
+{
+	w >>= 1;
+	
+	int16_t sy1 = HALF_LCDHEIGHT - w;
+	int16_t sy2 = HALF_LCDHEIGHT + w;
+
+	// clamp to the visible portion of the screen
+	int firsty = max(sy1, 0);
+	int lasty = min(sy2, LCDHEIGHT-1);
+
+	for (int y = firsty; y <= lasty; y++)
+	{
+		clearPixel(x, y);
+	}
+}
+
+// draws one side of a cell
+void drawWall(Vector2& _a, Vector2& _b)
+{
+	// find position of wall edges relative to eye
+	Vector2 a = transformToEye(_a);
+	Vector2 b = transformToEye(_b);
+
+	// cull back faces
+	if(a.x >= b.x)
+	{
+		return;
+	}
+
+	if(a.y == b.y)
+		return;
+
+	// clip to the front pane
+	if ((a.y<CLIP_PLANE) && (b.y<CLIP_PLANE))
+		return;
+	if (a.y < CLIP_PLANE)
+	{
+		a.x += (CLIP_PLANE-a.y) * (b.x-a.x) / (b.y-a.y);
+		a.y = CLIP_PLANE;
+	}
+	else if (b.y < CLIP_PLANE)
+	{
+		b.x += (CLIP_PLANE-b.y) * (a.x-b.x) / (a.y-b.y);
+		b.y = CLIP_PLANE;
+	}
+
+	// apply perspective projection
+	a.x = (a.x * NEAR_PLANE) / a.y;  
+	b.x = (b.x * NEAR_PLANE) / b.y; 
+
+	// transform the end points into screen space
+	a.x += HALF_LCDWIDTH;
+	b.x += HALF_LCDWIDTH;
+
+	/*if(a.x == b.x)
+		return;
+
+	// clamp to the visible portion of the screen
+	if(a.x < 0)
+	{
+		a.y += (0-a.x) * (b.y-a.y) / (b.x-a.x);
+		a.x = 0;
+	}
+	if(b.x >= LCDWIDTH)
+	{
+		b.y += ((LCDWIDTH-1)-b.x) * (a.y-b.y) / (a.x-b.x);
+		b.x = LCDWIDTH-1;
+	}*/
+
+	if ((a.y<CLIP_PLANE) || (b.y<CLIP_PLANE))
+		return;
+
+	// transform depth into w space
+	a.y = NEAR_PLANE / a.y;
+	b.y = NEAR_PLANE / b.y;
+	
+	int16_t dx = b.x - a.x;
+	int16_t werror = dx >> 1;
+	int16_t w = a.y;
+	
+	int16_t dw, wstep;
+	
+	if(a.y < b.y)
+	{
+		dw = b.y - a.y;
+		wstep = 1;
+	}
+	else
+	{
+		dw = a.y - b.y;
+		wstep = -1;
+	}
+
+	if(dx == 0)
+		return;
+
+	for(int16_t x = a.x; x <= b.x; x++)
+	{
+		if(x >= 0 && x < LCDWIDTH && w > wbuffer[x])
+		{
+			drawStrip(x, w);
+			wbuffer[x] = w;
+		}
+
+		werror -= dw;
+		
+		while(werror < 0)
+		{
+			w += wstep;
+			werror += dx;
+		}
+	}
+}
+
+
+#else
+
+#if 0
 // draws one side of a cell
 void drawWall(float _x1, float _z1, float _x2, float _z2)
 {
@@ -558,6 +795,133 @@ void drawWall(float _x1, float _z1, float _x2, float _z2)
     }
   }
 }
+#else
+
+
+/*void drawWall(float _x1, float _z1, float _x2, float _z2)
+{
+	int16_t x1 = (int16_t)(_x1 * CELL_SIZE);
+	int16_t z1 = (int16_t)(_z1 * CELL_SIZE);
+	int16_t x2 = (int16_t)(_x2 * CELL_SIZE);
+	int16_t z2 = (int16_t)(_z2 * CELL_SIZE);
+	
+	xpos_fixed = (int16_t)(xpos * CELL_SIZE);
+	zpos_fixed = (int16_t)(zpos * CELL_SIZE);
+	cos_dir_fixed = (int16_t)(cos_dir * FIXED_ONE);
+	sin_dir_fixed = (int16_t)(sin_dir * FIXED_ONE);
+	
+	drawWall(x1, z1, x2, z2);
+}
+*/
+// draws one side of a cell
+void drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2)
+{
+  // find position of wall edges relative to eye
+  int16_t x1 = (int16_t)(FIXED_TO_INT(cos_dir * (_x1-xpos)) - FIXED_TO_INT(sin_dir * (_z1-zpos)));
+  int16_t z1 = (int16_t)(FIXED_TO_INT(sin_dir * (_x1-xpos)) + FIXED_TO_INT(cos_dir * (_z1-zpos)));
+  int16_t x2 = (int16_t)(FIXED_TO_INT(cos_dir * (_x2-xpos)) - FIXED_TO_INT(sin_dir * (_z2-zpos)));
+  int16_t z2 = (int16_t)(FIXED_TO_INT(sin_dir * (_x2-xpos)) + FIXED_TO_INT(cos_dir * (_z2-zpos)));
+
+#undef CLIP_PLANE
+#define CLIP_PLANE 1  
+ 
+  // clip to the front pane
+  if ((z1<CLIP_PLANE) && (z2<CLIP_PLANE))
+    return;
+  if (z1 < CLIP_PLANE)
+  {
+    x1 += (CLIP_PLANE-z1) * (x2-x1) / (z2-z1);
+    z1 = CLIP_PLANE;
+  }
+  else if (z2 < CLIP_PLANE)
+  {
+    x2 += (CLIP_PLANE-z2) * (x1-x2) / (z1-z2);
+    z2 = CLIP_PLANE;
+  }
+
+  // apply perspective projection
+  int16_t vx1 = (int16_t)(x1 * NEAR_PLANE * CAMERA_SCALE / z1);  
+  int16_t vx2 = (int16_t)(x2 * NEAR_PLANE * CAMERA_SCALE / z2); 
+  
+  // transform the end points into screen space
+  int16_t sx1 = (int16_t)((LCDWIDTH / 2) + vx1);
+  int16_t sx2 = (int16_t)((LCDWIDTH / 2) + vx2) - 1;
+  
+  // clamp to the visible portion of the screen
+  int16_t firstx = max(sx1, 0);
+  int16_t lastx = min(sx2, LCDWIDTH-1);
+  if (lastx < firstx)
+    return;
+
+int16_t w1 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE / 2) / z1);
+  int16_t w2 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE / 2) / z2);
+  int16_t dx = sx2 - sx1;
+	int16_t werror = dx >> 1;
+	int16_t w = w1;
+	
+	int16_t dw, wstep;
+	
+	if(w1 < w2)
+	{
+		dw = w2 - w1;
+		wstep = 1;
+	}
+	else
+	{
+		dw = w1 - w2;
+		wstep = -1;
+	}
+	
+  for (int x=sx1; x<=sx2; x++)
+  {
+    if (x >= 0 && x < LCDWIDTH && w > wbuffer[x])
+    {        
+		if(w <= 255)
+		{
+			wbuffer[x] = (uint8_t) w;
+		}
+		else
+		{
+			wbuffer[x] = 255;
+		}
+      
+      numColumns++;
+      
+      // calculate top and bottom
+      int sy1 = (int)ceil(LCDHEIGHT / 2 - w);
+      int sy2 = (int)ceil(LCDHEIGHT / 2 + w) - 1;
+  
+      // clamp to the visible portion of the screen
+      int firsty = max(sy1, 0);
+      int lasty = min(sy2, LCDHEIGHT-1);
+      
+      // draw this column
+      if ((x==sx1) || (x==sx2))
+        for (int y=firsty; y<=lasty; y++)
+          setPixel(x, y);
+        else
+          for (int y=firsty; y<=lasty; y++)
+            clearPixel(x, y);
+      if (sy1 >= 0)
+        setPixel(x, sy1);
+      if (sy2 < LCDHEIGHT)
+        setPixel(x, sy2);
+    }
+	
+	werror -= dw;
+		
+	while(dx > 0 && werror < 0)
+	{
+		w += wstep;
+		werror += dx;
+	}
+  }
+
+#endif
+
+}
+
+#endif
 
 // I have done a little bit of optimization here, namely the use of 4:12 fixed-point arithmetic.
 void drawSprite(float _x, float _z, const byte * sprite, const byte * mask)
