@@ -1,3 +1,4 @@
+#if 0
 #include <iostream>
 #include <SDL.h>
 #include <math.h>
@@ -6,9 +7,13 @@
 
 #define LCDWIDTH 84
 #define LCDHEIGHT 48
+
+//#define LCDWIDTH 120
+//#define LCDHEIGHT 96
+
 #define HALF_LCDWIDTH (LCDWIDTH >> 1)
 #define HALF_LCDHEIGHT (LCDHEIGHT >> 1)
-#define ZOOM_SCALE 1
+#define ZOOM_SCALE 2
 #define PROGMEM
 
 typedef bool boolean;
@@ -172,10 +177,9 @@ int main(int, char**)
 #define CELL_SIZE 32
 #define FOV 60
 #define NEAR_PLANE 73
+//#define NEAR_PLANE 104
 //#define NEAR_PLANE (LCDWIDTH * (0.5/tan(PI*(FOV / 2)/180)))
-//#define NEAR_PLANE 145
-#define CLIP_PLANE 0.01f
-//#define CLIP_PLANE 1
+#define CLIP_PLANE 1
 #define CAMERA_SCALE 1
 //#define WALL_HEIGHT 1.0f
 #define WALL_HEIGHT 0.8f
@@ -188,17 +192,10 @@ int main(int, char**)
 int xcell = 1;
 int zcell = 1;
 
-#if 0
-float xpos, zpos, lastx, lastz;
-float dir = 0.0f;
-float cos_dir;
-float sin_dir;
-#else
 int16_t xpos, zpos, lastx, lastz;
 uint8_t dir = 0;
 int16_t cos_dir;
 int16_t sin_dir;
-#endif
 
 //extern uint8_t _displayBuffer[LCDWIDTH * LCDHEIGHT / 8];
 uint8_t wbuffer[LCDWIDTH];
@@ -227,6 +224,46 @@ const char theMap[MAP_SIZE*MAP_SIZE+1] PROGMEM =
   "#..............#"
   "#.#.#.#.#......#"
   "################"
+};
+
+char* texture =
+{
+  "#-...#-...#-===#"
+  "#-...#-...#-===#"
+  "#-...#-...######"
+  "######-...#-...#"
+  "#-===#-...#-...#"
+  "#-===#-...#-...#"
+  "#-===#-...#-...#"
+  "#-===#-...#-...#"
+  "#-===######-...#"
+  "#-===#-...#-...#"
+  "#-===#-...######"
+  "#-===#-...#-===#"
+  "######-...#-===#"
+  "#-...#-...#-===#"
+  "#-...#-...#-===#"
+  "#-...######-===#"
+};
+
+char* texture2 =
+{
+  "#...#...#...#..#"
+  "#...#...#...####"
+  "#...#...#...#..#"
+  "#...#####...#..#"
+  "#...#...#...#..#"
+  "#...#...#...#..#"
+  "#...#...#####..#"
+  "#...#...#...#..#"
+  "#####...#...#..#"
+  "#...#...#...#..#"
+  "#...#...#...####"
+  "#...#...#...#..#"
+  "#...#...#...#..#"
+  "#...#####...#..#"
+  "#...#...#...#..#"
+  "#...#...#...#..#"
 };
 
 #define SWAP(A, B) B, A,
@@ -326,9 +363,8 @@ void drawLayer(int layer);
 void drawCell(int cellX, int cellZ);
 void setPixel(int x, int y);
 void clearPixel(int x, int y);
-//void drawWall(float _x1, float _z1, float _x2, float _z2);
 void drawSprite(float _x, float _z, const byte * sprite, const byte * mask);
-void drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2);
+void drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, int8_t _u1 = 0, int8_t _u2 = 15);
 
 
 
@@ -474,7 +510,14 @@ void drawFloorAndCeiling()
 	{
 		for(int y = 0; y < LCDHEIGHT; y++)
 		{
-			setPixel(x, y);
+			if(y < HALF_LCDHEIGHT || ((x ^ y) & 1))
+			{
+				clearPixel(x, y);
+			}
+			else
+			{
+				setPixel(x, y);
+			}
 		}
 	}
   
@@ -575,246 +618,64 @@ inline void clearPixel(int x, int y)
 //  _displayBuffer[y_lut[y] + x] &= ~(0x01 << (y & 7));
 }
 
-#if 0
-#define CELL_SIZE 32
-
-void drawWall(Vector2& _a, Vector2& _b);
-Vector2 cameraPosition;
-int16_t cameraSinDir, cameraCosDir;
-
-void drawWall(float _x1, float _z1, float _x2, float _z2)
+inline void drawStrip(int16_t x, int16_t w, int8_t u)
 {
-	Vector2 a((int16_t)(_x1 * CELL_SIZE), (int16_t)(_z1 * CELL_SIZE));
-	Vector2 b((int16_t)(_x2 * CELL_SIZE), (int16_t)(_z2 * CELL_SIZE));
+	int halfW = w >> 1;
+	int y1 = (LCDHEIGHT / 2) - halfW;
+	int y2 = (LCDHEIGHT / 2) + halfW;
+	int verror = halfW;
+
+	int8_t* texData = (int8_t*) texture + u * 16;
+	int solid = (*texData) == '#' ? 1 : (*texData) == '-' ? 2 : (*texData) == '=' ? 3 : 0;
 	
-	cameraPosition.x = (int16_t)(xpos * CELL_SIZE);
-	cameraPosition.y = (int16_t)(zpos * CELL_SIZE);
-	cameraSinDir = (int16_t)(sin_dir * FIXED_ONE + 0.5f);
-	cameraCosDir = (int16_t)(cos_dir * FIXED_ONE + 0.5f);
-	
-	drawWall(a, b);
-}
-
-inline Vector2 transformToEye(Vector2& in)
-{
-	Vector2 output = in - cameraPosition;
-	output.x = FIXED_TO_INT(cameraCosDir * output.x) - FIXED_TO_INT(cameraSinDir * output.y);
-	output.y = FIXED_TO_INT(cameraSinDir * output.x) + FIXED_TO_INT(cameraCosDir * output.y);
-
-	return output;
-}
-
-void drawStrip(int16_t x, int16_t w)
-{
-	w >>= 1;
-	
-	int16_t sy1 = HALF_LCDHEIGHT - w;
-	int16_t sy2 = HALF_LCDHEIGHT + w;
-
-	// clamp to the visible portion of the screen
-	int firsty = max(sy1, 0);
-	int lasty = min(sy2, LCDHEIGHT-1);
-
-	for (int y = firsty; y <= lasty; y++)
+	for(int y = y1; y <= y2; y++)
 	{
-		clearPixel(x, y);
-	}
-}
-
-// draws one side of a cell
-void drawWall(Vector2& _a, Vector2& _b)
-{
-	// find position of wall edges relative to eye
-	Vector2 a = transformToEye(_a);
-	Vector2 b = transformToEye(_b);
-
-	// cull back faces
-	if(a.x >= b.x)
-	{
-		return;
-	}
-
-	if(a.y == b.y)
-		return;
-
-	// clip to the front pane
-	if ((a.y<CLIP_PLANE) && (b.y<CLIP_PLANE))
-		return;
-	if (a.y < CLIP_PLANE)
-	{
-		a.x += (CLIP_PLANE-a.y) * (b.x-a.x) / (b.y-a.y);
-		a.y = CLIP_PLANE;
-	}
-	else if (b.y < CLIP_PLANE)
-	{
-		b.x += (CLIP_PLANE-b.y) * (a.x-b.x) / (a.y-b.y);
-		b.y = CLIP_PLANE;
-	}
-
-	// apply perspective projection
-	a.x = (a.x * NEAR_PLANE) / a.y;  
-	b.x = (b.x * NEAR_PLANE) / b.y; 
-
-	// transform the end points into screen space
-	a.x += HALF_LCDWIDTH;
-	b.x += HALF_LCDWIDTH;
-
-	/*if(a.x == b.x)
-		return;
-
-	// clamp to the visible portion of the screen
-	if(a.x < 0)
-	{
-		a.y += (0-a.x) * (b.y-a.y) / (b.x-a.x);
-		a.x = 0;
-	}
-	if(b.x >= LCDWIDTH)
-	{
-		b.y += ((LCDWIDTH-1)-b.x) * (a.y-b.y) / (a.x-b.x);
-		b.x = LCDWIDTH-1;
-	}*/
-
-	if ((a.y<CLIP_PLANE) || (b.y<CLIP_PLANE))
-		return;
-
-	// transform depth into w space
-	a.y = NEAR_PLANE / a.y;
-	b.y = NEAR_PLANE / b.y;
-	
-	int16_t dx = b.x - a.x;
-	int16_t werror = dx >> 1;
-	int16_t w = a.y;
-	
-	int16_t dw, wstep;
-	
-	if(a.y < b.y)
-	{
-		dw = b.y - a.y;
-		wstep = 1;
-	}
-	else
-	{
-		dw = a.y - b.y;
-		wstep = -1;
-	}
-
-	if(dx == 0)
-		return;
-
-	for(int16_t x = a.x; x <= b.x; x++)
-	{
-		if(x >= 0 && x < LCDWIDTH && w > wbuffer[x])
+		if(y >= 0 && y < LCDHEIGHT)
 		{
-			drawStrip(x, w);
-			wbuffer[x] = w;
+			switch(solid)
+			{
+			case 0:
+				clearPixel(x, y);
+				break;
+			case 1:
+				setPixel(x, y);
+				break;
+			case 2:
+				if((x ^ y) & 1)
+				{
+					clearPixel(x, y);
+				}
+				else
+				{
+					setPixel(x, y);
+				}
+				break;
+			case 3:
+				if((x & y) & 1)
+				{
+					setPixel(x, y);
+				}
+				else
+				{
+					clearPixel(x, y);
+				}
+				break;
+			}
 		}
-
-		werror -= dw;
 		
-		while(werror < 0)
+		verror -= 15;
+		
+		while(verror < 0)
 		{
-			w += wstep;
-			werror += dx;
+			texData++;
+			solid = (*texData) == '#' ? 1 : (*texData) == '-' ? 2 : (*texData) == '=' ? 3 : 0;
+			verror += w;
 		}
 	}
 }
 
-
-#else
-
-#if 0
 // draws one side of a cell
-void drawWall(float _x1, float _z1, float _x2, float _z2)
-{
-  // find position of wall edges relative to eye
-  float x1 = cos_dir * (_x1-xpos) - sin_dir * (_z1-zpos);
-  float z1 = sin_dir * (_x1-xpos) + cos_dir * (_z1-zpos);
-  float x2 = cos_dir * (_x2-xpos) - sin_dir * (_z2-zpos);
-  float z2 = sin_dir * (_x2-xpos) + cos_dir * (_z2-zpos);
-  
-  // clip to the front pane
-  if ((z1<CLIP_PLANE) && (z2<CLIP_PLANE))
-    return;
-  if (z1 < CLIP_PLANE)
-  {
-    x1 += (CLIP_PLANE-z1) * (x2-x1) / (z2-z1);
-    z1 = CLIP_PLANE;
-  }
-  else if (z2 < CLIP_PLANE)
-  {
-    x2 += (CLIP_PLANE-z2) * (x1-x2) / (z1-z2);
-    z2 = CLIP_PLANE;
-  }
-  
-  // apply perspective projection
-  float vx1 = x1 * NEAR_PLANE * CAMERA_SCALE / z1;  
-  float vx2 = x2 * NEAR_PLANE * CAMERA_SCALE / z2; 
-  
-  // transform the end points into screen space
-  int sx1 = (int)ceil((LCDWIDTH / 2) + vx1);
-  int sx2 = (int)ceil((LCDWIDTH / 2) + vx2) - 1;
-  
-  // clamp to the visible portion of the screen
-  int firstx = max(sx1, 0);
-  int lastx = min(sx2, LCDWIDTH-1);
-  if (lastx < firstx)
-    return;
-  
-  // loop across each column
-  float w1 = 1.0f / z1;
-  float w2 = 1.0f / z2;
-  float delta_w = (w2 - w1) / (sx2-sx1);
-  float w = w1 + (firstx - sx1) * delta_w;
-  for (int x=firstx; x<=lastx; x++, w+=delta_w)
-  {
-    if (w > wbuffer[x])
-    {        
-      wbuffer[x] = w;
-      numColumns++;
-      
-      // calculate top and bottom
-      float vy = (WALL_HEIGHT / 2.0) * NEAR_PLANE * CAMERA_SCALE * w;
-      int sy1 = (int)ceil(LCDHEIGHT / 2 - vy);
-      int sy2 = (int)ceil(LCDHEIGHT / 2 + vy) - 1;
-  
-      // clamp to the visible portion of the screen
-      int firsty = max(sy1, 0);
-      int lasty = min(sy2, LCDHEIGHT-1);
-      
-      // draw this column
-      if ((x==sx1) || (x==sx2))
-        for (int y=firsty; y<=lasty; y++)
-          setPixel(x, y);
-        else
-          for (int y=firsty; y<=lasty; y++)
-            clearPixel(x, y);
-      if (sy1 >= 0)
-        setPixel(x, sy1);
-      if (sy2 < LCDHEIGHT)
-        setPixel(x, sy2);
-    }
-  }
-}
-#else
-
-
-/*void drawWall(float _x1, float _z1, float _x2, float _z2)
-{
-	int16_t x1 = (int16_t)(_x1 * CELL_SIZE);
-	int16_t z1 = (int16_t)(_z1 * CELL_SIZE);
-	int16_t x2 = (int16_t)(_x2 * CELL_SIZE);
-	int16_t z2 = (int16_t)(_z2 * CELL_SIZE);
-	
-	xpos_fixed = (int16_t)(xpos * CELL_SIZE);
-	zpos_fixed = (int16_t)(zpos * CELL_SIZE);
-	cos_dir_fixed = (int16_t)(cos_dir * FIXED_ONE);
-	sin_dir_fixed = (int16_t)(sin_dir * FIXED_ONE);
-	
-	drawWall(x1, z1, x2, z2);
-}
-*/
-// draws one side of a cell
-void drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2)
+void drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, int8_t _u1, int8_t _u2)
 {
   // find position of wall edges relative to eye
   int16_t x1 = (int16_t)(FIXED_TO_INT(cos_dir * (_x1-xpos)) - FIXED_TO_INT(sin_dir * (_z1-zpos)));
@@ -822,9 +683,6 @@ void drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2)
   int16_t x2 = (int16_t)(FIXED_TO_INT(cos_dir * (_x2-xpos)) - FIXED_TO_INT(sin_dir * (_z2-zpos)));
   int16_t z2 = (int16_t)(FIXED_TO_INT(sin_dir * (_x2-xpos)) + FIXED_TO_INT(cos_dir * (_z2-zpos)));
 
-#undef CLIP_PLANE
-#define CLIP_PLANE 1  
- 
   // clip to the front pane
   if ((z1<CLIP_PLANE) && (z2<CLIP_PLANE))
     return;
@@ -853,12 +711,14 @@ void drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2)
   if (lastx < firstx)
     return;
 
-int16_t w1 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE / 2) / z1);
-  int16_t w2 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE / 2) / z2);
+int16_t w1 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE) / z1);
+  int16_t w2 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE) / z2);
   int16_t dx = sx2 - sx1;
 	int16_t werror = dx >> 1;
+	int16_t uerror = werror;
 	int16_t w = w1;
-	
+	int8_t u = _u1;
+	int8_t du, ustep;
 	int16_t dw, wstep;
 	
 	if(w1 < w2)
@@ -870,6 +730,17 @@ int16_t w1 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE / 2) / z1);
 	{
 		dw = w1 - w2;
 		wstep = -1;
+	}
+
+	if(_u1 < _u2)
+	{
+		du = _u2 - _u1;
+		ustep = 1;
+	}
+	else
+	{
+		du = _u1 - _u2;
+		ustep = -1;
 	}
 	
   for (int x=sx1; x<=sx2; x++)
@@ -884,8 +755,10 @@ int16_t w1 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE / 2) / z1);
 		{
 			wbuffer[x] = 255;
 		}
+
+		drawStrip(x, w, u);
       
-      numColumns++;
+      /*numColumns++;
       
       // calculate top and bottom
       int sy1 = (int)ceil(LCDHEIGHT / 2 - w);
@@ -905,23 +778,28 @@ int16_t w1 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE / 2) / z1);
       if (sy1 >= 0)
         setPixel(x, sy1);
       if (sy2 < LCDHEIGHT)
-        setPixel(x, sy2);
+        setPixel(x, sy2);*/
+
     }
 	
 	werror -= dw;
-		
-	while(dx > 0 && werror < 0)
+	uerror -= du;
+	
+	if(dx > 0)
 	{
-		w += wstep;
-		werror += dx;
+		while(werror < 0)
+		{
+			w += wstep;
+			werror += dx;
+		}
+		while(uerror < 0)
+		{
+			u += ustep;
+			uerror += dx;
+		}
 	}
   }
-
-#endif
-
 }
-
-#endif
 
 // I have done a little bit of optimization here, namely the use of 4:12 fixed-point arithmetic.
 void drawSprite(float _x, float _z, const byte * sprite, const byte * mask)
@@ -974,3 +852,5 @@ void drawSprite(float _x, float _z, const byte * sprite, const byte * mask)
     }
 }
 
+
+#endif

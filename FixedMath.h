@@ -7,7 +7,6 @@
 #define FIXED_ONE (1 << FIXED_SHIFT)
 #define FIXED_HALF (1 << (FIXED_SHIFT - 1))
 #define FIXED_TO_INT(x) ((x) >> FIXED_SHIFT)
-//#define FIXED_TO_INT(x) ((x) / FIXED_ONE)
 #define FIXED_TO_INT_ROUNDED(x) (((x) + FIXED_HALF) >> FIXED_SHIFT)
 #define INT_TO_FIXED(x)	((x) << FIXED_SHIFT)
 #define DEGREES_90 64
@@ -18,21 +17,14 @@
 typedef int16_t fixed_t;
 typedef uint8_t angle_t;
 
-/*FixedMath::SinLUT[256] = {};
-
 class FixedMath
 {
 public:
-	static inline fixed_t Sin(angle_t x)
-	{
-		return SinLUT[x];
-	}
+	static fixed_t Sin(angle_t x);
 	static inline fixed_t Cos(angle_t x)
 	{
-		return SinLUT[x];
+		return Sin((angle_t)((int16_t)x + DEGREES_90));
 	}
-private:
-	static int8_t SinLUT[256];
-};*/ 
+}; 
 
 #endif
