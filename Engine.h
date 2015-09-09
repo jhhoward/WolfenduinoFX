@@ -1,7 +1,13 @@
 #ifndef ENGINE_H_
 #define ENGINE_H_
 
+#ifdef WIN32
 #include "SDLPlatform.h"
+#endif
+
+#ifdef PLATFORM_GAMEBUINO
+#include "GamebuinoPlatform.h"
+#endif
 
 #include "Platform.h"
 #include "Renderer.h"

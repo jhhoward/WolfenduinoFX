@@ -8,6 +8,7 @@
 #define HALF_DISPLAYHEIGHT (DISPLAYHEIGHT >> 1)
 
 // WIN32 specific
+#ifdef WIN32
 #define ZOOM_SCALE 3
 
 #define PROGMEM
@@ -15,6 +16,7 @@
 #define pgm_read_word(x) (*((uint16_t*)x))
 
 #define pgm_read_ptr(x) (*((uintptr_t*)x))
+#endif
 // end
 
 #define max(a, b) ((a) > (b) ? (a) : (b))
