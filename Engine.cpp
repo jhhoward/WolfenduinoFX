@@ -6,7 +6,9 @@ Player Engine::player;
 
 void Engine::init()
 {
-	player.x = player.z = 48;
+//	player.x = player.z = 48;
+	player.z = CELL_SIZE * (MAP_SIZE - 2);
+	player.x = CELL_SIZE * MAP_SIZE / 2;
 	renderer.init();
 }
 
@@ -28,22 +30,22 @@ void Engine::update()
     
     if (Platform.readInput() & Input_Dpad_Down)
     {
-      player.x -= (movement * sin_dir) >> (FIXED_SHIFT * 2);
-      player.z -= (movement * cos_dir) >> (FIXED_SHIFT * 2);
+      player.x -= (movement * sin_dir) >> (FIXED_SHIFT);
+      player.z -= (movement * cos_dir) >> (FIXED_SHIFT);
     }
     
     if (Platform.readInput() & Input_Dpad_Up)
     {
-      player.x += (movement * sin_dir) >> (FIXED_SHIFT * 2);
-      player.z += (movement * cos_dir) >> (FIXED_SHIFT * 2);
+      player.x += (movement * sin_dir) >> (FIXED_SHIFT);
+      player.z += (movement * cos_dir) >> (FIXED_SHIFT);
     }
     
     if (Platform.readInput() & Input_Dpad_Left)
     {
       if (strafe)
       {
-        player.x -= (movement * cos_dir) >> (FIXED_SHIFT * 2);
-        player.z += (movement * sin_dir) >> (FIXED_SHIFT * 2);
+        player.x -= (movement * cos_dir) >> (FIXED_SHIFT);
+        player.z += (movement * sin_dir) >> (FIXED_SHIFT);
       }
       else
         player.direction -= turn;
@@ -53,8 +55,8 @@ void Engine::update()
     {
       if (strafe)
       {
-        player.x += (movement * cos_dir) >> (FIXED_SHIFT * 2);
-        player.x -= (movement * sin_dir) >> (FIXED_SHIFT * 2);
+        player.x += (movement * cos_dir) >> (FIXED_SHIFT);
+        player.z -= (movement * sin_dir) >> (FIXED_SHIFT);
       }
       else
         player.direction += turn;

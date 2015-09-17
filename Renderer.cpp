@@ -4,6 +4,8 @@
 
 
 #include <math.h> // temp
+#include "textures.inc.h"
+
 
 // temporary
 const char texture[] PROGMEM =
@@ -26,6 +28,9 @@ const char texture[] PROGMEM =
   "#-...######-===#"
 };
 
+#include <stdio.h>
+int overdraw = 0;
+
 void Renderer::init()
 {
 }
@@ -43,15 +48,181 @@ void Renderer::drawFrame()
   //sin_dir = (int16_t)((FIXED_ONE * sin(Engine::player.direction * PI / 128.0f)) + 0.5f);
 	cos_dir = FixedMath::Cos(Engine::player.direction);
 	sin_dir = FixedMath::Sin(Engine::player.direction);
-
+	overdraw = 0;
   xcell = Engine::player.x / CELL_SIZE;
   zcell = Engine::player.z / CELL_SIZE;
   initWBuffer();
-  drawFloorAndCeiling();  
+  drawFloorAndCeiling();
+
+#if 1
   for (int layer=1; (layer<MAP_SIZE) && (numColumns<DISPLAYWIDTH); layer++)
-    drawLayer(layer);
+	  drawLayer(layer);
+#else
+  drawFrustumCells();
+#endif
+
   //drawSprite(3.5f, 1.5f, monster, monster_mask);
   //drawSprite(3.5f, 11.5f, key, key_mask);
+
+  if(overdraw > 0)
+	printf("Overdraw: %d\n", overdraw);
+}
+
+int orient2d(int ax, int ay, int bx, int by, int cx, int cy)
+{
+    return (bx-ax)*(cy-ay) - (by-ay)*(cx-ax);
+}
+
+void Renderer::drawFrustumCells()
+{
+	angle_t leftSide = Engine::player.direction - CULLING_FOV;
+	angle_t rightSide = Engine::player.direction + CULLING_FOV;
+	
+	#if 1
+	int16_t lx = FixedMath::Sin(leftSide);
+	int16_t lz = FixedMath::Cos(leftSide);
+	int16_t rx = FixedMath::Sin(rightSide);
+	int16_t rz = FixedMath::Cos(rightSide);
+	
+	int xd, zd;
+	int x1, x2, z1, z2;
+
+	if(sin_dir > 0)
+	{
+		xd = 1;		x1 = 0;		x2 = MAP_SIZE;
+	}
+	else
+	{
+		xd = -1;	x1 = MAP_SIZE - 1; x2 = -1;
+	}
+	if(cos_dir > 0)
+	{
+		zd = 1;		z1 = 0;		z2 = MAP_SIZE;
+	}
+	else
+	{
+		zd = -1;	z1 = MAP_SIZE - 1;	z2 = -1;
+	}
+	
+	//if(mabs(cos_dir) > mabs(sin_dir))
+	{
+		//printf("Cells rendered:\n");
+		for(int z = z1; z != z2; z += zd)
+		{
+			for(int x = x1; x != x2; x += xd)
+			{
+				if((lx * (x - xcell) + lz * (z - zcell)) >= 0
+				&& (rx * (x - xcell) + rz * (z - zcell)) >= 0)
+				{
+					drawCell(x, z);
+				}
+			}
+		}
+	}
+	/*else
+	{
+		for(int x = x1; x != x2; x += xd)
+		{
+			for(int z = z1; z != z2; z += zd)
+			{
+				if((lx * (x - xcell) + lz * (z - zcell)) >= 0
+				&& (rx * (x - xcell) + rz * (z - zcell)) >= 0)
+				{
+					drawCell(x, z);
+				}
+			}
+		}
+	}*/
+	
+
+	
+	#else
+	int16_t lx = (xpos + FIXED_TO_INT((int32_t)FixedMath::Sin(leftSide) * (int32_t)DRAW_DISTANCE) + (CELL_SIZE / 2)) / CELL_SIZE;
+	int16_t lz = (zpos + FIXED_TO_INT((int32_t)FixedMath::Cos(leftSide) * (int32_t)DRAW_DISTANCE) + (CELL_SIZE / 2)) / CELL_SIZE;
+	int16_t rx = (xpos + FIXED_TO_INT((int32_t)FixedMath::Sin(rightSide) * (int32_t)DRAW_DISTANCE) + (CELL_SIZE / 2)) / CELL_SIZE;
+	int16_t rz = (zpos + FIXED_TO_INT((int32_t)FixedMath::Cos(rightSide) * (int32_t)DRAW_DISTANCE) + (CELL_SIZE / 2)) / CELL_SIZE;
+
+	// Compute bounding box
+    int minX = min3(xcell, lx, rx);
+    int minZ = min3(zcell, lz, rz);
+    int maxX = max3(xcell, lx, rx);
+    int maxZ = max3(zcell, lz, rz);
+
+	minX = max(minX, 0);
+	minZ = max(minZ, 0);
+    maxX = min(maxX, MAP_SIZE - 1);
+    maxZ = min(maxZ, MAP_SIZE - 1);
+
+	int xd, zd;
+	int x1, x2, z1, z2;
+
+	if(sin_dir > 0)
+	{
+		xd = 1;
+		x1 = minX;
+		x2 = maxX + 1;
+	}
+	else
+	{
+		xd = -1;
+		x1 = maxX;
+		x2 = minX - 1;
+	}
+	if(cos_dir > 0)
+	{
+		zd = 1;
+		z1 = minZ;
+		z2 = maxZ + 1;
+	}
+	else
+	{
+		zd = -1;
+		z1 = maxZ;
+		z2 = minZ - 1;
+	}
+
+	if(mabs(cos_dir) > mabs(sin_dir))
+	{
+		//printf("Cells rendered:\n");
+		for(int z = z1; z != z2; z += zd)
+		{
+			for(int x = x1; x != x2; x += xd)
+			{
+				// Determine barycentric coordinates
+				int w0 = orient2d(lx, lz, rx, rz, x, z);
+				int w1 = orient2d(rx, rz, xcell, zcell, x, z);
+				int w2 = orient2d(xcell, zcell, lx, lz, x, z);
+
+				// If p is on or inside all edges, render pixel.
+				if (w0 <= 0 && w1 <= 0 && w2 <= 0)
+				{
+					drawCell(x, z);
+					//printf("X: %d\tZ:%d\n", x, z);
+				}
+			}
+		}
+	}
+	else
+	{
+		for(int x = x1; x != x2; x += xd)
+		{
+			for(int z = z1; z != z2; z += zd)
+			{
+				// Determine barycentric coordinates
+				int w0 = orient2d(lx, lz, rx, rz, x, z);
+				int w1 = orient2d(rx, rz, xcell, zcell, x, z);
+				int w2 = orient2d(xcell, zcell, lx, lz, x, z);
+
+				// If p is on or inside all edges, render pixel.
+				if (w0 <= 0 && w1 <= 0 && w2 <= 0)
+				{
+					drawCell(x, z);
+					//printf("X: %d\tZ:%d\n", x, z);
+				}
+			}
+		}
+	}
+	#endif
 }
 
 void Renderer::initWBuffer()
@@ -106,9 +277,9 @@ void Renderer::drawLayer(int layer)
   drawCell(xcell+layer, zcell-layer);
 }
 
-void Renderer::drawCellWall(int x1, int z1, int x2, int z2)
+void Renderer::drawCellWall(uint8_t textureId, int x1, int z1, int x2, int z2)
 {
-	drawWall(x1 * CELL_SIZE, z1 * CELL_SIZE, x2 * CELL_SIZE, z2 * CELL_SIZE);
+	drawWall(x1 * CELL_SIZE, z1 * CELL_SIZE, x2 * CELL_SIZE, z2 * CELL_SIZE, textureId);
 	//drawWall(x2 * CELL_SIZE, z2 * CELL_SIZE, x1 * CELL_SIZE, z1 * CELL_SIZE);
 }
 
@@ -118,23 +289,29 @@ void Renderer::drawCell(int cellX, int cellZ)
     return;
   if (!Engine::map.isBlocked(cellX, cellZ))
     return;
+
+	if((sin_dir * (cellX - xcell) + cos_dir * (cellZ - zcell)) < 0)
+	return;
+
+	uint8_t textureId = Engine::map.getTextureId(cellX, cellZ);
+	
   if (zpos < cellZ * CELL_SIZE)
   {
     if (xpos > cellX * CELL_SIZE)
     {
       // north west quadrant
       if ((zpos < cellZ * CELL_SIZE) && !Engine::map.isBlocked(cellX, cellZ-1))
-        drawCellWall(cellX, cellZ, cellX+1, cellZ);  // south wall
+        drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
       if ((xpos > (cellX+1) * CELL_SIZE) && (!Engine::map.isBlocked(cellX+1, cellZ)))
-        drawCellWall(cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+        drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
     }
     else
     {
       // north east quadrant
       if ((zpos < cellZ * CELL_SIZE) && !Engine::map.isBlocked(cellX, cellZ-1))
-        drawCellWall(cellX, cellZ, cellX+1, cellZ);  // south wall
+        drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
       if ((xpos< cellX * CELL_SIZE) && !Engine::map.isBlocked(cellX-1, cellZ))
-        drawCellWall(cellX, cellZ+1, cellX, cellZ);  // west wall
+        drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
     }
   }
   else
@@ -143,36 +320,38 @@ void Renderer::drawCell(int cellX, int cellZ)
     {
       // south west quadrant
       if ((zpos > (cellZ+1) * CELL_SIZE) && !Engine::map.isBlocked(cellX, cellZ+1))
-        drawCellWall(cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+        drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
       if ((xpos > (cellX+1) * CELL_SIZE) && !Engine::map.isBlocked(cellX+1, cellZ))
-        drawCellWall(cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+        drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
     }
     else
     {
       // south east quadrant
       if ((zpos > (cellZ+1) * CELL_SIZE) && !Engine::map.isBlocked(cellX, cellZ+1))
-        drawCellWall(cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+        drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
       if ((xpos< cellX * CELL_SIZE) && !Engine::map.isBlocked(cellX-1, cellZ))
-        drawCellWall(cellX, cellZ+1, cellX, cellZ);  // west wall
+        drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
     }
   }
 }
 
-/*inline*/ void Renderer::drawStrip(int16_t x, int16_t w, int8_t u)
+/*inline*/ void Renderer::drawStrip(int16_t x, int16_t w, int8_t u, uint8_t textureId)
 {
 	int halfW = w >> 1;
 	int y1 = (HALF_DISPLAYHEIGHT) - halfW;
 	int y2 = (HALF_DISPLAYHEIGHT) + halfW;
 	int verror = halfW;
 
-	int8_t* texPtr = (int8_t*) texture + u * 16;
-	char texData = pgm_read_byte(texPtr);
+	//int8_t* texPtr = (int8_t*) texture + u * 16;
+	//char texData = pgm_read_byte(texPtr);
+	BitPairReader textureReader((uint8_t*) textureData + u * TEXTURE_STRIDE + textureId * (TEXTURE_STRIDE * TEXTURE_SIZE));
+	uint8_t texData = textureReader.read();
 	
 	for(int y = y1; y <= y2; y++)
 	{
 		if(y >= 0 && y < DISPLAYHEIGHT)
 		{
-			switch(texData)
+			/*switch(texData)
 			{
 			default:
 				Platform.drawPixel(x, y, 1);
@@ -200,28 +379,59 @@ void Renderer::drawCell(int cellX, int cellZ)
 					Platform.drawPixel(x, y, 1);
 				}
 				break;
+			}*/
+			switch(texData)
+			{
+			case 1:
+				Platform.drawPixel(x, y, 1);
+				break;
+			case 2:
+				Platform.drawPixel(x, y, 0);
+				break;
+			case 0:
+				if((x ^ y) & 1)
+				{
+					Platform.drawPixel(x, y, 1);
+				}
+				else
+				{
+					Platform.drawPixel(x, y, 0);
+				}
+				break;
+			case 3:
+				if((x & y) & 1)
+				{
+					Platform.drawPixel(x, y, 0);
+				}
+				else
+				{
+					Platform.drawPixel(x, y, 1);
+				}
+				break;
 			}
+
 		}
 		
 		verror -= 15;
 		
 		while(verror < 0)
 		{
-			texPtr++;
-			texData = pgm_read_byte(texPtr);
+			//texPtr++;
+			//texData = pgm_read_byte(texPtr);
+			texData = textureReader.read();
 			verror += w;
 		}
 	}
 }
 
 // draws one side of a cell
-void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, int8_t _u1, int8_t _u2)
+void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint8_t textureId, int8_t _u1, int8_t _u2)
 {
   // find position of wall edges relative to eye
-  int16_t x1 = (int16_t)(FIXED_TO_INT(cos_dir * (_x1-xpos)) - FIXED_TO_INT(sin_dir * (_z1-zpos)));
-  int16_t z1 = (int16_t)(FIXED_TO_INT(sin_dir * (_x1-xpos)) + FIXED_TO_INT(cos_dir * (_z1-zpos)));
-  int16_t x2 = (int16_t)(FIXED_TO_INT(cos_dir * (_x2-xpos)) - FIXED_TO_INT(sin_dir * (_z2-zpos)));
-  int16_t z2 = (int16_t)(FIXED_TO_INT(sin_dir * (_x2-xpos)) + FIXED_TO_INT(cos_dir * (_z2-zpos)));
+  int16_t x1 = (int16_t)(FIXED_TO_INT(cos_dir * (int32_t)(_x1-xpos)) - FIXED_TO_INT(sin_dir * (int32_t)(_z1-zpos)));
+  int16_t z1 = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_x1-xpos)) + FIXED_TO_INT(cos_dir * (int32_t)(_z1-zpos)));
+  int16_t x2 = (int16_t)(FIXED_TO_INT(cos_dir * (int32_t)(_x2-xpos)) - FIXED_TO_INT(sin_dir * (int32_t)(_z2-zpos)));
+  int16_t z2 = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_x2-xpos)) + FIXED_TO_INT(cos_dir * (int32_t)(_z2-zpos)));
 
   // clip to the front pane
   if ((z1<CLIP_PLANE) && (z2<CLIP_PLANE))
@@ -287,6 +497,10 @@ int16_t w1 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE) / z1);
   {
     if (x >= 0 && x < DISPLAYWIDTH && w > wbuffer[x])
     {        
+		if(wbuffer[x] != 0)
+		{
+			overdraw++;
+		}
 		if(w <= 255)
 		{
 			wbuffer[x] = (uint8_t) w;
@@ -298,7 +512,7 @@ int16_t w1 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE) / z1);
 
       numColumns++;
 #if 1
-		drawStrip(x, w, u);
+		drawStrip(x, w, u, textureId);
 #else 
       
       // calculate top and bottom

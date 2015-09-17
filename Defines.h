@@ -8,8 +8,8 @@
 #define HALF_DISPLAYHEIGHT (DISPLAYHEIGHT >> 1)
 
 // WIN32 specific
-#ifdef WIN32
-#define ZOOM_SCALE 3
+#ifdef _WIN32
+#define ZOOM_SCALE 1
 
 #define PROGMEM
 #define pgm_read_byte(x) (*((uint8_t*)x))
@@ -22,17 +22,32 @@
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
+#define min3(a, b, c) (min(min(a, b), c))
+#define max3(a, b, c) (max(max(a, b), c))
+#define sign(x) ((x) < 0 ? -1 : 1)
+#define mabs(x) ((x) < 0 ? -(x) : (x))
 
 #define CELL_SIZE 32
-#define MAP_SIZE 16
-#define FOV 60
+#define MAP_SIZE 64
+#define MAP_BUFFER_SIZE 16
+//#define MAP_SIZE 16
+
+#define TEXTURE_SIZE 16
+#define TEXTURE_STRIDE 4
+
+// ~60 degree field of view (these values in wacky 256 unit format)
+#define FOV 44
+#define HALF_FOV 22
+#define CULLING_FOV 35
+#define DRAW_DISTANCE (CELL_SIZE * 20)
+
 #define NEAR_PLANE 73
 //#define NEAR_PLANE 104
 //#define NEAR_PLANE (LCDWIDTH * (0.5/tan(PI*(FOV / 2)/180)))
 #define CLIP_PLANE 1
 #define CAMERA_SCALE 1
 //#define WALL_HEIGHT 1.0f
-#define MOVEMENT 512
+#define MOVEMENT 7
 #define TURN 3
 
 

@@ -1,7 +1,7 @@
 #ifndef ENGINE_H_
 #define ENGINE_H_
 
-#ifdef WIN32
+#ifdef _WIN32
 #include "SDLPlatform.h"
 #endif
 
