@@ -28,7 +28,7 @@ bool Map::isBlocked(int cellX, int cellZ)
 {
 //  return mapBuffer[cellZ * MAP_SIZE + cellX] == '#';
 	uint8_t tile = getTile(cellX, cellZ);
-	return tile > 0 && tile != MAP_OUT_OF_BOUNDS;
+	return tile > 0 && tile < 64 && tile != MAP_OUT_OF_BOUNDS;
   //return pgm_read_byte(mapData + cellZ * MAP_SIZE + cellX) != 0;// == '#';
 //  return pgm_read_byte(mapBuffer + cellZ * MAP_SIZE + cellX) == '#';
 }

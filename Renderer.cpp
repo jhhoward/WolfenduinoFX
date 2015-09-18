@@ -345,13 +345,40 @@ void Renderer::drawCell(int cellX, int cellZ)
 {
   if (!Engine::map.isValid(cellX, cellZ))
     return;
-  if (!Engine::map.isBlocked(cellX, cellZ))
+
+  uint8_t tile = Engine::map.getTile(cellX, cellZ);
+  if (tile == 0)
     return;
 
   // clip cells behind us
 	if((cos_dir * (cellX - xcell) - sin_dir * (cellZ - zcell)) <= 0)
 		return;
 
+	if(tile == 0x5a)
+	{
+		if(xpos < cellX * CELL_SIZE + CELL_SIZE / 2)
+		{
+			drawWall(cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE, 18, 15, 0);
+		}
+		else
+		{
+			drawWall(cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE, 18);
+		}
+		return;
+	}
+	else if(tile == 0x5b)
+	{
+		if(zpos > cellZ * CELL_SIZE + CELL_SIZE / 2)
+		{
+			drawWall(cellX * CELL_SIZE + CELL_SIZE, cellZ * CELL_SIZE + CELL_SIZE / 2, cellX * CELL_SIZE, cellZ * CELL_SIZE + CELL_SIZE / 2, 18, 15, 0);
+		}
+		else
+		{
+			drawWall(cellX * CELL_SIZE, cellZ * CELL_SIZE + CELL_SIZE / 2, cellX * CELL_SIZE + CELL_SIZE, cellZ * CELL_SIZE + CELL_SIZE / 2, 18);
+		}
+		return;
+	}
+		
 	uint8_t textureId = Engine::map.getTextureId(cellX, cellZ);
 	
   if (zpos < cellZ * CELL_SIZE)

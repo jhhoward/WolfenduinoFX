@@ -23,6 +23,8 @@ void Engine::update()
     int16_t turn = TURN;
 	int16_t cos_dir = FixedMath::Cos(player.direction);
 	int16_t sin_dir = FixedMath::Sin(player.direction);
+	int16_t oldX = player.x;
+	int16_t oldZ = player.z;
   cos_dir = (int16_t)((FIXED_ONE * cos(Engine::player.direction * 3.141592 / 128.0f)) + 0.5f);
   sin_dir = (int16_t)((FIXED_ONE * sin(Engine::player.direction * 3.141592 / 128.0f)) + 0.5f);
     
@@ -66,6 +68,12 @@ void Engine::update()
         player.direction += turn;
     }
   
+	if(map.isBlocked(player.x / CELL_SIZE, player.z / CELL_SIZE))
+	{
+		player.x = oldX;
+		player.z = oldZ;
+	}
+
     player.x = max(player.x, 0);
     player.z = max(player.z, 0);
     player.x = min(player.x, MAP_SIZE * CELL_SIZE);
