@@ -1,8 +1,19 @@
 #ifndef DEFINES_H_
 #define DEFINES_H_
 
+#if 1
+// Gamebuino
 #define DISPLAYWIDTH 84
 #define DISPLAYHEIGHT 48
+#elif 0
+// Arduboy
+#define DISPLAYWIDTH 128
+#define DISPLAYHEIGHT 64
+#else
+// Uzebox
+#define DISPLAYWIDTH 120
+#define DISPLAYHEIGHT 96
+#endif
 
 #define HALF_DISPLAYWIDTH (DISPLAYWIDTH >> 1)
 #define HALF_DISPLAYHEIGHT (DISPLAYHEIGHT >> 1)
@@ -41,9 +52,12 @@
 #define CULLING_FOV 35
 #define DRAW_DISTANCE (CELL_SIZE * 20)
 
-#define NEAR_PLANE 73
+//#define NEAR_PLANE 73
 //#define NEAR_PLANE 104
 //#define NEAR_PLANE (LCDWIDTH * (0.5/tan(PI*(FOV / 2)/180)))
+#define NEAR_PLANE_MULTIPLIER 222
+#define NEAR_PLANE (DISPLAYWIDTH * NEAR_PLANE_MULTIPLIER / 256)
+
 #define CLIP_PLANE 1
 #define CAMERA_SCALE 1
 //#define WALL_HEIGHT 1.0f

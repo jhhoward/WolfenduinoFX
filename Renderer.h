@@ -19,6 +19,7 @@ private:
 /*inline*/ void drawStrip(int16_t x, int16_t w, int8_t u, uint8_t textureId);
 	void drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint8_t textureId = 0, int8_t _u1 = 0, int8_t _u2 = 15);
 	void drawFrustumCells();
+	void drawBufferedCells();
 
 	int16_t xpos, zpos;
 	int16_t cos_dir;

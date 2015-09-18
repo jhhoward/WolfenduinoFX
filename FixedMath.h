@@ -23,7 +23,7 @@ public:
 	static fixed_t Sin(angle_t x);
 	static inline fixed_t Cos(angle_t x)
 	{
-		return Sin((angle_t)((int16_t)x + DEGREES_90));
+		return Sin((angle_t)(DEGREES_90 + (int16_t)x));
 	}
 }; 
 

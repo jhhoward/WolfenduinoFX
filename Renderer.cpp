@@ -44,10 +44,10 @@ void Renderer::drawFrame()
 	xpos = Engine::player.x;
 	zpos = Engine::player.z;
 	// TODO: move this into a LUT
-//  cos_dir = (int16_t)((FIXED_ONE * cos(Engine::player.direction * PI / 128.0f)) + 0.5f);
-  //sin_dir = (int16_t)((FIXED_ONE * sin(Engine::player.direction * PI / 128.0f)) + 0.5f);
-	cos_dir = FixedMath::Cos(Engine::player.direction);
-	sin_dir = FixedMath::Sin(Engine::player.direction);
+ // cos_dir = (int16_t)((FIXED_ONE * cos(-Engine::player.direction * 3.141592 / 128.0f)) + 0.5f);
+  //sin_dir = (int16_t)((FIXED_ONE * sin(-Engine::player.direction * 3.141592 / 128.0f)) + 0.5f);
+	cos_dir = FixedMath::Cos(-Engine::player.direction);
+	sin_dir = FixedMath::Sin(-Engine::player.direction);
 	overdraw = 0;
   xcell = Engine::player.x / CELL_SIZE;
   zcell = Engine::player.z / CELL_SIZE;
@@ -55,7 +55,9 @@ void Renderer::drawFrame()
   drawFloorAndCeiling();
 
 #if 1
-  for (int layer=1; (layer<MAP_SIZE) && (numColumns<DISPLAYWIDTH); layer++)
+  drawBufferedCells();
+#elif 0
+  for (int layer=1; (layer<MAP_BUFFER_SIZE) && (numColumns<DISPLAYWIDTH); layer++)
 	  drawLayer(layer);
 #else
   drawFrustumCells();
@@ -71,6 +73,58 @@ void Renderer::drawFrame()
 int orient2d(int ax, int ay, int bx, int by, int cx, int cy)
 {
     return (bx-ax)*(cy-ay) - (by-ay)*(cx-ax);
+}
+
+void Renderer::drawBufferedCells()
+{
+	int xd, zd;
+	int x1, z1, x2, z2;
+
+	if(cos_dir > 0)
+	{
+		x1 = Engine::map.bufferX;
+		x2 = x1 + MAP_BUFFER_SIZE;
+		xd = 1;
+	}
+	else
+	{
+		x2 = Engine::map.bufferX - 1;
+		x1 = x2 + MAP_BUFFER_SIZE;
+		xd = -1;
+	}
+	if(sin_dir < 0)
+	{
+		z1 = Engine::map.bufferZ;
+		z2 = z1 + MAP_BUFFER_SIZE;
+		zd = 1;
+	}
+	else
+	{
+		z2 = Engine::map.bufferZ - 1;
+		z1 = z2 + MAP_BUFFER_SIZE;
+		zd = -1;
+	}
+
+	if(mabs(cos_dir) < mabs(sin_dir))
+	{
+		for(int z = z1; z != z2; z += zd)
+		{
+			for(int x = x1; x != x2; x+= xd)
+			{
+				drawCell(x, z);
+			}
+		}
+	}
+	else
+	{
+		for(int x = x1; x != x2; x+= xd)
+		{
+			for(int z = z1; z != z2; z += zd)
+			{
+				drawCell(x, z);
+			}
+		}
+	}
 }
 
 void Renderer::drawFrustumCells()
@@ -238,7 +292,10 @@ void Renderer::drawFloorAndCeiling()
 	{
 		for(int y = 0; y < DISPLAYHEIGHT; y++)
 		{
-			if(y < HALF_DISPLAYHEIGHT || ((x ^ y) & 1))
+#if 0
+			Platform.drawPixel(x, y, 1);
+#else
+			if(y < HALF_DISPLAYHEIGHT || ((x ^ y) & 1) == 1)
 			{
 				Platform.drawPixel(x, y, 0);
 			}
@@ -246,6 +303,7 @@ void Renderer::drawFloorAndCeiling()
 			{
 				Platform.drawPixel(x, y, 1);
 			}
+#endif
 		}
 	}
   
@@ -290,8 +348,9 @@ void Renderer::drawCell(int cellX, int cellZ)
   if (!Engine::map.isBlocked(cellX, cellZ))
     return;
 
-	if((sin_dir * (cellX - xcell) + cos_dir * (cellZ - zcell)) < 0)
-	return;
+  // clip cells behind us
+	if((cos_dir * (cellX - xcell) - sin_dir * (cellZ - zcell)) <= 0)
+		return;
 
 	uint8_t textureId = Engine::map.getTextureId(cellX, cellZ);
 	
@@ -428,10 +487,20 @@ void Renderer::drawCell(int cellX, int cellZ)
 void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint8_t textureId, int8_t _u1, int8_t _u2)
 {
   // find position of wall edges relative to eye
-  int16_t x1 = (int16_t)(FIXED_TO_INT(cos_dir * (int32_t)(_x1-xpos)) - FIXED_TO_INT(sin_dir * (int32_t)(_z1-zpos)));
+  /*int16_t x1 = (int16_t)(FIXED_TO_INT(cos_dir * (int32_t)(_x1-xpos)) - FIXED_TO_INT(sin_dir * (int32_t)(_z1-zpos)));
   int16_t z1 = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_x1-xpos)) + FIXED_TO_INT(cos_dir * (int32_t)(_z1-zpos)));
   int16_t x2 = (int16_t)(FIXED_TO_INT(cos_dir * (int32_t)(_x2-xpos)) - FIXED_TO_INT(sin_dir * (int32_t)(_z2-zpos)));
   int16_t z2 = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_x2-xpos)) + FIXED_TO_INT(cos_dir * (int32_t)(_z2-zpos)));
+  */
+  /*int16_t x1 = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_z1-zpos)) - FIXED_TO_INT(cos_dir * (int32_t)(_x1-xpos)));
+  int16_t z1 = (int16_t)(- FIXED_TO_INT(sin_dir * (int32_t)(_x1-xpos)) - FIXED_TO_INT(cos_dir * (int32_t)(_z1-zpos)));
+  int16_t x2 = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_z2-zpos)) - FIXED_TO_INT(cos_dir * (int32_t)(_x2-xpos)));
+  int16_t z2 = (int16_t)(- FIXED_TO_INT(sin_dir * (int32_t)(_x2-xpos)) - FIXED_TO_INT(cos_dir * (int32_t)(_z2-zpos)));*/
+
+  int16_t z2 = (int16_t)(FIXED_TO_INT(cos_dir * (int32_t)(_x1-xpos)) - FIXED_TO_INT(sin_dir * (int32_t)(_z1-zpos)));
+  int16_t x2 = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_x1-xpos)) + FIXED_TO_INT(cos_dir * (int32_t)(_z1-zpos)));
+  int16_t z1 = (int16_t)(FIXED_TO_INT(cos_dir * (int32_t)(_x2-xpos)) - FIXED_TO_INT(sin_dir * (int32_t)(_z2-zpos)));
+  int16_t x1 = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_x2-xpos)) + FIXED_TO_INT(cos_dir * (int32_t)(_z2-zpos)));
 
   // clip to the front pane
   if ((z1<CLIP_PLANE) && (z2<CLIP_PLANE))
