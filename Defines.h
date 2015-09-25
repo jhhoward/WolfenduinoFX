@@ -1,18 +1,31 @@
 #ifndef DEFINES_H_
 #define DEFINES_H_
 
-#if 1
+#define EMULATE_GAMEBUINO 1
+//#define EMULATE_ARDUBOY 1 
+//#define EMULATE_HACKVISION 1
+//#define EMULATE_UZEBOX 1
+
+#if defined(EMULATE_GAMEBUINO)
 // Gamebuino
 #define DISPLAYWIDTH 84
 #define DISPLAYHEIGHT 48
-#elif 0
+#elif defined(EMULATE_ARDUBOY)
 // Arduboy
 #define DISPLAYWIDTH 128
 #define DISPLAYHEIGHT 64
-#else
+#elif defined(EMULATE_HACKVISION)
+// Hackvision
+#define DISPLAYWIDTH 136
+#define DISPLAYHEIGHT 96
+#elif defined(EMULATE_UZEBOX)
 // Uzebox
 #define DISPLAYWIDTH 120
-#define DISPLAYHEIGHT 96
+//#define DISPLAYHEIGHT 96
+#define DISPLAYHEIGHT 80
+#else
+#define DISPLAYWIDTH 256
+#define DISPLAYHEIGHT 192
 #endif
 
 #define HALF_DISPLAYWIDTH (DISPLAYWIDTH >> 1)
@@ -20,7 +33,7 @@
 
 // WIN32 specific
 #ifdef _WIN32
-#define ZOOM_SCALE 1
+#define ZOOM_SCALE 3
 
 #define PROGMEM
 #define pgm_read_byte(x) (*((uint8_t*)x))
@@ -63,6 +76,9 @@
 //#define WALL_HEIGHT 1.0f
 #define MOVEMENT 7
 #define TURN 3
+#define MIN_WALL_DISTANCE 8
+#define MAX_DOORS 6
 
+#define DOOR_FRAME_TEXTURE 19
 
 #endif

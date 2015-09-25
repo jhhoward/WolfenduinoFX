@@ -5,8 +5,9 @@
 #include <Gamebuino.h>
 #include <EEPROM.h>
 #include <avr/pgmspace.h>
-
 #include "Platform.h"
+
+#define PLATFORM_GAMEBUINO 1
 
 class GamebuinoPlatform : public PlatformBase
 {

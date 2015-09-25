@@ -1,10 +1,10 @@
 #ifndef ENGINE_H_
 #define ENGINE_H_
 
-#include "Defines.h"
-
-#ifdef WIN32
+#ifdef _WIN32
 #include "SDLPlatform.h"
+#else
+#define PLATFORM_GAMEBUINO 1
 #endif
 
 #ifdef PLATFORM_GAMEBUINO

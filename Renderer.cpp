@@ -5,28 +5,8 @@
 
 #include <math.h> // temp
 #include "textures.inc.h"
-
-
-// temporary
-const char texture[] PROGMEM =
-{
-  "#-...#-...#-===#"
-  "#-...#-...#-===#"
-  "#-...#-...######"
-  "######-...#-...#"
-  "#-===#-...#-...#"
-  "#-===#-...#-...#"
-  "#-===#-...#-...#"
-  "#-===#-...#-...#"
-  "#-===######-...#"
-  "#-===#-...#-...#"
-  "#-===#-...######"
-  "#-===#-...#-===#"
-  "######-...#-===#"
-  "#-...#-...#-===#"
-  "#-...#-...#-===#"
-  "#-...######-===#"
-};
+#include "guard.inc.h"
+#include "pistol.inc.h"
 
 #include <stdio.h>
 int overdraw = 0;
@@ -35,39 +15,64 @@ void Renderer::init()
 {
 }
 
-/*void Renderer::drawFrame()
+void Renderer::drawWeapon()
 {
+	BitPairReader reader((uint8_t*)pistolSprite);
+
+	for(int i = 0; i < 16; i++)
+	{
+		for(int j = 0; j < 16; j++)
+		{
+			uint8_t pixel = reader.read();
+			if(pixel)
+			{
+				Platform.drawPixel(i + HALF_DISPLAYWIDTH - 8, DISPLAYHEIGHT - 16 + j, (pixel - 1) ? 0 : 1);
+			}
+		}
+	}
 }
-*/
+
 void Renderer::drawFrame()
 {
 	xpos = Engine::player.x;
 	zpos = Engine::player.z;
 	// TODO: move this into a LUT
- // cos_dir = (int16_t)((FIXED_ONE * cos(-Engine::player.direction * 3.141592 / 128.0f)) + 0.5f);
-  //sin_dir = (int16_t)((FIXED_ONE * sin(-Engine::player.direction * 3.141592 / 128.0f)) + 0.5f);
+	// cos_dir = (int16_t)((FIXED_ONE * cos(-Engine::player.direction * 3.141592 / 128.0f)) + 0.5f);
+	//sin_dir = (int16_t)((FIXED_ONE * sin(-Engine::player.direction * 3.141592 / 128.0f)) + 0.5f);
 	cos_dir = FixedMath::Cos(-Engine::player.direction);
 	sin_dir = FixedMath::Sin(-Engine::player.direction);
 	overdraw = 0;
-  xcell = Engine::player.x / CELL_SIZE;
-  zcell = Engine::player.z / CELL_SIZE;
-  initWBuffer();
-  drawFloorAndCeiling();
+	xcell = Engine::player.x / CELL_SIZE;
+	zcell = Engine::player.z / CELL_SIZE;
+	initWBuffer();
+	drawFloorAndCeiling();
 
 #if 1
-  drawBufferedCells();
+	drawBufferedCells();
 #elif 0
-  for (int layer=1; (layer<MAP_BUFFER_SIZE) && (numColumns<DISPLAYWIDTH); layer++)
-	  drawLayer(layer);
+	for (int layer=1; (layer<MAP_BUFFER_SIZE) && (numColumns<DISPLAYWIDTH); layer++)
+		drawLayer(layer);
 #else
-  drawFrustumCells();
+	drawFrustumCells();
 #endif
+	drawDoors();
 
-  //drawSprite(3.5f, 1.5f, monster, monster_mask);
-  //drawSprite(3.5f, 11.5f, key, key_mask);
+	//drawSprite(3.5f, 1.5f, monster, monster_mask);
+	//drawSprite(3.5f, 11.5f, key, key_mask);
 
-  if(overdraw > 0)
-	printf("Overdraw: %d\n", overdraw);
+	{
+		static int time = 0;
+		time++;
+		int frame = 0 + ((time / 4) % 9);
+		int offset = TEXTURE_STRIDE * TEXTURE_SIZE * frame;
+		
+		drawSprite((uint8_t*)guardSprite + offset, CELL_SIZE * MAP_SIZE / 2, CELL_SIZE * (MAP_SIZE - 2));
+		drawSprite((uint8_t*)guardSprite + offset, CELL_SIZE * MAP_SIZE / 2, CELL_SIZE * (MAP_SIZE - 32));
+	}
+
+	drawWeapon();
+	/*if(overdraw > 0)
+	printf("Overdraw: %d\n", overdraw);*/
 }
 
 int orient2d(int ax, int ay, int bx, int by, int cx, int cy)
@@ -292,8 +297,24 @@ void Renderer::drawFloorAndCeiling()
 	{
 		for(int y = 0; y < DISPLAYHEIGHT; y++)
 		{
-#if 0
-			Platform.drawPixel(x, y, 1);
+#if defined(EMULATE_UZEBOX)
+			if(y < HALF_DISPLAYHEIGHT || ((x & y) & 1) == 0)
+			{
+				Platform.drawPixel(x, y, 3);
+			}
+			else
+			{
+				Platform.drawPixel(x, y, 2);
+			}
+#elif 1
+			if(y < HALF_DISPLAYHEIGHT || ((x & y) & 1) == 0)
+			{
+				Platform.drawPixel(x, y, 1);
+			}
+			else
+			{
+				Platform.drawPixel(x, y, 0);
+			}
 #else
 			if(y < HALF_DISPLAYHEIGHT || ((x ^ y) & 1) == 1)
 			{
@@ -343,82 +364,132 @@ void Renderer::drawCellWall(uint8_t textureId, int x1, int z1, int x2, int z2)
 
 void Renderer::drawCell(int cellX, int cellZ)
 {
-  if (!Engine::map.isValid(cellX, cellZ))
-    return;
+	if (!Engine::map.isValid(cellX, cellZ))
+		return;
 
-  uint8_t tile = Engine::map.getTile(cellX, cellZ);
-  if (tile == 0)
-    return;
+	if (!Engine::map.isSolid(cellX, cellZ))
+		return;
 
-  // clip cells behind us
+	uint8_t tile = Engine::map.getTile(cellX, cellZ);
+	if (tile == 0)
+		return;
+
+	// clip cells behind us
 	if((cos_dir * (cellX - xcell) - sin_dir * (cellZ - zcell)) <= 0)
 		return;
 
-	if(tile == 0x5a)
-	{
-		if(xpos < cellX * CELL_SIZE + CELL_SIZE / 2)
-		{
-			drawWall(cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE, 18, 15, 0);
-		}
-		else
-		{
-			drawWall(cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE, 18);
-		}
-		return;
-	}
-	else if(tile == 0x5b)
-	{
-		if(zpos > cellZ * CELL_SIZE + CELL_SIZE / 2)
-		{
-			drawWall(cellX * CELL_SIZE + CELL_SIZE, cellZ * CELL_SIZE + CELL_SIZE / 2, cellX * CELL_SIZE, cellZ * CELL_SIZE + CELL_SIZE / 2, 18, 15, 0);
-		}
-		else
-		{
-			drawWall(cellX * CELL_SIZE, cellZ * CELL_SIZE + CELL_SIZE / 2, cellX * CELL_SIZE + CELL_SIZE, cellZ * CELL_SIZE + CELL_SIZE / 2, 18);
-		}
-		return;
-	}
-		
 	uint8_t textureId = Engine::map.getTextureId(cellX, cellZ);
-	
-  if (zpos < cellZ * CELL_SIZE)
-  {
-    if (xpos > cellX * CELL_SIZE)
-    {
-      // north west quadrant
-      if ((zpos < cellZ * CELL_SIZE) && !Engine::map.isBlocked(cellX, cellZ-1))
-        drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
-      if ((xpos > (cellX+1) * CELL_SIZE) && (!Engine::map.isBlocked(cellX+1, cellZ)))
-        drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
-    }
-    else
-    {
-      // north east quadrant
-      if ((zpos < cellZ * CELL_SIZE) && !Engine::map.isBlocked(cellX, cellZ-1))
-        drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
-      if ((xpos< cellX * CELL_SIZE) && !Engine::map.isBlocked(cellX-1, cellZ))
-        drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
-    }
-  }
-  else
-  {
-    if (xpos > cellX * CELL_SIZE)
-    {
-      // south west quadrant
-      if ((zpos > (cellZ+1) * CELL_SIZE) && !Engine::map.isBlocked(cellX, cellZ+1))
-        drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
-      if ((xpos > (cellX+1) * CELL_SIZE) && !Engine::map.isBlocked(cellX+1, cellZ))
-        drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
-    }
-    else
-    {
-      // south east quadrant
-      if ((zpos > (cellZ+1) * CELL_SIZE) && !Engine::map.isBlocked(cellX, cellZ+1))
-        drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
-      if ((xpos< cellX * CELL_SIZE) && !Engine::map.isBlocked(cellX-1, cellZ))
-        drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
-    }
-  }
+
+	if (zpos < cellZ * CELL_SIZE)
+	{
+		if (xpos > cellX * CELL_SIZE)
+		{
+			// north west quadrant
+			if (zpos < cellZ * CELL_SIZE)
+			{
+				if(Engine::map.isDoor(cellX, cellZ - 1))
+				{
+					drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ, cellX+1, cellZ);  // south wall
+				}
+				else if(!Engine::map.isSolid(cellX, cellZ - 1))
+				{
+					drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
+				}
+			}
+			if (xpos > (cellX+1) * CELL_SIZE)
+			{
+				if(Engine::map.isDoor(cellX + 1, cellZ))
+				{
+					drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+				}
+				else if(!Engine::map.isSolid(cellX+1, cellZ))
+				{
+					drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+				}
+			}
+		}
+		else
+		{
+			// north east quadrant
+			if (zpos < cellZ * CELL_SIZE)
+			{
+				if(Engine::map.isDoor(cellX, cellZ-1))
+				{
+					drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ, cellX+1, cellZ);  // south wall
+				}
+				else if(!Engine::map.isSolid(cellX, cellZ-1))
+				{
+					drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
+				}
+			}
+			if (xpos< cellX * CELL_SIZE)
+			{
+				if(Engine::map.isDoor(cellX-1, cellZ))
+				{
+					drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ+1, cellX, cellZ);  // west wall
+				}
+				else if(!Engine::map.isSolid(cellX-1, cellZ))
+				{
+					drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
+				}
+			}
+		}
+	}
+	else
+	{
+		if (xpos > cellX * CELL_SIZE)
+		{
+			// south west quadrant
+			if (zpos > (cellZ+1) * CELL_SIZE)
+			{
+				if(Engine::map.isDoor(cellX, cellZ+1))
+				{
+					drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+				}
+				else if(!Engine::map.isSolid(cellX, cellZ+1))
+				{
+					drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+				}
+			}
+			if (xpos > (cellX+1) * CELL_SIZE)
+			{
+				if(Engine::map.isDoor(cellX+1, cellZ))
+				{
+					drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+				}
+				else if(!Engine::map.isSolid(cellX+1, cellZ))
+				{
+					drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+				}
+			}
+		}
+		else
+		{
+			// south east quadrant
+			if (zpos > (cellZ+1) * CELL_SIZE)
+			{
+				if(Engine::map.isDoor(cellX, cellZ+1))
+				{
+					drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+				}
+				else if(!Engine::map.isSolid(cellX, cellZ+1))
+				{
+					drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+				}
+			}
+			if (xpos< cellX * CELL_SIZE)
+			{
+				if(Engine::map.isDoor(cellX-1, cellZ))
+				{
+					drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ+1, cellX, cellZ);  // west wall
+				}
+				else if(!Engine::map.isSolid(cellX-1, cellZ))
+				{
+					drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
+				}
+			}
+		}
+	}
 }
 
 /*inline*/ void Renderer::drawStrip(int16_t x, int16_t w, int8_t u, uint8_t textureId)
@@ -437,35 +508,6 @@ void Renderer::drawCell(int cellX, int cellZ)
 	{
 		if(y >= 0 && y < DISPLAYHEIGHT)
 		{
-			/*switch(texData)
-			{
-			default:
-				Platform.drawPixel(x, y, 1);
-				break;
-			case '#':
-				Platform.drawPixel(x, y, 0);
-				break;
-			case '-':
-				if((x ^ y) & 1)
-				{
-					Platform.drawPixel(x, y, 1);
-				}
-				else
-				{
-					Platform.drawPixel(x, y, 0);
-				}
-				break;
-			case '=':
-				if((x & y) & 1)
-				{
-					Platform.drawPixel(x, y, 0);
-				}
-				else
-				{
-					Platform.drawPixel(x, y, 1);
-				}
-				break;
-			}*/
 			switch(texData)
 			{
 			case 1:
@@ -475,6 +517,9 @@ void Renderer::drawCell(int cellX, int cellZ)
 				Platform.drawPixel(x, y, 0);
 				break;
 			case 0:
+#if defined(EMULATE_UZEBOX)
+				Platform.drawPixel(x, y, 2);
+#else
 				if((x ^ y) & 1)
 				{
 					Platform.drawPixel(x, y, 1);
@@ -483,8 +528,12 @@ void Renderer::drawCell(int cellX, int cellZ)
 				{
 					Platform.drawPixel(x, y, 0);
 				}
+#endif
 				break;
 			case 3:
+#if defined(EMULATE_UZEBOX)
+				Platform.drawPixel(x, y, 3);
+#else
 				if((x & y) & 1)
 				{
 					Platform.drawPixel(x, y, 0);
@@ -493,6 +542,7 @@ void Renderer::drawCell(int cellX, int cellZ)
 				{
 					Platform.drawPixel(x, y, 1);
 				}
+#endif
 				break;
 			}
 
@@ -651,5 +701,142 @@ int16_t w1 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE) / z1);
 		}
 	}
   }
+}
+
+void Renderer::drawDoors()
+{
+	for(int n = 0; n < MAX_DOORS; n++)
+	{
+		Door& door = Engine::map.doors[n];
+		uint8_t textureId = 18;
+		int offset = door.open;
+		if(offset >= 16)
+		{
+			continue;
+		}
+
+		if(door.x < Engine::map.bufferX || door.z < Engine::map.bufferZ
+			|| door.x >= Engine::map.bufferX + MAP_BUFFER_SIZE || door.z >= Engine::map.bufferZ + MAP_BUFFER_SIZE)
+		{
+			continue;
+		}
+
+		if(door.type == DoorType_StandardVertical)
+		{
+			if(xpos < door.x * CELL_SIZE + CELL_SIZE / 2)
+			{
+				drawWall(door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + CELL_SIZE, 
+						door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + offset * 2, textureId, 0, 15 - offset);
+			}
+			else
+			{
+				drawWall(door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + offset * 2, 
+						door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + CELL_SIZE, textureId, 15 - offset, 0);
+			}
+		}
+		else if(door.type == DoorType_StandardHorizontal)
+		{
+			if(zpos > door.z * CELL_SIZE + CELL_SIZE / 2)
+			{
+				drawWall(door.x * CELL_SIZE + CELL_SIZE, door.z * CELL_SIZE + CELL_SIZE / 2, 
+					door.x * CELL_SIZE + offset * 2, door.z * CELL_SIZE + CELL_SIZE / 2, textureId, 0, 15 - offset);
+			}
+			else
+			{
+				drawWall(door.x * CELL_SIZE + offset * 2, door.z * CELL_SIZE + CELL_SIZE / 2, 
+					door.x * CELL_SIZE + CELL_SIZE, door.z * CELL_SIZE + CELL_SIZE / 2, textureId, 15 - offset, 0);
+			}
+		}
+	}
+}
+
+void Renderer::drawSprite(uint8_t* sprite, int16_t _x, int16_t _z)
+{
+	int16_t zt = (int16_t)(FIXED_TO_INT(cos_dir * (int32_t)(_x-xpos)) - FIXED_TO_INT(sin_dir * (int32_t)(_z-zpos)));
+	int16_t xt = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_x-xpos)) + FIXED_TO_INT(cos_dir * (int32_t)(_z-zpos)));
+
+	// clip to the front pane
+	if (zt < CLIP_PLANE)
+		return;
+
+	// apply perspective projection
+	int16_t vx = (int16_t)(xt * NEAR_PLANE * CAMERA_SCALE / zt);  
+	int16_t w = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE) / zt);
+	int16_t halfW = w >> 1;
+	int y1 = (HALF_DISPLAYHEIGHT) - halfW;
+	int y2 = (HALF_DISPLAYHEIGHT) + halfW;
+
+	// transform the end points into screen space
+	int16_t sx1 = (int16_t)((DISPLAYWIDTH / 2) + vx - halfW);
+	int16_t sx2 = sx1 + w;
+
+
+	int16_t dx = w;
+	int16_t uerror = dx >> 1;
+	int8_t u = 0;
+	int8_t du = 16, ustep = 1;
+
+	for (int x = sx1; x <= sx2; x++)
+	{
+		if (x >= 0 && x < DISPLAYWIDTH && w > wbuffer[x])
+		{        
+			int verror = halfW;
+
+			BitPairReader textureReader((uint8_t*) sprite + u * TEXTURE_STRIDE);
+			uint8_t texData = textureReader.read();
+
+			for(int y = y1; y <= y2; y++)
+			{
+				if(y >= 0 && y < DISPLAYHEIGHT)
+				{
+					switch(texData)
+					{
+					case 0:
+						break;
+					case 1:
+						Platform.drawPixel(x, y, 1);
+						break;
+					case 2:
+						Platform.drawPixel(x, y, 0);
+						break;
+					case 3:
+#if defined(EMULATE_UZEBOX)
+						Platform.drawPixel(x, y, 2);
+#else
+						if((x ^ y) & 1)
+						{
+							Platform.drawPixel(x, y, 1);
+						}
+						else
+						{
+							Platform.drawPixel(x, y, 0);
+						}
+#endif
+						break;
+					}
+
+				}
+
+				verror -= 15;
+
+				while(verror < 0)
+				{
+					texData = textureReader.read();
+					verror += w;
+				}
+			}
+		}
+
+		uerror -= du;
+
+		if(dx > 0)
+		{
+			while(uerror < 0)
+			{
+				u += ustep;
+				uerror += dx;
+			}
+		}
+	}
 }
 

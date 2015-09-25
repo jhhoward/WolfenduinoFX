@@ -115,9 +115,28 @@ void SDLPlatform::drawPixel(SDL_Surface *surface, int x, int y, Uint32 pixel)
     *(Uint32 *)p = pixel;
 }
 
+uint8_t paletteColours[] =
+{
+#if defined(EMULATE_GAMEBUINO)
+	0, 0, 0,
+	206, 221, 231,
+#elif defined(EMULATE_ARDUBOY)
+	0, 0, 0,
+	255, 255, 255,
+#else
+	0, 0, 0,
+	255, 255, 255,
+	145, 145, 170,
+	182, 182, 170
+#endif
+};
+
 void SDLPlatform::drawPixel(uint8_t x, uint8_t y, uint8_t colour)
 {
-	if(!colour)
+	Uint32 col = SDL_MapRGBA(m_screenSurface->format, paletteColours[colour * 3], paletteColours[colour * 3 + 1], paletteColours[colour * 3 + 2], 255);
+	drawPixel(m_screenSurface, x, y, col);
+
+	/*if(!colour)
 	{
 		Uint32 black = SDL_MapRGBA(m_screenSurface->format, 0, 0, 0, 255);
 		drawPixel(m_screenSurface, x, y, black);
@@ -126,5 +145,5 @@ void SDLPlatform::drawPixel(uint8_t x, uint8_t y, uint8_t colour)
 	{
 		Uint32 white = SDL_MapRGBA(m_screenSurface->format, 206, 221, 231, 255);
 		drawPixel(m_screenSurface, x, y, white);
-	}
+	}*/
 }

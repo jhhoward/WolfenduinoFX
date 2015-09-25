@@ -24,13 +24,44 @@ bool Map::isValid(int x, int z)
   return true;*/
 }
 
+void Map::init()
+{
+	bufferX = 0;
+	bufferZ = 0;
+}
+
+void Map::update()
+{
+	updateDoors();
+}
+
+bool Map::isDoor(int cellX, int cellZ)
+{
+	uint8_t tile = getTile(cellX, cellZ);
+	return tile == 0x5a || tile == 0x5b;
+}
+
 bool Map::isBlocked(int cellX, int cellZ)
 {
-//  return mapBuffer[cellZ * MAP_SIZE + cellX] == '#';
 	uint8_t tile = getTile(cellX, cellZ);
-	return tile > 0 && tile < 64 && tile != MAP_OUT_OF_BOUNDS;
-  //return pgm_read_byte(mapData + cellZ * MAP_SIZE + cellX) != 0;// == '#';
-//  return pgm_read_byte(mapBuffer + cellZ * MAP_SIZE + cellX) == '#';
+	if((tile > 0 && tile < 22) || tile == MAP_OUT_OF_BOUNDS)
+		return true;
+
+	for(int n = 0; n < MAX_DOORS; n++)
+	{
+		if(doors[n].type != DoorType_None && doors[n].x == cellX && doors[n].z == cellZ && doors[n].open < 16)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Map::isSolid(int cellX, int cellZ)
+{
+	uint8_t tile = getTile(cellX, cellZ);
+	return tile > 0 && tile < 22 && tile != MAP_OUT_OF_BOUNDS;
 }
 
 uint8_t Map::getTextureId(int cellX, int cellZ)
@@ -73,6 +104,22 @@ void Map::streamData(uint8_t* buffer, MapRead_Orientation orientation, int x, in
 	}	
 }
 
+uint8_t Map::streamIn(uint8_t tile, int x, int z)
+{
+	if(tile == 0x5b)
+	{
+		streamInDoor(DoorType_StandardHorizontal, x, z);
+		//return 0;
+	}
+	if(tile == 0x5a)
+	{
+		streamInDoor(DoorType_StandardVertical, x, z);
+		//return 0;
+	}
+
+	return tile;
+}
+
 void Map::updateHorizontalSlice(int offsetZ)
 {
 	uint8_t readBuffer[MAP_BUFFER_SIZE];
@@ -84,7 +131,9 @@ void Map::updateHorizontalSlice(int offsetZ)
 	for(int x = 0; x < MAP_BUFFER_SIZE; x++)
 	{
 		int targetX = (bufferX + x) & 0xf;
-		m_mapBuffer[targetZ * MAP_BUFFER_SIZE + targetX] = readBuffer[x];
+		uint8_t read = streamIn(readBuffer[x], bufferX + x, bufferZ + offsetZ);
+
+		m_mapBuffer[targetZ * MAP_BUFFER_SIZE + targetX] = read;
 	}
 }
 
@@ -99,7 +148,9 @@ void Map::updateVerticalSlice(int offsetX)
 	for(int z = 0; z < MAP_BUFFER_SIZE; z++)
 	{
 		int targetZ = (bufferZ + z) & 0xf;
-		m_mapBuffer[targetZ * MAP_BUFFER_SIZE + targetX] = readBuffer[z];
+		uint8_t read = streamIn(readBuffer[z], bufferX + offsetX, bufferZ + z);
+
+		m_mapBuffer[targetZ * MAP_BUFFER_SIZE + targetX] = read;
 	}
 }
 
@@ -153,5 +204,98 @@ void Map::updateBufferPosition(int newX, int newZ)
 	{
 		bufferZ --;
 		updateHorizontalSlice(0);
+	}
+}
+
+void Map::updateDoors()
+{
+	for(int n = 0; n < MAX_DOORS; n++)
+	{
+		if(doors[n].type != DoorType_None)
+		{
+			doors[n].update();
+		}
+	}
+}
+
+void Map::streamInDoor(DoorType type, int x, int z)
+{
+	int freeIndex = -1;
+
+	for(int n = 0; n < MAX_DOORS; n++)
+	{
+		if(freeIndex == -1 && doors[n].type == DoorType_None)
+		{
+			freeIndex = n;
+		}
+		if(doors[n].type != DoorType_None && doors[n].x == x && doors[n].z == z)
+		{
+			// Already streamed in
+			return;
+		}
+	}
+
+	if(freeIndex == -1)
+	{
+		for(int n = 0; n < MAX_DOORS; n++)
+		{
+			if(doors[n].x < bufferX || doors[n].x >= bufferX + MAP_BUFFER_SIZE
+			|| doors[n].z < bufferZ || doors[n].z >= bufferZ + MAP_BUFFER_SIZE)
+			{
+				freeIndex = n;
+				break;
+			}
+		}
+	}
+
+	if(freeIndex == -1)
+	{
+#ifdef _WIN32
+		printf("No room to spawn door!\n");
+#endif
+		return;
+	}
+
+	doors[freeIndex].x = x;
+	doors[freeIndex].z = z;
+	doors[freeIndex].open = 0;
+	doors[freeIndex].state = DoorState_Idle;
+	doors[freeIndex].type = type;
+}
+
+void Map::openDoorsAt(int x, int z)
+{
+	if(!isDoor(x, z))
+		return;
+
+	for(int n = 0; n < MAX_DOORS; n++)
+	{
+		if(doors[n].type != DoorType_None && doors[n].x == x && doors[n].z == z)
+		{
+			doors[n].state = DoorState_Opening;
+			return;
+		}
+	}
+}
+
+
+void Door::update()
+{
+	switch(state)
+	{
+	case DoorState_Opening:
+		if(open < DOOR_MAX_OPEN)
+		{
+			open ++;
+		}
+		else state = DoorState_Closing;
+		break;
+	case DoorState_Closing:
+		if(open > 0)
+		{
+			open --;
+		}
+		else state = DoorState_Idle;
+		break;
 	}
 }

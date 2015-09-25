@@ -21,6 +21,14 @@ uint8_t texturePalette[] =
 	127, 127, 127		// grey
 };
 
+uint8_t texturePaletteSprite[] = 
+{
+	0, 255, 255,		// cyan
+	255, 255, 255,		// white
+	0, 0, 0,			// black
+	127, 127, 127		// grey
+};
+
 EncodeMode encodeMode = Encode_Invalid;
 
 int GetPaletteIndexFromColour(uint8_t* palette, uint8_t r, uint8_t g, uint8_t b)
@@ -56,7 +64,8 @@ vector<uint8_t> EncodeImage(vector<uint8_t> data, int width, int height)
 		for(int y = 0; y < height; y++)
 		{
 			int position = (y * width + x) * 4;
-			int index = GetPaletteIndexFromColour(texturePalette, data[position], data[position + 1], data[position + 2]);
+			uint8_t* palette = encodeMode == Encode_Texture ? texturePalette : texturePaletteSprite;
+			int index = GetPaletteIndexFromColour(palette, data[position], data[position + 1], data[position + 2]);
 			buffer |= ((index & 0x3) << bufferPos);
 			bufferPos += 2;
 			if(bufferPos >= 8)
