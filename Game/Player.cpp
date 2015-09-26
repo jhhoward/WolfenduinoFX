@@ -1,5 +1,6 @@
 #include "Engine.h"
 #include "Player.h"
+#include "TileTypes.h"
 
 Player::Player()
 {
@@ -194,6 +195,34 @@ void Player::updateWeapon()
 			weapon.frame = 0;
 			weapon.shooting = false;
 			break;
+		}
+	}
+}
+
+void Player::init()
+{
+	// Find player start tile
+	for(int j = 0; j < MAP_SIZE; j += MAP_BUFFER_SIZE)
+	{
+		for(int i = 0; i < MAP_SIZE; i += MAP_BUFFER_SIZE)
+		{
+			Engine::map.updateBufferPosition(i, j);
+
+			for(int a = 0; a < MAP_BUFFER_SIZE; a++)
+			{
+				for(int b = 0; b < MAP_BUFFER_SIZE; b++)
+				{
+					uint8_t tile = Engine::map.getTileFast(b, a);
+
+					if(tile >= Tile_PlayerStart_North && tile <= Tile_PlayerStart_West)
+					{
+						x = (i + b) * CELL_SIZE + CELL_SIZE / 2;
+						z = (j + a) * CELL_SIZE + CELL_SIZE / 2;
+						direction = (uint8_t)((tile - Tile_PlayerStart_North - 1) * DEGREES_90);
+						return;
+					}
+				}
+			}
 		}
 	}
 }

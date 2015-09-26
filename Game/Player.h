@@ -15,6 +15,7 @@ class Player
 {
 public:
 	Player();
+	void init();
 	void update();
 	void move(int16_t deltaX, int16_t deltaZ);
 

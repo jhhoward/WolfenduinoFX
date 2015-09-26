@@ -11,6 +11,7 @@ void Engine::init()
 	player.x = CELL_SIZE * MAP_SIZE / 2;
 	renderer.init();
 	map.init();
+	player.init();
 }
 
 #include <math.h> // temp
