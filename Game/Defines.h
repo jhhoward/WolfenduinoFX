@@ -1,6 +1,7 @@
 #ifndef DEFINES_H_
 #define DEFINES_H_
 
+#if defined (_WIN32)
 #define EMULATE_GAMEBUINO 1
 //#define EMULATE_ARDUBOY 1 
 //#define EMULATE_HACKVISION 1
@@ -21,12 +22,21 @@
 #elif defined(EMULATE_UZEBOX)
 // Uzebox
 #define DISPLAYWIDTH 120
-#define DISPLAYHEIGHT 96
-//#define DISPLAYWIDTH 60
-//#define DISPLAYHEIGHT 64
+#define DISPLAYHEIGHT 48
 #else
 #define DISPLAYWIDTH 256
 #define DISPLAYHEIGHT 192
+#endif
+
+#elif defined(PLATFORM_UZEBOX)
+#define DEFER_RENDER 1
+#define DISPLAYWIDTH 120
+#define DISPLAYHEIGHT 48
+#define EMULATE_UZEBOX 1
+
+#else // Gamebuino
+#define DISPLAYWIDTH LCDWIDTH
+#define DISPLAYHEIGHT LCDHEIGHT
 #endif
 
 #define HALF_DISPLAYWIDTH (DISPLAYWIDTH >> 1)

@@ -21,6 +21,10 @@ public:
 	void init();
 	void drawFrame();
 
+#ifdef DEFER_RENDER
+	void drawDeferredFrame();
+#endif
+
 private:
 	void initWBuffer();
 	void drawFloorAndCeiling();  
@@ -33,7 +37,6 @@ private:
 	void drawDoors();
 
 	void queueSprite(uint8_t* sprite, int16_t x, int16_t z);
-	void drawSprite(uint8_t* sprite, int16_t x, int16_t z);
 	void drawQueuedSprite(uint8_t id);
 	void drawWeapon();
 
@@ -43,6 +46,11 @@ private:
 	int8_t xcell, zcell;
 	int8_t numColumns;
 	uint8_t wbuffer[DISPLAYWIDTH];
+
+#ifdef DEFER_RENDER
+	uint8_t texbuffer[DISPLAYWIDTH];
+	uint8_t ubuffer[DISPLAYWIDTH];
+#endif
 
 	uint8_t renderQueueHead;
 	RenderQueueItem renderQueue[RENDER_QUEUE_CAPACITY];

@@ -9,6 +9,7 @@
 #include "Data_Pistol.h"
 #include "Data_Decorations.h"
 #include "Data_BlockingDecorations.h"
+#include "Data_Items.h"
 
 #include <stdio.h>
 int overdraw = 0;
@@ -28,7 +29,7 @@ void Renderer::drawWeapon()
 			uint8_t pixel = reader.read();
 			if(pixel)
 			{
-				Platform.drawPixel(i + HALF_DISPLAYWIDTH - 8, DISPLAYHEIGHT - 16 + j, (pixel - 1) ? 0 : 1);
+				drawPixel(i + HALF_DISPLAYWIDTH - 8, DISPLAYHEIGHT - 16 + j, (pixel - 1) ? 0 : 1);
 			}
 		}
 	}
@@ -50,7 +51,10 @@ void Renderer::drawFrame()
 	xcell = Engine::player.x / CELL_SIZE;
 	zcell = Engine::player.z / CELL_SIZE;
 	initWBuffer();
+
+#if !defined(DEFER_RENDER)
 	drawFloorAndCeiling();
+#endif
 
 	drawBufferedCells();
 	drawDoors();
@@ -59,23 +63,38 @@ void Renderer::drawFrame()
 	queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 3));
 	queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 4));
 	*/
+#if !defined(DEFER_RENDER)
 	for(uint8_t item = renderQueueHead; item != NULL_QUEUE_ITEM; item = renderQueue[item].next)
 	{
 		drawQueuedSprite(item);
 	}
-	if(0)
-	{
-		static int time = 0;
-		time++;
-		int frame = 0 + ((time / 4) % 9);
-		int offset = TEXTURE_STRIDE * TEXTURE_SIZE * frame;
-
-		drawSprite((uint8_t*)Data_guardSprite + offset, CELL_SIZE * MAP_SIZE / 2, CELL_SIZE * (MAP_SIZE - 2));
-		drawSprite((uint8_t*)Data_guardSprite + offset, CELL_SIZE * MAP_SIZE / 2, CELL_SIZE * (MAP_SIZE - 32));
-	}
 
 	drawWeapon();
+#endif
 }
+
+#ifdef DEFER_RENDER
+void Renderer::drawDeferredFrame()
+{
+	for(int x = 0; x < DISPLAYWIDTH; x++)
+	{
+		int16_t w = wbuffer[x];
+		int16_t halfW = w >> 1;
+		for(int y = 0; y < HALF_DISPLAYHEIGHT - halfW - 1; y++)
+		{
+			clearPixel(x, y);
+			clearPixel(x, DISPLAYHEIGHT - y - 1);
+		}
+		drawStrip(x, wbuffer[x], ubuffer[x], texbuffer[x]);
+	}
+	/*for(uint8_t item = renderQueueHead; item != NULL_QUEUE_ITEM; item = renderQueue[item].next)
+	{
+		drawQueuedSprite(item);
+	}
+
+	drawWeapon();*/
+}
+#endif
 
 void Renderer::drawBufferedCells()
 {
@@ -160,29 +179,29 @@ void Renderer::drawFloorAndCeiling()
 #if defined(EMULATE_UZEBOX)
 			if(y < HALF_DISPLAYHEIGHT || ((x & y) & 1) == 0)
 			{
-				Platform.drawPixel(x, y, 3);
+				drawPixel(x, y, 3);
 			}
 			else
 			{
-				Platform.drawPixel(x, y, 2);
+				drawPixel(x, y, 2);
 			}
 #elif 1
 			if(y < HALF_DISPLAYHEIGHT || ((x & y) & 1) == 0)
 			{
-				Platform.drawPixel(x, y, 1);
+				clearPixel(x, y);
 			}
 			else
 			{
-				Platform.drawPixel(x, y, 0);
+				setPixel(x, y);
 			}
 #else
 			if(y < HALF_DISPLAYHEIGHT || ((x ^ y) & 1) == 1)
 			{
-				Platform.drawPixel(x, y, 0);
+				setPixel(x, y);
 			}
 			else
 			{
-				Platform.drawPixel(x, y, 1);
+				clearPixel(x, y);
 			}
 #endif
 		}
@@ -206,7 +225,7 @@ void Renderer::drawCell(int cellX, int cellZ)
 	uint8_t tile = Engine::map.getTileFast(cellX, cellZ);
 	if (tile == 0)
 		return;
-
+	
 	if(tile >= Tile_FirstDecoration && tile <= Tile_LastDecoration)
 	{
 		queueSprite((uint8_t*)Data_decorations + (tile - Tile_FirstDecoration) * TEXTURE_SIZE * TEXTURE_STRIDE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
@@ -224,9 +243,8 @@ void Renderer::drawCell(int cellX, int cellZ)
 	}
 	if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
 	{
-		queueSprite((uint8_t*)Data_decorations + (1) * TEXTURE_SIZE * TEXTURE_STRIDE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
+		queueSprite((uint8_t*)Data_itemSprites + (tile - Tile_FirstItem) * TEXTURE_SIZE * TEXTURE_STRIDE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
 		return;
-		//queueSprite((uint8_t*)Data_guardSprite, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
 	}
 
 	if(tile >= Tile_FirstWall && tile <= Tile_LastWall)
@@ -369,36 +387,36 @@ void Renderer::drawCell(int cellX, int cellZ)
 			switch(texData)
 			{
 			case 1:
-				Platform.drawPixel(x, y, 1);
+				clearPixel(x, y);
 				break;
 			case 2:
-				Platform.drawPixel(x, y, 0);
+				setPixel(x, y);
 				break;
 			case 0:
 #if defined(EMULATE_UZEBOX)
-				Platform.drawPixel(x, y, 2);
+				drawPixel(x, y, 2);
 #else
 				if((x ^ y) & 1)
 				{
-					Platform.drawPixel(x, y, 1);
+					clearPixel(x, y);
 				}
 				else
 				{
-					Platform.drawPixel(x, y, 0);
+					setPixel(x, y);
 				}
 #endif
 				break;
 			case 3:
 #if defined(EMULATE_UZEBOX)
-				Platform.drawPixel(x, y, 3);
+				drawPixel(x, y, 3);
 #else
 				if((x & y) & 1)
 				{
-					Platform.drawPixel(x, y, 0);
+					setPixel(x, y);
 				}
 				else
 				{
-					Platform.drawPixel(x, y, 1);
+					clearPixel(x, y);
 				}
 #endif
 				break;
@@ -417,7 +435,7 @@ void Renderer::drawCell(int cellX, int cellZ)
 
 #if FORCE_WALL_STRIP_EDGES
 	if(y2 < DISPLAYHEIGHT)
-		Platform.drawPixel(x, y2, 0);
+		setPixel(x, y2);
 #endif
 
 }
@@ -492,6 +510,7 @@ void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint
 		ustep = -1;
 	}
 
+//	for (int x=firstx; x<=lastx; x++)
 	for (int x=sx1; x<=sx2; x++)
 	{
 		if (x >= 0 && x < DISPLAYWIDTH && w > wbuffer[x])
@@ -510,7 +529,13 @@ void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint
 			}
 
 			numColumns++;
+
+#ifdef DEFER_RENDER
+			ubuffer[x] = u;
+			texbuffer[x] = textureId;
+#else
 			drawStrip(x, w, u, textureId);
+#endif
 		}
 
 		werror -= dw;
@@ -574,96 +599,6 @@ void Renderer::drawDoors()
 			{
 				drawWall(door.x * CELL_SIZE + offset * 2, door.z * CELL_SIZE + CELL_SIZE / 2, 
 					door.x * CELL_SIZE + CELL_SIZE, door.z * CELL_SIZE + CELL_SIZE / 2, textureId, 15 - offset, 0);
-			}
-		}
-	}
-}
-
-void Renderer::drawSprite(uint8_t* sprite, int16_t _x, int16_t _z)
-{
-	int16_t zt = (int16_t)(FIXED_TO_INT(cos_dir * (int32_t)(_x-xpos)) - FIXED_TO_INT(sin_dir * (int32_t)(_z-zpos)));
-	int16_t xt = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_x-xpos)) + FIXED_TO_INT(cos_dir * (int32_t)(_z-zpos)));
-
-	// clip to the front pane
-	if (zt < CLIP_PLANE)
-		return;
-
-	// apply perspective projection
-	int16_t vx = (int16_t)(xt * NEAR_PLANE * CAMERA_SCALE / zt);  
-	int16_t w = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE) / zt);
-	int16_t halfW = w >> 1;
-	int y1 = (HALF_DISPLAYHEIGHT) - halfW;
-	int y2 = (HALF_DISPLAYHEIGHT) + halfW;
-
-	// transform the end points into screen space
-	int16_t sx1 = (int16_t)((DISPLAYWIDTH / 2) + vx - halfW);
-	int16_t sx2 = sx1 + w;
-
-
-	int16_t dx = w;
-	int16_t uerror = dx >> 1;
-	int8_t u = 0;
-	int8_t du = 16, ustep = 1;
-
-	for (int x = sx1; x <= sx2; x++)
-	{
-		if (x >= 0 && x < DISPLAYWIDTH && w > wbuffer[x])
-		{        
-			int verror = halfW;
-
-			BitPairReader textureReader((uint8_t*) sprite + u * TEXTURE_STRIDE);
-			uint8_t texData = textureReader.read();
-
-			for(int y = y1; y <= y2; y++)
-			{
-				if(y >= 0 && y < DISPLAYHEIGHT)
-				{
-					switch(texData)
-					{
-					case 0:
-						break;
-					case 1:
-						Platform.drawPixel(x, y, 1);
-						break;
-					case 2:
-						Platform.drawPixel(x, y, 0);
-						break;
-					case 3:
-#if defined(EMULATE_UZEBOX)
-						Platform.drawPixel(x, y, 2);
-#else
-						if((x ^ y) & 1)
-						{
-							Platform.drawPixel(x, y, 1);
-						}
-						else
-						{
-							Platform.drawPixel(x, y, 0);
-						}
-#endif
-						break;
-					}
-
-				}
-
-				verror -= 15;
-
-				while(verror < 0)
-				{
-					texData = textureReader.read();
-					verror += w;
-				}
-			}
-		}
-
-		uerror -= du;
-
-		if(dx > 0)
-		{
-			while(uerror < 0)
-			{
-				u += ustep;
-				uerror += dx;
 			}
 		}
 	}
@@ -787,22 +722,22 @@ void Renderer::drawQueuedSprite(uint8_t id)
 					case 0:
 						break;
 					case 1:
-						Platform.drawPixel(x, y, 1);
+						clearPixel(x, y);
 						break;
 					case 2:
-						Platform.drawPixel(x, y, 0);
+						setPixel(x, y);
 						break;
 					case 3:
 #if defined(EMULATE_UZEBOX)
-						Platform.drawPixel(x, y, 2);
+						drawPixel(x, y, 2);
 #else
 						if((x ^ y) & 1)
 						{
-							Platform.drawPixel(x, y, 1);
+							clearPixel(x, y);
 						}
 						else
 						{
-							Platform.drawPixel(x, y, 0);
+							setPixel(x, y);
 						}
 #endif
 						break;

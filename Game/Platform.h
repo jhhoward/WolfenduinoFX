@@ -21,7 +21,6 @@ enum
 class PlatformBase
 {
 public:
-	virtual void drawPixel(uint8_t x, uint8_t y, uint8_t colour) = 0;
 	uint8_t readInput() { return inputState; }
 
 	uint8_t inputState;

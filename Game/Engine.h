@@ -3,12 +3,16 @@
 
 #ifdef _WIN32
 #include "../Windows/SDLPlatform.h"
-#else
+#elif !defined(PLATFORM_UZEBOX)
 #define PLATFORM_GAMEBUINO 1
 #endif
 
 #ifdef PLATFORM_GAMEBUINO
 #include "GamebuinoPlatform.h"
+#endif
+
+#ifdef PLATFORM_UZEBOX
+#include "UzeboxPlatform.h"
 #endif
 
 #include "Platform.h"

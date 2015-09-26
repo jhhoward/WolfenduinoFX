@@ -9,7 +9,7 @@ class SDLPlatform : public PlatformBase
 public:
 	void init();
 	void run();
-	virtual void drawPixel(uint8_t x, uint8_t y, uint8_t colour);
+	void drawPixel(uint8_t x, uint8_t y, uint8_t colour);
 	
 private:
 	void drawPixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
@@ -24,5 +24,18 @@ private:
 };
 
 extern SDLPlatform Platform;
+
+inline void drawPixel(uint8_t x, uint8_t y, uint8_t colour)
+{
+	Platform.drawPixel(x, y, colour);
+}
+inline void setPixel(uint8_t x, uint8_t y)
+{
+	Platform.drawPixel(x, y, 0);
+}
+inline void clearPixel(uint8_t x, uint8_t y)
+{
+	Platform.drawPixel(x, y, 1);
+}
 
 #endif
