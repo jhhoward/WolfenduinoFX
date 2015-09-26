@@ -310,6 +310,8 @@ void Renderer::drawCell(int cellX, int cellZ)
 	}
 }
 
+#define FORCE_WALL_STRIP_EDGES 1
+
 /*inline*/ void Renderer::drawStrip(int16_t x, int16_t w, int8_t u, uint8_t textureId)
 {
 	int halfW = w >> 1;
@@ -320,7 +322,11 @@ void Renderer::drawCell(int cellX, int cellZ)
 	BitPairReader textureReader((uint8_t*) Data_wallTextures + u * TEXTURE_STRIDE + textureId * (TEXTURE_STRIDE * TEXTURE_SIZE));
 	uint8_t texData = textureReader.read();
 
+#if FORCE_WALL_STRIP_EDGES
+	for(int y = y1; y < y2; y++)
+#else
 	for(int y = y1; y <= y2; y++)
+#endif
 	{
 		if(y >= 0 && y < DISPLAYHEIGHT)
 		{
@@ -372,6 +378,12 @@ void Renderer::drawCell(int cellX, int cellZ)
 			verror += w;
 		}
 	}
+
+#if FORCE_WALL_STRIP_EDGES
+	if(y2 < DISPLAYHEIGHT)
+		Platform.drawPixel(x, y2, 0);
+#endif
+
 }
 
 // draws one side of a cell
