@@ -97,7 +97,7 @@ int main(int, char**)
 {
 	for(int n = 0; n < 256; n++)
 	{
-		printf("%d %d\n", n, FixedMath::Sin(n));
+		WARNING("%d %d\n", n, FixedMath::Sin(n));
 	}
 
 	Platform.init();

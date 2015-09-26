@@ -5,6 +5,16 @@
 #include "Engine.h"
 #include "Defines.h"
 
+#define NULL_QUEUE_ITEM 0xff
+#define RENDER_QUEUE_CAPACITY 10
+
+struct RenderQueueItem
+{
+	uint8_t* data;
+	uint8_t x, w;
+	uint8_t next;
+};
+
 class Renderer
 {
 public:
@@ -22,7 +32,9 @@ private:
 	void drawBufferedCells();
 	void drawDoors();
 
+	void queueSprite(uint8_t* sprite, int16_t x, int16_t z);
 	void drawSprite(uint8_t* sprite, int16_t x, int16_t z);
+	void drawQueuedSprite(uint8_t id);
 	void drawWeapon();
 
 	int16_t xpos, zpos;
@@ -31,6 +43,9 @@ private:
 	int8_t xcell, zcell;
 	int8_t numColumns;
 	uint8_t wbuffer[DISPLAYWIDTH];
+
+	uint8_t renderQueueHead;
+	RenderQueueItem renderQueue[RENDER_QUEUE_CAPACITY];
 };
 
 class BitPairReader

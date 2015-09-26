@@ -45,6 +45,9 @@
     <ClInclude Include="Windows\SDLPlatform.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Game\TileTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Game\Engine.cpp">

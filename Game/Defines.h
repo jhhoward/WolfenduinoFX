@@ -21,8 +21,9 @@
 #elif defined(EMULATE_UZEBOX)
 // Uzebox
 #define DISPLAYWIDTH 120
-//#define DISPLAYHEIGHT 96
-#define DISPLAYHEIGHT 80
+#define DISPLAYHEIGHT 96
+//#define DISPLAYWIDTH 60
+//#define DISPLAYHEIGHT 64
 #else
 #define DISPLAYWIDTH 256
 #define DISPLAYHEIGHT 192
@@ -40,6 +41,10 @@
 #define pgm_read_word(x) (*((uint16_t*)x))
 
 #define pgm_read_ptr(x) (*((uintptr_t*)x))
+
+#define WARNING(msg, ...) printf((msg), __VA_ARGS__)
+#else
+#define WARNING(msg, ...)
 #endif
 // end
 

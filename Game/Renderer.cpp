@@ -1,12 +1,14 @@
 #include "Engine.h"
 #include "Renderer.h"
 #include "FixedMath.h"
-
+#include "TileTypes.h"
 
 #include <math.h> // temp
 #include "Data_Walls.h"
 #include "Data_Guard.h"
 #include "Data_Pistol.h"
+#include "Data_Decorations.h"
+#include "Data_BlockingDecorations.h"
 
 #include <stdio.h>
 int overdraw = 0;
@@ -17,7 +19,7 @@ void Renderer::init()
 
 void Renderer::drawWeapon()
 {
-	BitPairReader reader((uint8_t*)Data_pistolSprite);
+	BitPairReader reader((uint8_t*)Data_pistolSprite + TEXTURE_STRIDE * TEXTURE_SIZE * Engine::player.weapon.frame);
 
 	for(int i = 0; i < 16; i++)
 	{
@@ -34,6 +36,12 @@ void Renderer::drawWeapon()
 
 void Renderer::drawFrame()
 {
+	renderQueueHead = NULL_QUEUE_ITEM;
+	for(int n = 0; n < RENDER_QUEUE_CAPACITY; n++)
+	{
+		renderQueue[n].data = NULL;
+	}
+
 	xpos = Engine::player.x;
 	zpos = Engine::player.z;
 	cos_dir = FixedMath::Cos(-Engine::player.direction);
@@ -47,6 +55,15 @@ void Renderer::drawFrame()
 	drawBufferedCells();
 	drawDoors();
 
+	/*queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 2));
+	queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 3));
+	queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 4));
+	*/
+	for(uint8_t item = renderQueueHead; item != NULL_QUEUE_ITEM; item = renderQueue[item].next)
+	{
+		drawQueuedSprite(item);
+	}
+	if(0)
 	{
 		static int time = 0;
 		time++;
@@ -182,128 +199,147 @@ void Renderer::drawCellWall(uint8_t textureId, int x1, int z1, int x2, int z2)
 
 void Renderer::drawCell(int cellX, int cellZ)
 {
-	if (!Engine::map.isValid(cellX, cellZ))
-		return;
-
-	if (!Engine::map.isSolid(cellX, cellZ))
-		return;
-
-	uint8_t tile = Engine::map.getTile(cellX, cellZ);
-	if (tile == 0)
-		return;
-
 	// clip cells behind us
 	if((cos_dir * (cellX - xcell) - sin_dir * (cellZ - zcell)) <= 0)
 		return;
 
-	uint8_t textureId = Engine::map.getTextureId(cellX, cellZ);
+	uint8_t tile = Engine::map.getTileFast(cellX, cellZ);
+	if (tile == 0)
+		return;
 
-	if (zpos < cellZ * CELL_SIZE)
+	if(tile >= Tile_FirstDecoration && tile <= Tile_LastDecoration)
 	{
-		if (xpos > cellX * CELL_SIZE)
-		{
-			// north west quadrant
-			if (zpos < cellZ * CELL_SIZE)
-			{
-				if(Engine::map.isDoor(cellX, cellZ - 1))
-				{
-					drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ, cellX+1, cellZ);  // south wall
-				}
-				else if(!Engine::map.isSolid(cellX, cellZ - 1))
-				{
-					drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
-				}
-			}
-			if (xpos > (cellX+1) * CELL_SIZE)
-			{
-				if(Engine::map.isDoor(cellX + 1, cellZ))
-				{
-					drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
-				}
-				else if(!Engine::map.isSolid(cellX+1, cellZ))
-				{
-					drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
-				}
-			}
-		}
-		else
-		{
-			// north east quadrant
-			if (zpos < cellZ * CELL_SIZE)
-			{
-				if(Engine::map.isDoor(cellX, cellZ-1))
-				{
-					drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ, cellX+1, cellZ);  // south wall
-				}
-				else if(!Engine::map.isSolid(cellX, cellZ-1))
-				{
-					drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
-				}
-			}
-			if (xpos< cellX * CELL_SIZE)
-			{
-				if(Engine::map.isDoor(cellX-1, cellZ))
-				{
-					drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ+1, cellX, cellZ);  // west wall
-				}
-				else if(!Engine::map.isSolid(cellX-1, cellZ))
-				{
-					drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
-				}
-			}
-		}
+		queueSprite((uint8_t*)Data_decorations + (tile - Tile_FirstDecoration) * TEXTURE_SIZE * TEXTURE_STRIDE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
+		return;
 	}
-	else
+	if(tile >= Tile_FirstBlockingDecoration && tile <= Tile_LastBlockingDecoration)
 	{
-		if (xpos > cellX * CELL_SIZE)
+		queueSprite((uint8_t*)Data_blockingDecorations + (tile - Tile_FirstBlockingDecoration) * TEXTURE_SIZE * TEXTURE_STRIDE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
+		return;
+	}
+	if(tile >= Tile_FirstActor && tile <= Tile_LastActor)
+	{
+		queueSprite((uint8_t*)Data_guardSprite, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
+		return;
+	}
+	if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
+	{
+		queueSprite((uint8_t*)Data_decorations + (1) * TEXTURE_SIZE * TEXTURE_STRIDE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
+		return;
+		//queueSprite((uint8_t*)Data_guardSprite, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
+	}
+
+	if(tile >= Tile_FirstWall && tile <= Tile_LastWall)
+	{
+		uint8_t textureId = tile - Tile_FirstWall; //Engine::map.getTextureId(cellX, cellZ);
+
+		if (zpos < cellZ * CELL_SIZE)
 		{
-			// south west quadrant
-			if (zpos > (cellZ+1) * CELL_SIZE)
+			if (xpos > cellX * CELL_SIZE)
 			{
-				if(Engine::map.isDoor(cellX, cellZ+1))
+				// north west quadrant
+				if (zpos < cellZ * CELL_SIZE)
 				{
-					drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+					if(Engine::map.isDoor(cellX, cellZ - 1))
+					{
+						drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ, cellX+1, cellZ);  // south wall
+					}
+					else if(!Engine::map.isSolid(cellX, cellZ - 1))
+					{
+						drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
+					}
 				}
-				else if(!Engine::map.isSolid(cellX, cellZ+1))
+				if (xpos > (cellX+1) * CELL_SIZE)
 				{
-					drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+					if(Engine::map.isDoor(cellX + 1, cellZ))
+					{
+						drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+					}
+					else if(!Engine::map.isSolid(cellX+1, cellZ))
+					{
+						drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+					}
 				}
 			}
-			if (xpos > (cellX+1) * CELL_SIZE)
+			else
 			{
-				if(Engine::map.isDoor(cellX+1, cellZ))
+				// north east quadrant
+				if (zpos < cellZ * CELL_SIZE)
 				{
-					drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+					if(Engine::map.isDoor(cellX, cellZ-1))
+					{
+						drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ, cellX+1, cellZ);  // south wall
+					}
+					else if(!Engine::map.isSolid(cellX, cellZ-1))
+					{
+						drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
+					}
 				}
-				else if(!Engine::map.isSolid(cellX+1, cellZ))
+				if (xpos< cellX * CELL_SIZE)
 				{
-					drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+					if(Engine::map.isDoor(cellX-1, cellZ))
+					{
+						drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ+1, cellX, cellZ);  // west wall
+					}
+					else if(!Engine::map.isSolid(cellX-1, cellZ))
+					{
+						drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
+					}
 				}
 			}
 		}
 		else
 		{
-			// south east quadrant
-			if (zpos > (cellZ+1) * CELL_SIZE)
+			if (xpos > cellX * CELL_SIZE)
 			{
-				if(Engine::map.isDoor(cellX, cellZ+1))
+				// south west quadrant
+				if (zpos > (cellZ+1) * CELL_SIZE)
 				{
-					drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+					if(Engine::map.isDoor(cellX, cellZ+1))
+					{
+						drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+					}
+					else if(!Engine::map.isSolid(cellX, cellZ+1))
+					{
+						drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+					}
 				}
-				else if(!Engine::map.isSolid(cellX, cellZ+1))
+				if (xpos > (cellX+1) * CELL_SIZE)
 				{
-					drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+					if(Engine::map.isDoor(cellX+1, cellZ))
+					{
+						drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+					}
+					else if(!Engine::map.isSolid(cellX+1, cellZ))
+					{
+						drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+					}
 				}
 			}
-			if (xpos< cellX * CELL_SIZE)
+			else
 			{
-				if(Engine::map.isDoor(cellX-1, cellZ))
+				// south east quadrant
+				if (zpos > (cellZ+1) * CELL_SIZE)
 				{
-					drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ+1, cellX, cellZ);  // west wall
+					if(Engine::map.isDoor(cellX, cellZ+1))
+					{
+						drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+					}
+					else if(!Engine::map.isSolid(cellX, cellZ+1))
+					{
+						drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+					}
 				}
-				else if(!Engine::map.isSolid(cellX-1, cellZ))
+				if (xpos< cellX * CELL_SIZE)
 				{
-					drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
+					if(Engine::map.isDoor(cellX-1, cellZ))
+					{
+						drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ+1, cellX, cellZ);  // west wall
+					}
+					else if(!Engine::map.isSolid(cellX-1, cellZ))
+					{
+						drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
+					}
 				}
 			}
 		}
@@ -633,3 +669,166 @@ void Renderer::drawSprite(uint8_t* sprite, int16_t _x, int16_t _z)
 	}
 }
 
+void Renderer::queueSprite(uint8_t* sprite, int16_t _x, int16_t _z)
+{
+	int16_t zt = (int16_t)(FIXED_TO_INT(cos_dir * (int32_t)(_x-xpos)) - FIXED_TO_INT(sin_dir * (int32_t)(_z-zpos)));
+	int16_t xt = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_x-xpos)) + FIXED_TO_INT(cos_dir * (int32_t)(_z-zpos)));
+
+	// clip to the front plane
+	if (zt < CLIP_PLANE)
+		return;
+
+	// apply perspective projection
+	int16_t vx = (int16_t)(xt * NEAR_PLANE * CAMERA_SCALE / zt);  
+
+	if(vx <= -DISPLAYWIDTH || vx >= DISPLAYWIDTH)
+		return;
+
+	int16_t w = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE) / zt);
+	int16_t x = vx + HALF_DISPLAYWIDTH;
+
+	if(w > 255)
+		w = 255;
+
+	// TODO: cull if off screen (x)
+	uint8_t newItem = NULL_QUEUE_ITEM;
+	for(int n = 0; n < RENDER_QUEUE_CAPACITY; n++)
+	{
+		if(renderQueue[n].data == NULL)
+		{
+			newItem = n;
+			break;
+		}
+	}
+
+	if(newItem == NULL_QUEUE_ITEM)
+	{
+		if(w > renderQueue[renderQueueHead].w)
+		{
+			newItem = renderQueueHead;
+			renderQueueHead = renderQueue[renderQueueHead].next;
+		}
+		else
+		{
+			WARNING("Out of queue space!\n");
+			return;
+		}
+	}
+
+	renderQueue[newItem].x = x;
+	renderQueue[newItem].w = w;
+	renderQueue[newItem].data = sprite;
+
+	if(renderQueueHead == NULL_QUEUE_ITEM)
+	{
+		renderQueueHead = newItem;
+		renderQueue[newItem].next = NULL_QUEUE_ITEM;
+		return;
+	}
+	else
+	{
+		if(w < renderQueue[renderQueueHead].w)
+		{
+			renderQueue[newItem].next = renderQueueHead;
+			renderQueueHead = newItem;
+		}
+		else
+		{
+			for(uint8_t item = renderQueueHead; item != NULL_QUEUE_ITEM; item = renderQueue[item].next)
+			{
+				if(renderQueue[item].next == NULL_QUEUE_ITEM)
+				{
+					renderQueue[item].next = newItem;
+					renderQueue[newItem].next = NULL_QUEUE_ITEM;
+					break;
+				}
+				else if(w < renderQueue[renderQueue[item].next].w)
+				{
+					renderQueue[newItem].next = renderQueue[item].next;
+					renderQueue[item].next = newItem;
+					break;
+				}
+			}
+		}
+	}
+}
+
+void Renderer::drawQueuedSprite(uint8_t id)
+{
+	int16_t halfW = renderQueue[id].w >> 1;
+	int y1 = (HALF_DISPLAYHEIGHT) - halfW;
+	int y2 = (HALF_DISPLAYHEIGHT) + halfW;
+
+	// transform the end points into screen space
+	int16_t w = renderQueue[id].w;
+	int16_t sx1 = renderQueue[id].x - halfW;
+	int16_t sx2 = sx1 + w;
+
+	int16_t dx = w;
+	int16_t uerror = dx >> 1;
+	int8_t u = 0;
+	int8_t du = 16, ustep = 1;
+
+	for (int x = sx1; x <= sx2; x++)
+	{
+		if (x >= 0 && x < DISPLAYWIDTH && w > wbuffer[x])
+		{        
+			int verror = halfW;
+
+			BitPairReader textureReader((uint8_t*) renderQueue[id].data + u * TEXTURE_STRIDE);
+			uint8_t texData = textureReader.read();
+
+			for(int y = y1; y <= y2; y++)
+			{
+				if(y >= 0 && y < DISPLAYHEIGHT)
+				{
+					switch(texData)
+					{
+					case 0:
+						break;
+					case 1:
+						Platform.drawPixel(x, y, 1);
+						break;
+					case 2:
+						Platform.drawPixel(x, y, 0);
+						break;
+					case 3:
+#if defined(EMULATE_UZEBOX)
+						Platform.drawPixel(x, y, 2);
+#else
+						if((x ^ y) & 1)
+						{
+							Platform.drawPixel(x, y, 1);
+						}
+						else
+						{
+							Platform.drawPixel(x, y, 0);
+						}
+#endif
+						break;
+					}
+
+				}
+
+				verror -= 15;
+
+				while(verror < 0)
+				{
+					texData = textureReader.read();
+					verror += w;
+				}
+			}
+		}
+
+		uerror -= du;
+
+		if(dx > 0)
+		{
+			while(uerror < 0)
+			{
+				u += ustep;
+				uerror += dx;
+			}
+		}
+	}
+}

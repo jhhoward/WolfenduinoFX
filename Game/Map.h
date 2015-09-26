@@ -47,6 +47,12 @@ public:
 	bool isDoor(int cellX, int cellZ);
 	uint8_t getTextureId(int cellX, int cellZ);
 	uint8_t getTile(int cellX, int cellZ);
+	uint8_t getTileFast(int cellX, int cellZ)
+	{
+		cellX &= 0xf;
+		cellZ &= 0xf;
+		return m_mapBuffer[cellZ * MAP_BUFFER_SIZE + cellX];
+	}
 
 	int bufferX;
 	int bufferZ;

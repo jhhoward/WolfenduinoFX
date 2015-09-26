@@ -1,5 +1,6 @@
 #include "Engine.h"
 #include "Map.h"
+#include "TileTypes.h"
 
 #include <stdio.h>
 
@@ -38,15 +39,22 @@ void Map::update()
 bool Map::isDoor(int cellX, int cellZ)
 {
 	uint8_t tile = getTile(cellX, cellZ);
-	return tile == 0x5a || tile == 0x5b;
+	return tile >= Tile_FirstDoor && tile <= Tile_LastDoor;
 }
 
 bool Map::isBlocked(int cellX, int cellZ)
 {
 	uint8_t tile = getTile(cellX, cellZ);
-	if((tile > 0 && tile < 22) || tile == MAP_OUT_OF_BOUNDS)
+
+	// Check if this is a wall
+	if((tile >= Tile_FirstWall && tile <= Tile_LastWall))
 		return true;
 
+	// Check if this is a blocking decoration
+	if((tile >= Tile_FirstBlockingDecoration && tile <= Tile_LastBlockingDecoration))
+		return true;
+
+	// Check if the door is closed
 	for(int n = 0; n < MAX_DOORS; n++)
 	{
 		if(doors[n].type != DoorType_None && doors[n].x == cellX && doors[n].z == cellZ && doors[n].open < 16)
@@ -61,7 +69,7 @@ bool Map::isBlocked(int cellX, int cellZ)
 bool Map::isSolid(int cellX, int cellZ)
 {
 	uint8_t tile = getTile(cellX, cellZ);
-	return tile > 0 && tile < 22 && tile != MAP_OUT_OF_BOUNDS;
+	return tile >= Tile_FirstWall && tile <= Tile_LastWall && tile != MAP_OUT_OF_BOUNDS;
 }
 
 uint8_t Map::getTextureId(int cellX, int cellZ)
@@ -79,9 +87,7 @@ uint8_t Map::getTile(int x, int z)
 		return MAP_OUT_OF_BOUNDS;
 	}
 	
-	x &= 0xf;
-	z &= 0xf;
-	return m_mapBuffer[z * MAP_BUFFER_SIZE + x];
+	return getTileFast(x, z);
 }
 
 void Map::streamData(uint8_t* buffer, MapRead_Orientation orientation, int x, int z, int length)
@@ -106,15 +112,17 @@ void Map::streamData(uint8_t* buffer, MapRead_Orientation orientation, int x, in
 
 uint8_t Map::streamIn(uint8_t tile, int x, int z)
 {
-	if(tile == 0x5b)
+	if(tile >= Tile_FirstDoor && tile <= Tile_LastDoor)
 	{
-		streamInDoor(DoorType_StandardHorizontal, x, z);
-		//return 0;
-	}
-	if(tile == 0x5a)
-	{
-		streamInDoor(DoorType_StandardVertical, x, z);
-		//return 0;
+		//if(tile & 0x1)
+		if(tile == Tile_Door_Generic_Horizontal)
+		{
+			streamInDoor(DoorType_StandardHorizontal, x, z);
+		}
+		else if(tile == Tile_Door_Generic_Vertical)
+		{
+			streamInDoor(DoorType_StandardVertical, x, z);
+		}
 	}
 
 	return tile;
@@ -250,9 +258,7 @@ void Map::streamInDoor(DoorType type, int x, int z)
 
 	if(freeIndex == -1)
 	{
-#ifdef _WIN32
-		printf("No room to spawn door!\n");
-#endif
+		WARNING("No room to spawn door!\n");
 		return;
 	}
 

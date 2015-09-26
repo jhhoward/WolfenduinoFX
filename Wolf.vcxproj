@@ -18,6 +18,7 @@
     <ClInclude Include="Game\Platform.h" />
     <ClInclude Include="Game\Player.h" />
     <ClInclude Include="Game\Renderer.h" />
+    <ClInclude Include="Game\TileTypes.h" />
     <ClInclude Include="Game\TrigLUT.h" />
     <ClInclude Include="Game\Vector2.h" />
     <ClInclude Include="Windows\SDLPlatform.h" />

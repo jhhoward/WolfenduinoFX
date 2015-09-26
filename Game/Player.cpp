@@ -1,6 +1,14 @@
 #include "Engine.h"
 #include "Player.h"
 
+Player::Player()
+{
+	weapon.type = WeaponType_Pistol;
+	weapon.ammo = 8;
+	weapon.frame = 0;
+	weapon.debounce = false;
+}
+
 void Player::update()
 {
 	bool strafe = Platform.readInput() & Input_Btn_A;
@@ -13,11 +21,7 @@ void Player::update()
 	int16_t oldZ = z;
 	int16_t deltaX = 0, deltaZ = 0;
     
-	if (Platform.readInput() & Input_Btn_B)
-	{
-		movement *= 2;
-		turn *= 2;
-	}
+	updateWeapon();
     
 	if (Platform.readInput() & Input_Dpad_Down)
 	{
@@ -145,4 +149,51 @@ void Player::move(int16_t deltaX, int16_t deltaZ)
 
 	x += deltaX;
 	z += deltaZ;
+}
+
+#define NUM_WEAPON_FRAMES 4
+
+void Player::updateWeapon()
+{
+	if (Platform.readInput() & Input_Btn_B)
+	{
+		if(!weapon.debounce)
+		{
+			weapon.debounce = true;
+			if(weapon.shooting == false)
+			{
+				weapon.shooting = true;
+				weapon.time = 0;
+			}
+		}
+	}
+	else
+	{
+		weapon.debounce = false;
+	}
+
+	if(weapon.shooting)
+	{
+		weapon.time++;
+
+		switch(weapon.time)
+		{
+		case 2:
+			weapon.frame = 1;
+			break;
+		case 4:
+			weapon.frame = 2;
+			break;
+		case 6:
+			weapon.frame = 3;
+			break;
+		case 8:
+			weapon.frame = 1;
+			break;
+		case 10:
+			weapon.frame = 0;
+			weapon.shooting = false;
+			break;
+		}
+	}
 }
