@@ -30,6 +30,7 @@ uint8_t outlayer[MAP_SIZE * MAP_SIZE];
 
 int outChunkOffsets[NUM_MAP_CHUNKS];
 uint8_t outData[MAP_SIZE * MAP_SIZE];
+uint8_t idData[MAP_SIZE * MAP_SIZE];
 int outDataLength = 0;
 
 using namespace std;
@@ -516,6 +517,32 @@ void ConvertTiles()
 	}
 }
 
+void GenerateIds()
+{
+	uint8_t itemId = 0;
+	uint8_t actorId = 0;
+
+	for(int y = 0; y < MAP_SIZE; y++)
+	{
+		for(int x = 0; x < MAP_SIZE; x++)
+		{
+			uint8_t id = 0;
+			uint8_t tile = outlayer[y * MAP_SIZE + x];
+			if(tile >= Tile_FirstActor && tile <= Tile_LastActor)
+			{
+				id = actorId;
+				actorId++;
+			}
+			if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
+			{
+				id = itemId;
+				itemId++;
+			}
+			idData[y * MAP_SIZE + x] = id;
+		}
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	if(argc != 3)
@@ -536,14 +563,34 @@ int main(int argc, char* argv[])
 
 	fclose(fs);
 
+	ConvertTiles();
+	GenerateIds();
+
+	fs = fopen("wolf3d.dat", "wb");
+	for(int y = 0; y < MAP_SIZE; y++)
+	{
+		for(int x = 0; x < MAP_SIZE; x++)
+		{
+			fwrite(&outlayer[y * MAP_SIZE + x], 1, 1, fs);
+			fwrite(&idData[y * MAP_SIZE + x], 1, 1, fs);
+		}
+	}
+	for(int x = 0; x < MAP_SIZE; x++)
+	{
+		for(int y = 0; y < MAP_SIZE; y++)
+		{
+			fwrite(&outlayer[y * MAP_SIZE + x], 1, 1, fs);
+			fwrite(&idData[y * MAP_SIZE + x], 1, 1, fs);
+		}
+	}
+	fclose(fs);
+
 	fs = fopen(argv[2], "w");
 	if(!fs)
 	{
 		printf("Error opening %s\n", argv[2]);
 		return 0;
 	}
-
-	ConvertTiles();
 
 	fprintf(fs, "const uint8_t mapData[] PROGMEM = {\n\t");
 

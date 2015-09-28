@@ -14,7 +14,7 @@ void setup(void)
 	gb.battery.show = false;
 	gb.setFrameRate(30);
 	
-	Engine::init();
+	engine.init();
 }
 
 void loop()
@@ -22,7 +22,7 @@ void loop()
 	if(gb.update())
 	{
 		Platform.update();
-		Engine::update();
+		engine.update();
 	}
 }
 	

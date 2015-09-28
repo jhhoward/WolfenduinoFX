@@ -19,16 +19,21 @@
 #include "Renderer.h"
 #include "Player.h"
 #include "Map.h"
+#include "Actor.h"
 
 class Engine
 {
 public:
-	static void init();
-	static void update();
+	void init();
+	void update();
+	Actor* spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8_t cellZ);
 	
-	static Renderer renderer;
-	static Player player;
-	static Map map;
+	Renderer renderer;
+	Player player;
+	Map map;
+	Actor actors[MAX_ACTIVE_ACTORS];
 };
+
+extern Engine engine;
 
 #endif

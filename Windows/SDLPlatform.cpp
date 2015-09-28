@@ -56,7 +56,7 @@ void SDLPlatform::run()
 {
 	m_isRunning = true;
 	
-	Engine::init();
+	engine.init();
 	
 	while(m_isRunning)
 	{
@@ -81,7 +81,7 @@ void SDLPlatform::run()
 		SDL_SetRenderDrawColor ( m_appRenderer, 206, 221, 231, 255 );
 		SDL_RenderClear ( m_appRenderer );
 
-		Engine::update();
+		engine.update();
 
 		SDL_UpdateTexture(m_screenTexture, NULL, m_screenSurface->pixels, m_screenSurface->pitch);
 		SDL_RenderCopy(m_appRenderer, m_screenTexture, NULL, NULL);

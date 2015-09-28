@@ -27,6 +27,9 @@ bool Map::isValid(int x, int z)
 
 void Map::init()
 {
+#ifdef STANDARD_FILE_STREAMING
+	fopen_s(&m_mapStream, "wolf3d.dat", "rb");
+#endif
 	bufferX = 0;
 	bufferZ = 0;
 }
@@ -90,8 +93,24 @@ uint8_t Map::getTile(int x, int z)
 	return getTileFast(x, z);
 }
 
+static uint8_t mapStreamBuffer[MAP_BUFFER_SIZE * 2];
+
 void Map::streamData(uint8_t* buffer, MapRead_Orientation orientation, int x, int z, int length)
 {
+#ifdef STANDARD_FILE_STREAMING
+	if(m_mapStream)
+	{
+		int32_t offset = orientation == MapRead_Horizontal ? (z * MAP_SIZE + x) * 2 : (MAP_SIZE * MAP_SIZE * 2) + (x * MAP_SIZE + z) * 2;
+		fseek(m_mapStream, offset, SEEK_SET);
+		fread(mapStreamBuffer, 1, length * 2, m_mapStream);
+		for(int n = 0; n < length; n++)
+		{
+			buffer[n] = mapStreamBuffer[n * 2];
+		}
+		return;
+	}
+#endif
+
 	//printf("Streaming %s, %d, %d\n", orientation == MapRead_Horizontal ? "Horizontal" : "Vertical", x, z, length);
 	// TODO: make this stream from SD card or decompress from huffman stream in progmem
 	if(orientation == MapRead_Horizontal)
@@ -123,6 +142,10 @@ uint8_t Map::streamIn(uint8_t tile, int x, int z)
 		{
 			streamInDoor(DoorType_StandardVertical, x, z);
 		}
+	}
+	else if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
+	{
+
 	}
 
 	return tile;

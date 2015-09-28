@@ -39,7 +39,7 @@ int main(){
 
 	srand(0x365e);
 	
-	Engine::init();
+	engine.init();
 	
 	while(1)
 	{
@@ -53,9 +53,9 @@ int main(){
 		}*/
 		
 		Platform.update();
-		Engine::update();
+		engine.update();
 		WaitVsync(1);
-		Engine::renderer.drawDeferredFrame();
+		engine.renderer.drawDeferredFrame();
 	}
 }
 

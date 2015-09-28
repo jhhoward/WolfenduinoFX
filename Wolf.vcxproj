@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Game\Actor.h" />
     <ClInclude Include="Game\Defines.h" />
     <ClInclude Include="Game\Engine.h" />
     <ClInclude Include="Game\FixedMath.h" />
@@ -24,6 +25,7 @@
     <ClInclude Include="Windows\SDLPlatform.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Game\Actor.cpp" />
     <ClCompile Include="Game\Engine.cpp" />
     <ClCompile Include="Game\FixedMath.cpp" />
     <ClCompile Include="Game\Map.cpp" />

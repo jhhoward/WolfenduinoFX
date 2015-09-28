@@ -2,6 +2,7 @@
 #define DEFINES_H_
 
 #if defined (_WIN32)
+#define STANDARD_FILE_STREAMING
 #define EMULATE_GAMEBUINO 1
 //#define EMULATE_ARDUBOY 1 
 //#define EMULATE_HACKVISION 1
@@ -97,5 +98,7 @@
 #define MAX_DOORS 6
 
 #define DOOR_FRAME_TEXTURE 19
+
+#define MAX_ACTIVE_ACTORS 10
 
 #endif

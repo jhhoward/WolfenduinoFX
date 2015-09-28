@@ -20,7 +20,7 @@ void Renderer::init()
 
 void Renderer::drawWeapon()
 {
-	BitPairReader reader((uint8_t*)Data_pistolSprite + TEXTURE_STRIDE * TEXTURE_SIZE * Engine::player.weapon.frame);
+	BitPairReader reader((uint8_t*)Data_pistolSprite + TEXTURE_STRIDE * TEXTURE_SIZE * engine.player.weapon.frame);
 
 	for(int i = 0; i < 16; i++)
 	{
@@ -43,13 +43,13 @@ void Renderer::drawFrame()
 		renderQueue[n].data = NULL;
 	}
 
-	xpos = Engine::player.x;
-	zpos = Engine::player.z;
-	cos_dir = FixedMath::Cos(-Engine::player.direction);
-	sin_dir = FixedMath::Sin(-Engine::player.direction);
+	xpos = engine.player.x;
+	zpos = engine.player.z;
+	cos_dir = FixedMath::Cos(-engine.player.direction);
+	sin_dir = FixedMath::Sin(-engine.player.direction);
 	overdraw = 0;
-	xcell = Engine::player.x / CELL_SIZE;
-	zcell = Engine::player.z / CELL_SIZE;
+	xcell = engine.player.x / CELL_SIZE;
+	zcell = engine.player.z / CELL_SIZE;
 	initWBuffer();
 
 #if !defined(DEFER_RENDER)
@@ -103,25 +103,25 @@ void Renderer::drawBufferedCells()
 
 	if(cos_dir > 0)
 	{
-		x1 = Engine::map.bufferX;
+		x1 = engine.map.bufferX;
 		x2 = x1 + MAP_BUFFER_SIZE;
 		xd = 1;
 	}
 	else
 	{
-		x2 = Engine::map.bufferX - 1;
+		x2 = engine.map.bufferX - 1;
 		x1 = x2 + MAP_BUFFER_SIZE;
 		xd = -1;
 	}
 	if(sin_dir < 0)
 	{
-		z1 = Engine::map.bufferZ;
+		z1 = engine.map.bufferZ;
 		z2 = z1 + MAP_BUFFER_SIZE;
 		zd = 1;
 	}
 	else
 	{
-		z2 = Engine::map.bufferZ - 1;
+		z2 = engine.map.bufferZ - 1;
 		z1 = z2 + MAP_BUFFER_SIZE;
 		zd = -1;
 	}
@@ -222,7 +222,7 @@ void Renderer::drawCell(int cellX, int cellZ)
 	if((cos_dir * (cellX - xcell) - sin_dir * (cellZ - zcell)) <= 0)
 		return;
 
-	uint8_t tile = Engine::map.getTileFast(cellX, cellZ);
+	uint8_t tile = engine.map.getTileFast(cellX, cellZ);
 	if (tile == 0)
 		return;
 	
@@ -249,7 +249,7 @@ void Renderer::drawCell(int cellX, int cellZ)
 
 	if(tile >= Tile_FirstWall && tile <= Tile_LastWall)
 	{
-		uint8_t textureId = tile - Tile_FirstWall; //Engine::map.getTextureId(cellX, cellZ);
+		uint8_t textureId = tile - Tile_FirstWall; //engine.map.getTextureId(cellX, cellZ);
 
 		if (zpos < cellZ * CELL_SIZE)
 		{
@@ -258,22 +258,22 @@ void Renderer::drawCell(int cellX, int cellZ)
 				// north west quadrant
 				if (zpos < cellZ * CELL_SIZE)
 				{
-					if(Engine::map.isDoor(cellX, cellZ - 1))
+					if(engine.map.isDoor(cellX, cellZ - 1))
 					{
 						drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ, cellX+1, cellZ);  // south wall
 					}
-					else if(!Engine::map.isSolid(cellX, cellZ - 1))
+					else if(!engine.map.isSolid(cellX, cellZ - 1))
 					{
 						drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
 					}
 				}
 				if (xpos > (cellX+1) * CELL_SIZE)
 				{
-					if(Engine::map.isDoor(cellX + 1, cellZ))
+					if(engine.map.isDoor(cellX + 1, cellZ))
 					{
 						drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
 					}
-					else if(!Engine::map.isSolid(cellX+1, cellZ))
+					else if(!engine.map.isSolid(cellX+1, cellZ))
 					{
 						drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
 					}
@@ -284,22 +284,22 @@ void Renderer::drawCell(int cellX, int cellZ)
 				// north east quadrant
 				if (zpos < cellZ * CELL_SIZE)
 				{
-					if(Engine::map.isDoor(cellX, cellZ-1))
+					if(engine.map.isDoor(cellX, cellZ-1))
 					{
 						drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ, cellX+1, cellZ);  // south wall
 					}
-					else if(!Engine::map.isSolid(cellX, cellZ-1))
+					else if(!engine.map.isSolid(cellX, cellZ-1))
 					{
 						drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
 					}
 				}
 				if (xpos< cellX * CELL_SIZE)
 				{
-					if(Engine::map.isDoor(cellX-1, cellZ))
+					if(engine.map.isDoor(cellX-1, cellZ))
 					{
 						drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ+1, cellX, cellZ);  // west wall
 					}
-					else if(!Engine::map.isSolid(cellX-1, cellZ))
+					else if(!engine.map.isSolid(cellX-1, cellZ))
 					{
 						drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
 					}
@@ -313,22 +313,22 @@ void Renderer::drawCell(int cellX, int cellZ)
 				// south west quadrant
 				if (zpos > (cellZ+1) * CELL_SIZE)
 				{
-					if(Engine::map.isDoor(cellX, cellZ+1))
+					if(engine.map.isDoor(cellX, cellZ+1))
 					{
 						drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
 					}
-					else if(!Engine::map.isSolid(cellX, cellZ+1))
+					else if(!engine.map.isSolid(cellX, cellZ+1))
 					{
 						drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
 					}
 				}
 				if (xpos > (cellX+1) * CELL_SIZE)
 				{
-					if(Engine::map.isDoor(cellX+1, cellZ))
+					if(engine.map.isDoor(cellX+1, cellZ))
 					{
 						drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
 					}
-					else if(!Engine::map.isSolid(cellX+1, cellZ))
+					else if(!engine.map.isSolid(cellX+1, cellZ))
 					{
 						drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
 					}
@@ -339,22 +339,22 @@ void Renderer::drawCell(int cellX, int cellZ)
 				// south east quadrant
 				if (zpos > (cellZ+1) * CELL_SIZE)
 				{
-					if(Engine::map.isDoor(cellX, cellZ+1))
+					if(engine.map.isDoor(cellX, cellZ+1))
 					{
 						drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
 					}
-					else if(!Engine::map.isSolid(cellX, cellZ+1))
+					else if(!engine.map.isSolid(cellX, cellZ+1))
 					{
 						drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
 					}
 				}
 				if (xpos< cellX * CELL_SIZE)
 				{
-					if(Engine::map.isDoor(cellX-1, cellZ))
+					if(engine.map.isDoor(cellX-1, cellZ))
 					{
 						drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ+1, cellX, cellZ);  // west wall
 					}
-					else if(!Engine::map.isSolid(cellX-1, cellZ))
+					else if(!engine.map.isSolid(cellX-1, cellZ))
 					{
 						drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
 					}
@@ -561,7 +561,7 @@ void Renderer::drawDoors()
 {
 	for(int n = 0; n < MAX_DOORS; n++)
 	{
-		Door& door = Engine::map.doors[n];
+		Door& door = engine.map.doors[n];
 		uint8_t textureId = 18;
 		int offset = door.open;
 		if(offset >= 16)
@@ -569,8 +569,8 @@ void Renderer::drawDoors()
 			continue;
 		}
 
-		if(door.x < Engine::map.bufferX || door.z < Engine::map.bufferZ
-			|| door.x >= Engine::map.bufferX + MAP_BUFFER_SIZE || door.z >= Engine::map.bufferZ + MAP_BUFFER_SIZE)
+		if(door.x < engine.map.bufferX || door.z < engine.map.bufferZ
+			|| door.x >= engine.map.bufferX + MAP_BUFFER_SIZE || door.z >= engine.map.bufferZ + MAP_BUFFER_SIZE)
 		{
 			continue;
 		}

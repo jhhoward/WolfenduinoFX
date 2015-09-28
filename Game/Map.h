@@ -1,6 +1,12 @@
 #ifndef MAP_H_
 #define MAP_H_
 
+#include "Engine.h"
+
+#ifdef STANDARD_FILE_STREAMING
+#include <stdio.h>
+#endif
+
 #define MAP_OUT_OF_BOUNDS 0xff
 
 enum MapRead_Orientation
@@ -41,6 +47,7 @@ public:
 class Map
 {
 public:
+	void init();
 	bool isValid(int cellX, int cellZ);
 	bool isBlocked(int cellX, int cellZ);
 	bool isSolid(int cellX, int cellZ);
@@ -62,9 +69,33 @@ public:
 
 	void updateBufferPosition(int newX, int newZ);
 
-	void init();
 	void update();
 	void openDoorsAt(int x, int z);
+
+	bool isItemCollected(uint8_t spawnId)
+	{
+		int index = spawnId / 8;
+		int mask = 1 << (spawnId - (index * 8));
+		return (m_itemState[index] & mask) != 0;
+	}
+	void markItemCollected(uint8_t spawnId)
+	{
+		int index = spawnId / 8;
+		int mask = 1 << (spawnId - (index * 8));
+		m_itemState[index] |= mask;
+	}
+	bool isActorKilled(uint8_t spawnId)
+	{
+		int index = spawnId / 8;
+		int mask = 1 << (spawnId - (index * 8));
+		return (m_actorState[index] & mask) != 0;
+	}
+	void markActorKilled(uint8_t spawnId)
+	{
+		int index = spawnId / 8;
+		int mask = 1 << (spawnId - (index * 8));
+		m_actorState[index] |= mask;
+	}
 
 private:
 	void streamData(uint8_t* buffer, MapRead_Orientation orientation, int x, int z, int length);
@@ -75,6 +106,12 @@ private:
 	uint8_t streamIn(uint8_t tile, int x, int z);
 	void streamInDoor(DoorType type, int x, int z);
 	
+	uint8_t m_itemState[256 / 8];
+	uint8_t m_actorState[256 / 8];
+
+#ifdef STANDARD_FILE_STREAMING
+	FILE* m_mapStream;
+#endif
 };
 
 #endif

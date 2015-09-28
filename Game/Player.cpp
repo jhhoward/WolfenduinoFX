@@ -66,29 +66,29 @@ void Player::update()
 	int16_t projectedX = x / CELL_SIZE + cos_dir / 19;
 	int16_t projectedZ = z / CELL_SIZE + sin_dir / 19;
 
-	Engine::map.updateBufferPosition(projectedX - MAP_BUFFER_SIZE / 2, projectedZ - MAP_BUFFER_SIZE / 2);
+	engine.map.updateBufferPosition(projectedX - MAP_BUFFER_SIZE / 2, projectedZ - MAP_BUFFER_SIZE / 2);
 
 	// Check for doors
 	int cellX = x / CELL_SIZE;
 	int cellZ = z / CELL_SIZE;
 
-	Engine::map.openDoorsAt(cellX, cellZ);
+	engine.map.openDoorsAt(cellX, cellZ);
 
 	if(cos_dir > 0)
 	{
-		Engine::map.openDoorsAt(cellX + 1, cellZ);
+		engine.map.openDoorsAt(cellX + 1, cellZ);
 	}
 	else
 	{
-		Engine::map.openDoorsAt(cellX - 1, cellZ);
+		engine.map.openDoorsAt(cellX - 1, cellZ);
 	}
 	if(sin_dir > 0)
 	{
-		Engine::map.openDoorsAt(cellX, cellZ + 1);
+		engine.map.openDoorsAt(cellX, cellZ + 1);
 	}
 	else
 	{
-		Engine::map.openDoorsAt(cellX, cellZ - 1);
+		engine.map.openDoorsAt(cellX, cellZ - 1);
 	}
 
 }
@@ -100,9 +100,9 @@ void Player::move(int16_t deltaX, int16_t deltaZ)
 
 	if(deltaX < 0)
 	{
-		if(Engine::map.isBlocked(cellX - 1, cellZ)
-			|| (z < cellZ * CELL_SIZE + MIN_WALL_DISTANCE && Engine::map.isBlocked(cellX - 1, cellZ - 1))
-			|| (z > cellZ * CELL_SIZE + CELL_SIZE - MIN_WALL_DISTANCE && Engine::map.isBlocked(cellX - 1, cellZ + 1)))
+		if(engine.map.isBlocked(cellX - 1, cellZ)
+			|| (z < cellZ * CELL_SIZE + MIN_WALL_DISTANCE && engine.map.isBlocked(cellX - 1, cellZ - 1))
+			|| (z > cellZ * CELL_SIZE + CELL_SIZE - MIN_WALL_DISTANCE && engine.map.isBlocked(cellX - 1, cellZ + 1)))
 		{
 			if(x + deltaX < cellX * CELL_SIZE + MIN_WALL_DISTANCE)
 			{
@@ -112,9 +112,9 @@ void Player::move(int16_t deltaX, int16_t deltaZ)
 	}
 	else if(deltaX > 0)
 	{
-		if(Engine::map.isBlocked(cellX + 1, cellZ)
-			|| (z < cellZ * CELL_SIZE + MIN_WALL_DISTANCE && Engine::map.isBlocked(cellX + 1, cellZ - 1))
-			|| (z > cellZ * CELL_SIZE + CELL_SIZE - MIN_WALL_DISTANCE && Engine::map.isBlocked(cellX + 1, cellZ + 1)))
+		if(engine.map.isBlocked(cellX + 1, cellZ)
+			|| (z < cellZ * CELL_SIZE + MIN_WALL_DISTANCE && engine.map.isBlocked(cellX + 1, cellZ - 1))
+			|| (z > cellZ * CELL_SIZE + CELL_SIZE - MIN_WALL_DISTANCE && engine.map.isBlocked(cellX + 1, cellZ + 1)))
 		{
 			if(x + deltaX > cellX * CELL_SIZE + CELL_SIZE - MIN_WALL_DISTANCE)
 			{
@@ -125,9 +125,9 @@ void Player::move(int16_t deltaX, int16_t deltaZ)
 
 	if(deltaZ < 0)
 	{
-		if(Engine::map.isBlocked(cellX, cellZ - 1)
-			|| (x < cellX * CELL_SIZE + MIN_WALL_DISTANCE && Engine::map.isBlocked(cellX - 1, cellZ - 1))
-			|| (x > cellX * CELL_SIZE + CELL_SIZE - MIN_WALL_DISTANCE && Engine::map.isBlocked(cellX + 1, cellZ - 1)))
+		if(engine.map.isBlocked(cellX, cellZ - 1)
+			|| (x < cellX * CELL_SIZE + MIN_WALL_DISTANCE && engine.map.isBlocked(cellX - 1, cellZ - 1))
+			|| (x > cellX * CELL_SIZE + CELL_SIZE - MIN_WALL_DISTANCE && engine.map.isBlocked(cellX + 1, cellZ - 1)))
 		{
 			if(z + deltaZ < cellZ * CELL_SIZE + MIN_WALL_DISTANCE)
 			{
@@ -137,9 +137,9 @@ void Player::move(int16_t deltaX, int16_t deltaZ)
 	}
 	else if(deltaZ > 0)
 	{
-		if(Engine::map.isBlocked(cellX, cellZ + 1)
-			|| (x < cellX * CELL_SIZE + MIN_WALL_DISTANCE && Engine::map.isBlocked(cellX - 1, cellZ + 1))
-			|| (x > cellX * CELL_SIZE + CELL_SIZE - MIN_WALL_DISTANCE && Engine::map.isBlocked(cellX + 1, cellZ + 1)))
+		if(engine.map.isBlocked(cellX, cellZ + 1)
+			|| (x < cellX * CELL_SIZE + MIN_WALL_DISTANCE && engine.map.isBlocked(cellX - 1, cellZ + 1))
+			|| (x > cellX * CELL_SIZE + CELL_SIZE - MIN_WALL_DISTANCE && engine.map.isBlocked(cellX + 1, cellZ + 1)))
 		{
 			if(z + deltaZ > cellZ * CELL_SIZE + CELL_SIZE - MIN_WALL_DISTANCE)
 			{
@@ -206,13 +206,13 @@ void Player::init()
 	{
 		for(int i = 0; i < MAP_SIZE; i += MAP_BUFFER_SIZE)
 		{
-			Engine::map.updateBufferPosition(i, j);
+			engine.map.updateBufferPosition(i, j);
 
 			for(int a = 0; a < MAP_BUFFER_SIZE; a++)
 			{
 				for(int b = 0; b < MAP_BUFFER_SIZE; b++)
 				{
-					uint8_t tile = Engine::map.getTileFast(b, a);
+					uint8_t tile = engine.map.getTileFast(b, a);
 
 					if(tile >= Tile_PlayerStart_North && tile <= Tile_PlayerStart_West)
 					{
