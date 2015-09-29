@@ -20,6 +20,7 @@ class Renderer
 public:
 	void init();
 	void drawFrame();
+	void queueSprite(uint8_t* sprite, int16_t x, int16_t z);
 
 #ifdef DEFER_RENDER
 	void drawDeferredFrame();
@@ -36,7 +37,6 @@ private:
 	void drawBufferedCells();
 	void drawDoors();
 
-	void queueSprite(uint8_t* sprite, int16_t x, int16_t z);
 	void drawQueuedSprite(uint8_t id);
 	void drawWeapon();
 

@@ -5,7 +5,6 @@
 
 #include <math.h> // temp
 #include "Data_Walls.h"
-#include "Data_Guard.h"
 #include "Data_Pistol.h"
 #include "Data_Decorations.h"
 #include "Data_BlockingDecorations.h"
@@ -58,6 +57,14 @@ void Renderer::drawFrame()
 
 	drawBufferedCells();
 	drawDoors();
+
+	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	{
+		if(engine.actors[n].type != ActorType_Empty && !engine.actors[n].flags.frozen)
+		{
+			engine.actors[n].draw();
+		}
+	}
 
 	/*queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 2));
 	queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 3));
@@ -236,11 +243,11 @@ void Renderer::drawCell(int cellX, int cellZ)
 		queueSprite((uint8_t*)Data_blockingDecorations + (tile - Tile_FirstBlockingDecoration) * TEXTURE_SIZE * TEXTURE_STRIDE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
 		return;
 	}
-	if(tile >= Tile_FirstActor && tile <= Tile_LastActor)
+	/*if(tile >= Tile_FirstActor && tile <= Tile_LastActor)
 	{
 		queueSprite((uint8_t*)Data_guardSprite, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
 		return;
-	}
+	}*/
 	if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
 	{
 		queueSprite((uint8_t*)Data_itemSprites + (tile - Tile_FirstItem) * TEXTURE_SIZE * TEXTURE_STRIDE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);

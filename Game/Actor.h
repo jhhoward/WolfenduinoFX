@@ -16,6 +16,8 @@ public:
 	void update();
 	void draw();
 
+	void updateFrozenState();
+
 	uint8_t spawnId;
 	uint8_t type;
 	int16_t x, z;

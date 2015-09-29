@@ -93,8 +93,6 @@ uint8_t Map::getTile(int x, int z)
 	return getTileFast(x, z);
 }
 
-static uint8_t mapStreamBuffer[MAP_BUFFER_SIZE * 2];
-
 void Map::streamData(uint8_t* buffer, MapRead_Orientation orientation, int x, int z, int length)
 {
 #ifdef STANDARD_FILE_STREAMING
@@ -102,11 +100,7 @@ void Map::streamData(uint8_t* buffer, MapRead_Orientation orientation, int x, in
 	{
 		int32_t offset = orientation == MapRead_Horizontal ? (z * MAP_SIZE + x) * 2 : (MAP_SIZE * MAP_SIZE * 2) + (x * MAP_SIZE + z) * 2;
 		fseek(m_mapStream, offset, SEEK_SET);
-		fread(mapStreamBuffer, 1, length * 2, m_mapStream);
-		for(int n = 0; n < length; n++)
-		{
-			buffer[n] = mapStreamBuffer[n * 2];
-		}
+		fread(buffer, 1, length * 2, m_mapStream);
 		return;
 	}
 #endif
@@ -129,7 +123,7 @@ void Map::streamData(uint8_t* buffer, MapRead_Orientation orientation, int x, in
 	}	
 }
 
-uint8_t Map::streamIn(uint8_t tile, int x, int z)
+uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int x, int z)
 {
 	if(tile >= Tile_FirstDoor && tile <= Tile_LastDoor)
 	{
@@ -145,7 +139,18 @@ uint8_t Map::streamIn(uint8_t tile, int x, int z)
 	}
 	else if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
 	{
-
+		if(isItemCollected(metadata))
+		{
+			return Tile_Empty;
+		}
+	}
+	else if(tile >= Tile_FirstActor && tile <= Tile_LastActor)
+	{
+		if(!isActorKilled(metadata))
+		{
+			engine.spawnActor(metadata, tile, x, z);
+		}
+		return Tile_Empty;
 	}
 
 	return tile;
@@ -153,16 +158,14 @@ uint8_t Map::streamIn(uint8_t tile, int x, int z)
 
 void Map::updateHorizontalSlice(int offsetZ)
 {
-	uint8_t readBuffer[MAP_BUFFER_SIZE];
-
-	streamData(readBuffer, MapRead_Horizontal, bufferX, bufferZ + offsetZ, MAP_BUFFER_SIZE);
+	streamData(m_streamBuffer, MapRead_Horizontal, bufferX, bufferZ + offsetZ, MAP_BUFFER_SIZE);
 
 	int targetZ	= (bufferZ + offsetZ) & 0xf;
 
 	for(int x = 0; x < MAP_BUFFER_SIZE; x++)
 	{
 		int targetX = (bufferX + x) & 0xf;
-		uint8_t read = streamIn(readBuffer[x], bufferX + x, bufferZ + offsetZ);
+		uint8_t read = streamIn(m_streamBuffer[x * 2], m_streamBuffer[x * 2 + 1], bufferX + x, bufferZ + offsetZ);
 
 		m_mapBuffer[targetZ * MAP_BUFFER_SIZE + targetX] = read;
 	}
@@ -170,16 +173,14 @@ void Map::updateHorizontalSlice(int offsetZ)
 
 void Map::updateVerticalSlice(int offsetX)
 {
-	uint8_t readBuffer[MAP_BUFFER_SIZE];
-	
-	streamData(readBuffer, MapRead_Vertical, bufferX + offsetX, bufferZ, MAP_BUFFER_SIZE);
+	streamData(m_streamBuffer, MapRead_Vertical, bufferX + offsetX, bufferZ, MAP_BUFFER_SIZE);
 
 	int targetX = (bufferX + offsetX) & 0xf;
 
 	for(int z = 0; z < MAP_BUFFER_SIZE; z++)
 	{
 		int targetZ = (bufferZ + z) & 0xf;
-		uint8_t read = streamIn(readBuffer[z], bufferX + offsetX, bufferZ + z);
+		uint8_t read = streamIn(m_streamBuffer[z * 2], m_streamBuffer[z * 2 + 1], bufferX + offsetX, bufferZ + z);
 
 		m_mapBuffer[targetZ * MAP_BUFFER_SIZE + targetX] = read;
 	}
@@ -187,6 +188,14 @@ void Map::updateVerticalSlice(int offsetX)
 
 void Map::updateEntireBuffer()
 {
+	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	{
+		if(engine.actors[n].type != ActorType_Empty)
+		{
+			engine.actors[n].updateFrozenState();
+		}
+	}
+
 	for(int n = 0; n < MAP_BUFFER_SIZE; n++)
 	{
 		updateHorizontalSlice(n);

@@ -15,6 +15,8 @@ void Engine::init()
 	renderer.init();
 	map.init();
 	player.init();
+
+	frameCount = 0;
 }
 
 void Engine::update()
@@ -28,6 +30,8 @@ void Engine::update()
 	}
 
 	renderer.drawFrame();
+
+	frameCount ++;
 }
 
 Actor* Engine::spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8_t cellZ)

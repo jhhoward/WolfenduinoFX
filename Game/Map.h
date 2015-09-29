@@ -103,12 +103,13 @@ private:
 	void updateVerticalSlice(int offsetX);
 	void updateEntireBuffer();
 	void updateDoors();
-	uint8_t streamIn(uint8_t tile, int x, int z);
+	uint8_t streamIn(uint8_t tile, uint8_t metadata, int x, int z);
 	void streamInDoor(DoorType type, int x, int z);
 	
 	uint8_t m_itemState[256 / 8];
 	uint8_t m_actorState[256 / 8];
 
+	uint8_t m_streamBuffer[MAP_BUFFER_SIZE * 2];
 #ifdef STANDARD_FILE_STREAMING
 	FILE* m_mapStream;
 #endif

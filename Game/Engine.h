@@ -32,6 +32,8 @@ public:
 	Player player;
 	Map map;
 	Actor actors[MAX_ACTIVE_ACTORS];
+
+	int16_t frameCount;
 };
 
 extern Engine engine;
