@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "Engine.h"
 #include "Defines.h"
+#include "FixedMath.h"
 
 #define NULL_QUEUE_ITEM 0xff
 #define RENDER_QUEUE_CAPACITY 10
@@ -40,11 +41,29 @@ private:
 	void drawQueuedSprite(uint8_t id);
 	void drawWeapon();
 
-	int16_t xpos, zpos;
+	inline bool isFrustrumClipped(int16_t x, int16_t z)
+	{
+		if((view.clipCos * (x - view.cellX) - view.clipSin * (z - view.cellZ)) < -FIXED_ONE)
+			return true;
+		if((view.clipSin * (x - view.cellX) + view.clipCos * (z - view.cellZ)) < -FIXED_ONE)
+			return true;
+
+		return false;
+	}
+
+	struct 
+	{
+		int16_t x, z;
+		int16_t cellX, cellZ;
+		int16_t rotCos, rotSin;
+		int16_t clipCos, clipSin;
+	} view;
+
+/*	int16_t xpos, zpos;
 	int16_t cos_dir;
 	int16_t sin_dir;
 	int8_t xcell, zcell;
-	int8_t numColumns;
+	int8_t numColumns;*/
 	uint8_t wbuffer[DISPLAYWIDTH];
 
 #ifdef DEFER_RENDER

@@ -42,13 +42,16 @@ void Renderer::drawFrame()
 		renderQueue[n].data = NULL;
 	}
 
-	xpos = engine.player.x;
-	zpos = engine.player.z;
-	cos_dir = FixedMath::Cos(-engine.player.direction);
-	sin_dir = FixedMath::Sin(-engine.player.direction);
+	view.x = engine.player.x;
+	view.z = engine.player.z;
+	view.rotCos = FixedMath::Cos(-engine.player.direction);
+	view.rotSin = FixedMath::Sin(-engine.player.direction);
+	view.clipCos = FixedMath::Cos(-engine.player.direction + DEGREES_90 / 2);
+	view.clipSin = FixedMath::Sin(-engine.player.direction + DEGREES_90 / 2);
+
 	overdraw = 0;
-	xcell = engine.player.x / CELL_SIZE;
-	zcell = engine.player.z / CELL_SIZE;
+	view.cellX = engine.player.x / CELL_SIZE;
+	view.cellZ = engine.player.z / CELL_SIZE;
 	initWBuffer();
 
 #if !defined(DEFER_RENDER)
@@ -70,6 +73,35 @@ void Renderer::drawFrame()
 	queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 3));
 	queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 4));
 	*/
+#if 0
+	int fill1 = 0;
+	int fill2 = 0;
+	for(int i = engine.map.bufferX; i < engine.map.bufferX + MAP_BUFFER_SIZE; i++)
+	{
+		for(int j = engine.map.bufferZ; j < engine.map.bufferZ + MAP_BUFFER_SIZE; j++)
+		{
+			uint8_t tile = engine.map.getTile(i, j);
+			uint8_t colour = 1;
+
+			if(!((view.clipCos * (i - view.cellX) - view.clipSin * (j - view.cellZ)) <= 0))
+				fill1 ++;
+			if(!isFrustrumClipped(i, j))
+				fill2 ++;
+			if(tile >= Tile_FirstWall && tile <= Tile_LastWall)
+			{
+				colour = 0;
+				if((view.clipCos * (i - view.cellX) - view.clipSin * (j - view.cellZ)) <= 0)
+					colour = 1;
+				colour = isFrustrumClipped(i, j) ? 1 : 0;
+			}
+			drawPixel(i - engine.map.bufferX, j - engine.map.bufferZ, colour);
+		}
+	}
+	WARNING("Old: %d\tNew: %d\t Diff=%f\n", fill1, fill2, (float)fill2 / (float)fill1);
+	drawPixel(view.cellX - engine.map.bufferX, view.cellZ - engine.map.bufferZ, 0);
+
+#endif
+
 #if !defined(DEFER_RENDER)
 	for(uint8_t item = renderQueueHead; item != NULL_QUEUE_ITEM; item = renderQueue[item].next)
 	{
@@ -108,7 +140,7 @@ void Renderer::drawBufferedCells()
 	int xd, zd;
 	int x1, z1, x2, z2;
 
-	if(cos_dir > 0)
+	if(view.rotCos > 0)
 	{
 		x1 = engine.map.bufferX;
 		x2 = x1 + MAP_BUFFER_SIZE;
@@ -120,7 +152,7 @@ void Renderer::drawBufferedCells()
 		x1 = x2 + MAP_BUFFER_SIZE;
 		xd = -1;
 	}
-	if(sin_dir < 0)
+	if(view.rotSin < 0)
 	{
 		z1 = engine.map.bufferZ;
 		z2 = z1 + MAP_BUFFER_SIZE;
@@ -133,7 +165,7 @@ void Renderer::drawBufferedCells()
 		zd = -1;
 	}
 
-	if(mabs(cos_dir) < mabs(sin_dir))
+	if(mabs(view.rotCos) < mabs(view.rotSin))
 	{
 		for(int z = z1; z != z2; z += zd)
 		{
@@ -159,7 +191,6 @@ void Renderer::initWBuffer()
 {
 	for (int i=0; i<DISPLAYWIDTH; i++)
 		wbuffer[i] = 0;
-	numColumns = 0;
 }
 
 #if defined(PLATFORM_GAMEBUINO)
@@ -225,8 +256,8 @@ void Renderer::drawCellWall(uint8_t textureId, int x1, int z1, int x2, int z2)
 
 void Renderer::drawCell(int cellX, int cellZ)
 {
-	// clip cells behind us
-	if((cos_dir * (cellX - xcell) - sin_dir * (cellZ - zcell)) <= 0)
+	// clip cells out of frustum view
+	if(isFrustrumClipped(cellX, cellZ))
 		return;
 
 	uint8_t tile = engine.map.getTileFast(cellX, cellZ);
@@ -258,12 +289,12 @@ void Renderer::drawCell(int cellX, int cellZ)
 	{
 		uint8_t textureId = tile - Tile_FirstWall; //engine.map.getTextureId(cellX, cellZ);
 
-		if (zpos < cellZ * CELL_SIZE)
+		if (view.z < cellZ * CELL_SIZE)
 		{
-			if (xpos > cellX * CELL_SIZE)
+			if (view.x > cellX * CELL_SIZE)
 			{
 				// north west quadrant
-				if (zpos < cellZ * CELL_SIZE)
+				if (view.z < cellZ * CELL_SIZE)
 				{
 					if(engine.map.isDoor(cellX, cellZ - 1))
 					{
@@ -274,7 +305,7 @@ void Renderer::drawCell(int cellX, int cellZ)
 						drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
 					}
 				}
-				if (xpos > (cellX+1) * CELL_SIZE)
+				if (view.x > (cellX+1) * CELL_SIZE)
 				{
 					if(engine.map.isDoor(cellX + 1, cellZ))
 					{
@@ -289,7 +320,7 @@ void Renderer::drawCell(int cellX, int cellZ)
 			else
 			{
 				// north east quadrant
-				if (zpos < cellZ * CELL_SIZE)
+				if (view.z < cellZ * CELL_SIZE)
 				{
 					if(engine.map.isDoor(cellX, cellZ-1))
 					{
@@ -300,7 +331,7 @@ void Renderer::drawCell(int cellX, int cellZ)
 						drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
 					}
 				}
-				if (xpos< cellX * CELL_SIZE)
+				if (view.x< cellX * CELL_SIZE)
 				{
 					if(engine.map.isDoor(cellX-1, cellZ))
 					{
@@ -315,10 +346,10 @@ void Renderer::drawCell(int cellX, int cellZ)
 		}
 		else
 		{
-			if (xpos > cellX * CELL_SIZE)
+			if (view.x > cellX * CELL_SIZE)
 			{
 				// south west quadrant
-				if (zpos > (cellZ+1) * CELL_SIZE)
+				if (view.z > (cellZ+1) * CELL_SIZE)
 				{
 					if(engine.map.isDoor(cellX, cellZ+1))
 					{
@@ -329,7 +360,7 @@ void Renderer::drawCell(int cellX, int cellZ)
 						drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
 					}
 				}
-				if (xpos > (cellX+1) * CELL_SIZE)
+				if (view.x > (cellX+1) * CELL_SIZE)
 				{
 					if(engine.map.isDoor(cellX+1, cellZ))
 					{
@@ -344,7 +375,7 @@ void Renderer::drawCell(int cellX, int cellZ)
 			else
 			{
 				// south east quadrant
-				if (zpos > (cellZ+1) * CELL_SIZE)
+				if (view.z > (cellZ+1) * CELL_SIZE)
 				{
 					if(engine.map.isDoor(cellX, cellZ+1))
 					{
@@ -355,7 +386,7 @@ void Renderer::drawCell(int cellX, int cellZ)
 						drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
 					}
 				}
-				if (xpos< cellX * CELL_SIZE)
+				if (view.x< cellX * CELL_SIZE)
 				{
 					if(engine.map.isDoor(cellX-1, cellZ))
 					{
@@ -452,10 +483,10 @@ void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint
 {
 	// find position of wall edges relative to eye
 
-	int16_t z2 = (int16_t)(FIXED_TO_INT(cos_dir * (int32_t)(_x1-xpos)) - FIXED_TO_INT(sin_dir * (int32_t)(_z1-zpos)));
-	int16_t x2 = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_x1-xpos)) + FIXED_TO_INT(cos_dir * (int32_t)(_z1-zpos)));
-	int16_t z1 = (int16_t)(FIXED_TO_INT(cos_dir * (int32_t)(_x2-xpos)) - FIXED_TO_INT(sin_dir * (int32_t)(_z2-zpos)));
-	int16_t x1 = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_x2-xpos)) + FIXED_TO_INT(cos_dir * (int32_t)(_z2-zpos)));
+	int16_t z2 = (int16_t)(FIXED_TO_INT(view.rotCos * (int32_t)(_x1-view.x)) - FIXED_TO_INT(view.rotSin * (int32_t)(_z1-view.z)));
+	int16_t x2 = (int16_t)(FIXED_TO_INT(view.rotSin * (int32_t)(_x1-view.x)) + FIXED_TO_INT(view.rotCos * (int32_t)(_z1-view.z)));
+	int16_t z1 = (int16_t)(FIXED_TO_INT(view.rotCos * (int32_t)(_x2-view.x)) - FIXED_TO_INT(view.rotSin * (int32_t)(_z2-view.z)));
+	int16_t x1 = (int16_t)(FIXED_TO_INT(view.rotSin * (int32_t)(_x2-view.x)) + FIXED_TO_INT(view.rotCos * (int32_t)(_z2-view.z)));
 
 	// clip to the front pane
 	if ((z1<CLIP_PLANE) && (z2<CLIP_PLANE))
@@ -535,8 +566,6 @@ void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint
 				wbuffer[x] = 255;
 			}
 
-			numColumns++;
-
 #ifdef DEFER_RENDER
 			ubuffer[x] = u;
 			texbuffer[x] = textureId;
@@ -584,7 +613,7 @@ void Renderer::drawDoors()
 
 		if(door.type == DoorType_StandardVertical)
 		{
-			if(xpos < door.x * CELL_SIZE + CELL_SIZE / 2)
+			if(view.x < door.x * CELL_SIZE + CELL_SIZE / 2)
 			{
 				drawWall(door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + CELL_SIZE, 
 					door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + offset * 2, textureId, 0, 15 - offset);
@@ -597,7 +626,7 @@ void Renderer::drawDoors()
 		}
 		else if(door.type == DoorType_StandardHorizontal)
 		{
-			if(zpos > door.z * CELL_SIZE + CELL_SIZE / 2)
+			if(view.z > door.z * CELL_SIZE + CELL_SIZE / 2)
 			{
 				drawWall(door.x * CELL_SIZE + CELL_SIZE, door.z * CELL_SIZE + CELL_SIZE / 2, 
 					door.x * CELL_SIZE + offset * 2, door.z * CELL_SIZE + CELL_SIZE / 2, textureId, 0, 15 - offset);
@@ -613,8 +642,14 @@ void Renderer::drawDoors()
 
 void Renderer::queueSprite(uint8_t* sprite, int16_t _x, int16_t _z)
 {
-	int16_t zt = (int16_t)(FIXED_TO_INT(cos_dir * (int32_t)(_x-xpos)) - FIXED_TO_INT(sin_dir * (int32_t)(_z-zpos)));
-	int16_t xt = (int16_t)(FIXED_TO_INT(sin_dir * (int32_t)(_x-xpos)) + FIXED_TO_INT(cos_dir * (int32_t)(_z-zpos)));
+	int cellX = _x / CELL_SIZE;
+	int cellZ = _z / CELL_SIZE;
+
+	if(isFrustrumClipped(cellX, cellZ))
+		return;
+
+	int16_t zt = (int16_t)(FIXED_TO_INT(view.rotCos * (int32_t)(_x-view.x)) - FIXED_TO_INT(view.rotSin * (int32_t)(_z-view.z)));
+	int16_t xt = (int16_t)(FIXED_TO_INT(view.rotSin * (int32_t)(_x-view.x)) + FIXED_TO_INT(view.rotCos * (int32_t)(_z-view.z)));
 
 	// clip to the front plane
 	if (zt < CLIP_PLANE)
