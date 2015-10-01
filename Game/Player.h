@@ -34,6 +34,7 @@ public:
 
 private:
 	void updateWeapon();
+	void shootWeapon();
 };
 
 #endif

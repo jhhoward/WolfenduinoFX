@@ -1,6 +1,7 @@
 #include "Engine.h"
 #include "Player.h"
 #include "TileTypes.h"
+#include "FixedMath.h"
 
 Player::Player()
 {
@@ -183,6 +184,7 @@ void Player::updateWeapon()
 			weapon.frame = 1;
 			break;
 		case 4:
+			shootWeapon();
 			weapon.frame = 2;
 			break;
 		case 6:
@@ -224,5 +226,48 @@ void Player::init()
 				}
 			}
 		}
+	}
+}
+
+void Player::shootWeapon()
+{
+	int16_t rotCos = FixedMath::Cos(-direction);
+	int16_t rotSin = FixedMath::Sin(-direction);
+	int8_t closestActor = -1;
+	int16_t actorDistance = 0;
+	
+	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	{
+		if(engine.actors[n].type != ActorType_Empty && engine.actors[n].hp > 0)
+		{
+			int16_t zt = (int16_t)(FIXED_TO_INT(rotCos * (int32_t)(engine.actors[n].x - x)) - FIXED_TO_INT(rotSin * (int32_t)(engine.actors[n].z - z)));
+			int16_t xt = (int16_t)(FIXED_TO_INT(rotSin * (int32_t)(engine.actors[n].x - x)) + FIXED_TO_INT(rotCos * (int32_t)(engine.actors[n].z - z)));
+
+			if(zt > CLIP_PLANE && xt > -ACTOR_HITBOX_SIZE / 2 && xt < ACTOR_HITBOX_SIZE / 2)
+			{
+				if(closestActor == -1 || zt < actorDistance)
+				{
+					closestActor = n;
+					actorDistance = zt;
+				}
+			}
+		}
+	}
+
+	if(closestActor != -1)
+	{
+		if(engine.map.isClearLine(x, z, engine.actors[closestActor].x, engine.actors[closestActor].z))
+		{
+			engine.actors[closestActor].damage(10);
+			WARNING("BANG!\n");
+		}
+		else
+		{
+			WARNING("NOT A CLEAR LINE!\n");
+		}
+	}
+	else
+	{
+		WARNING("NO TARGET!\n");
 	}
 }

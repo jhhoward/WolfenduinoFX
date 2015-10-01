@@ -68,5 +68,7 @@ Actor* Engine::spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8
 			return &actors[n];
 		}
 	}
+
+	WARNING("Could not find a slot for new actor\n");
 	return NULL;
 }

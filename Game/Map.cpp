@@ -337,3 +337,176 @@ void Door::update()
 		break;
 	}
 }
+
+bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
+/*{
+	int cellX = x1 / CELL_SIZE;
+	int cellZ = z1 / CELL_SIZE;
+	int targetCellX = x2 / CELL_SIZE;
+	int targetCellZ = z2 / CELL_SIZE;
+	int16_t x = x1;
+	int16_t z = z1;
+	int16_t dx = x2 - x1;
+	int16_t dz = z2 - z1;
+	int16_t tx, tz;
+
+	while(1)
+	{
+		if(cellX == targetCellX && cellZ == targetCellZ)
+			return true;
+
+		if(dx < 0)
+		{
+			tx = (x - cellX * CELL_SIZE) / -dx;
+		}
+		else if(dx > 0)
+		{
+			tx = ((cellX + 1) * CELL_SIZE - x) / dx;
+		}
+		else tx = 0;
+
+		if(dz < 0)
+		{
+			tz = (z - cellZ * CELL_SIZE) / -dz;
+		}
+		else if(dz > 0)
+		{
+			tz = ((cellZ + 1) * CELL_SIZE - z) / dz;
+		}
+		else tz = 0;
+
+	}
+
+	return true;
+}
+*/
+{
+/*    int         x1,y1,xt1,yt1,x2,y2,xt2,yt2;
+    int         x,y;
+    int         xdist,ydist,xstep,ystep;
+    int         partial,delta;
+    int32_t     ltemp;
+    int         xfrac,yfrac,deltafrac;
+    unsigned    value,intercept;
+	*/
+	int cellX1 = x1 / CELL_SIZE;
+	int cellX2 = x2 / CELL_SIZE;
+	int cellZ1 = z1 / CELL_SIZE;
+	int cellZ2 = z2 / CELL_SIZE;
+
+    int xdist = abs(cellX2 - cellX1);
+
+	int partial, delta;
+	int deltafrac;
+	int xfrac, zfrac;
+	int xstep, zstep;
+	int32_t ltemp;
+	int x, z;
+
+    if (xdist > 0)
+    {
+        if (cellX2 > cellX1)
+        {
+            partial = ((cellX1 + 1) * CELL_SIZE - x1);
+            xstep = 1;
+        }
+        else
+        {
+            partial = (x1 - cellX1 * CELL_SIZE);
+            xstep = -1;
+        }
+
+        deltafrac = abs(x2 - x1);
+        delta = z2 - z1;
+        ltemp = ((int32_t)delta * CELL_SIZE) / deltafrac;
+        if (ltemp > 0x7fffl)
+            zstep = 0x7fff;
+        else if (ltemp < -0x7fffl)
+            zstep = -0x7fff;
+        else
+            zstep = ltemp;
+        zfrac = z1 + (((int32_t)zstep*partial) / CELL_SIZE);
+
+        x = cellX1 + xstep;
+        cellX2 += xstep;
+        do
+        {
+            z = zfrac / CELL_SIZE;
+            zfrac += zstep;
+
+            uint8_t tile = getTile(x, z);
+            x += xstep;
+
+            if (!tile)
+                continue;
+
+            if (tile >= Tile_FirstWall && tile <= Tile_LastWall)
+                return false;
+
+            //
+            // see if the door is open enough
+            //
+            /*value &= ~0x80;
+            intercept = yfrac-ystep/2;
+
+            if (intercept>doorposition[value])
+                return false;*/
+
+        } while (x != cellX2);
+    }
+
+    int zdist = abs(cellZ2 - cellZ1);
+
+    if (zdist > 0)
+    {
+        if (cellZ2 > cellZ1)
+        {
+            partial = ((cellZ1 + 1) * CELL_SIZE - z1);
+            zstep = 1;
+        }
+        else
+        {
+            partial = (z1 - cellZ1 * CELL_SIZE);
+            zstep = -1;
+        }
+
+        deltafrac = abs(z2 - z1);
+        delta = x2 - x1;
+        ltemp = ((int32_t)delta * CELL_SIZE)/deltafrac;
+        if (ltemp > 0x7fffl)
+            xstep = 0x7fff;
+        else if (ltemp < -0x7fffl)
+            xstep = -0x7fff;
+        else
+            xstep = ltemp;
+        xfrac = x1 + (((int32_t)xstep*partial) / CELL_SIZE);
+
+        z = cellZ1 + zstep;
+        cellZ2 += zstep;
+        do
+        {
+            x = xfrac / CELL_SIZE;
+            xfrac += xstep;
+
+            uint8_t tile = getTile(x, z);
+            z += zstep;
+
+            if (!tile)
+                continue;
+
+            if (tile >= Tile_FirstWall && tile <= Tile_LastWall)
+                return false;
+
+            //
+            // see if the door is open enough
+            //
+            /*value &= ~0x80;
+            intercept = xfrac-xstep/2;
+
+            if (intercept>doorposition[value])
+                return false;*/
+        } while (z != cellZ2);
+    }
+
+    return true;
+}

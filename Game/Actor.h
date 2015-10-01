@@ -9,14 +9,27 @@ enum ActorType
 	ActorType_Guard
 };
 
+enum ActorState
+{
+	ActorState_Idle,
+	ActorState_Injured,
+	ActorState_Dying,
+	ActorState_Dead
+};
+
 class Actor
 {
 public:
 	void init(uint8_t spawnId, uint8_t actorType, uint8_t cellX, uint8_t cellZ);
 	void update();
 	void draw();
+	void damage(int amount);
 
+	void switchState(uint8_t newState);
 	void updateFrozenState();
+
+	void dropItem(uint8_t itemType);
+	bool tryDropItem(uint8_t itemType, int cellX, int cellZ);
 
 	uint8_t spawnId;
 	uint8_t type;

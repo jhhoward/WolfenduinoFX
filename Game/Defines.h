@@ -45,7 +45,7 @@
 
 // WIN32 specific
 #ifdef _WIN32
-#define ZOOM_SCALE 3
+#define ZOOM_SCALE 1
 
 #define PROGMEM
 #define pgm_read_byte(x) (*((uint8_t*)x))
@@ -100,5 +100,7 @@
 #define DOOR_FRAME_TEXTURE 19
 
 #define MAX_ACTIVE_ACTORS 10
+
+#define ACTOR_HITBOX_SIZE 16
 
 #endif

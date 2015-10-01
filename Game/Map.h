@@ -97,6 +97,8 @@ public:
 		m_actorState[index] |= mask;
 	}
 
+	bool isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2);
+
 private:
 	void streamData(uint8_t* buffer, MapRead_Orientation orientation, int x, int z, int length);
 	void updateHorizontalSlice(int offsetZ);
