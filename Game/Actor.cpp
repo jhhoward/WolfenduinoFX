@@ -10,6 +10,8 @@ void Actor::init(uint8_t id, uint8_t actorType, uint8_t cellX, uint8_t cellZ)
 	state = ActorState_Idle;
 	x = cellX * CELL_SIZE + CELL_SIZE / 2;
 	z = cellZ * CELL_SIZE + CELL_SIZE / 2;
+	targetCellX = cellX;
+	targetCellZ = cellZ;
 	hp = 20;
 }
 
@@ -27,10 +29,25 @@ void Actor::update()
 
 	switch(state)
 	{
+	case ActorState_Idle:
+		if(engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
+		{
+			switchState(ActorState_Active);
+		}
+		break;
+	case ActorState_Active:
+	{
+		frame = 0;
+		if(tryMove())
+		{
+			pickNewTargetCell();
+		}
+	}
+		break;
 	case ActorState_Injured:
 		if(updateFrame)
 		{
-			switchState(ActorState_Idle);
+			switchState(ActorState_Active);
 		}
 		break;
 	case ActorState_Dying:
@@ -135,4 +152,98 @@ bool Actor::tryDropItem(uint8_t itemType, int cellX, int cellZ)
 		return true;
 	}
 	return false;
+}
+
+bool Actor::tryMove()
+{
+	int16_t newX = x;
+	int16_t newZ = z;
+	int movement = 1;
+
+	int16_t targetX = targetCellX * CELL_SIZE + CELL_SIZE / 2;
+	int16_t targetZ = targetCellZ * CELL_SIZE + CELL_SIZE / 2;
+
+	if(x < targetX)
+	{
+		if(targetX - x < movement)
+		{
+			newX = targetX;
+		}
+		else newX = x + movement;
+	}
+	else if(x > targetX)
+	{
+		if(x - targetX < movement)
+		{
+			newX = targetX;
+		}
+		else newX = x - movement;
+	}
+	if(z < targetZ)
+	{
+		if(targetZ - z < movement)
+		{
+			newZ = targetZ;
+		}
+		else newZ = z + movement;
+	}
+	else if(z > targetZ)
+	{
+		if(z - targetZ < movement)
+		{
+			newZ = targetZ;
+		}
+		else newZ = z - movement;
+	}
+
+	if(newX >= engine.player.x - MIN_ACTOR_DISTANCE && newX <= engine.player.x + MIN_ACTOR_DISTANCE
+	&& newZ >= engine.player.z - MIN_ACTOR_DISTANCE && newZ <= engine.player.z + MIN_ACTOR_DISTANCE)
+	{
+		return false;
+	}
+
+	x = newX;
+	z = newZ;
+
+	return (x == targetX && z == targetZ);
+}
+
+void Actor::pickNewTargetCell()
+{
+	uint8_t newTargetCellX = targetCellX;
+	uint8_t newTargetCellZ = targetCellZ;
+
+	// TODO: better way of picking next tile
+	if(engine.player.x < x)
+	{
+		newTargetCellX --;
+	}
+	else
+	{
+		newTargetCellX ++;
+	}
+	if(engine.player.z < z)
+	{
+		newTargetCellZ --;
+	}
+	else
+	{
+		newTargetCellZ ++;
+	}
+
+	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	{
+		if(this != &engine.actors[n] && engine.actors[n].type != ActorType_Empty && engine.actors[n].hp > 0)
+		{
+			if(engine.actors[n].targetCellX == newTargetCellX && engine.actors[n].targetCellZ == newTargetCellZ)
+				return;
+		}
+	}
+
+	if(engine.map.getTile(newTargetCellX, newTargetCellZ) == 0)
+	{
+		targetCellX = newTargetCellX;
+		targetCellZ = newTargetCellZ;
+	}
+
 }

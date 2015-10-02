@@ -96,6 +96,42 @@ void Player::update()
 
 void Player::move(int16_t deltaX, int16_t deltaZ)
 {
+	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	{
+		Actor& actor = engine.actors[n];
+		if(actor.type != ActorType_Empty && actor.hp > 0)
+		{
+			int16_t diffX = abs((x + deltaX) - actor.x);
+			int16_t diffZ = abs((z + deltaZ) - actor.z);
+
+			if(diffX < MIN_ACTOR_DISTANCE && diffZ < MIN_ACTOR_DISTANCE)
+			{
+				if(diffX > diffZ)
+				{
+					if(x < actor.x)
+					{
+						deltaX = (actor.x - MIN_ACTOR_DISTANCE) - x;
+					}
+					else
+					{
+						deltaX = (actor.x + MIN_ACTOR_DISTANCE) - x;
+					}
+				}
+				else
+				{
+					if(z < actor.z)
+					{
+						deltaZ = (actor.z - MIN_ACTOR_DISTANCE) - z;
+					}
+					else
+					{
+						deltaZ = (actor.z + MIN_ACTOR_DISTANCE) - z;
+					}
+				}
+			}
+		}
+	}
+
 	int cellX = x / CELL_SIZE;
 	int cellZ = z / CELL_SIZE;
 
@@ -108,6 +144,7 @@ void Player::move(int16_t deltaX, int16_t deltaZ)
 			if(x + deltaX < cellX * CELL_SIZE + MIN_WALL_DISTANCE)
 			{
 				deltaX = (cellX * CELL_SIZE + MIN_WALL_DISTANCE) - x;
+				cellX = x / CELL_SIZE;
 			}
 		}
 	}
@@ -120,6 +157,7 @@ void Player::move(int16_t deltaX, int16_t deltaZ)
 			if(x + deltaX > cellX * CELL_SIZE + CELL_SIZE - MIN_WALL_DISTANCE)
 			{
 				deltaX = (cellX * CELL_SIZE + CELL_SIZE - MIN_WALL_DISTANCE) - x;
+				cellX = x / CELL_SIZE;
 			}
 		}
 	}
@@ -148,6 +186,7 @@ void Player::move(int16_t deltaX, int16_t deltaZ)
 			}
 		}
 	}
+
 
 	x += deltaX;
 	z += deltaZ;

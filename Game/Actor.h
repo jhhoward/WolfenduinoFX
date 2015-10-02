@@ -12,6 +12,7 @@ enum ActorType
 enum ActorState
 {
 	ActorState_Idle,
+	ActorState_Active,
 	ActorState_Injured,
 	ActorState_Dying,
 	ActorState_Dead
@@ -28,6 +29,9 @@ public:
 	void switchState(uint8_t newState);
 	void updateFrozenState();
 
+	bool tryMove();
+	void pickNewTargetCell();
+
 	void dropItem(uint8_t itemType);
 	bool tryDropItem(uint8_t itemType, int cellX, int cellZ);
 
@@ -37,6 +41,8 @@ public:
 	uint8_t state;
 	uint8_t frame;
 	int16_t hp;
+
+	uint8_t targetCellX, targetCellZ;
 
 	struct
 	{

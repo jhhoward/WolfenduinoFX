@@ -102,5 +102,6 @@
 #define MAX_ACTIVE_ACTORS 10
 
 #define ACTOR_HITBOX_SIZE 16
+#define MIN_ACTOR_DISTANCE 32
 
 #endif
