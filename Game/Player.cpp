@@ -94,6 +94,55 @@ void Player::update()
 
 }
 
+#ifdef USE_SIMPLE_COLLISIONS
+
+bool Player::isPlayerColliding()
+{
+	for(int8_t n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	{
+		Actor& actor = engine.actors[n];
+		if(actor.type != ActorType_Empty && actor.hp > 0 && actor.isPlayerColliding())
+		{
+			return true;
+		}
+	}
+
+	return isPointColliding(x - MIN_WALL_DISTANCE, z - MIN_WALL_DISTANCE)
+		|| isPointColliding(x + MIN_WALL_DISTANCE, z - MIN_WALL_DISTANCE)
+		|| isPointColliding(x + MIN_WALL_DISTANCE, z + MIN_WALL_DISTANCE)
+		|| isPointColliding(x - MIN_WALL_DISTANCE, z + MIN_WALL_DISTANCE);
+}
+
+bool Player::isPointColliding(int16_t pointX, int16_t pointZ)
+{
+	int8_t cellX = pointX / CELL_SIZE;
+	int8_t cellZ = pointZ / CELL_SIZE;
+
+	return (engine.map.isBlocked(cellX, cellZ));
+}
+
+void Player::move(int16_t deltaX, int16_t deltaZ)
+{
+	x += deltaX;
+	z += deltaZ;
+
+	if(isPlayerColliding())
+	{
+		z -= deltaZ;
+		if(isPlayerColliding())
+		{
+			x -= deltaX;
+			z += deltaZ;
+			if(isPlayerColliding())
+			{
+				z -= deltaZ;
+			}
+		}
+	}
+}
+
+#else
+
 void Player::move(int16_t deltaX, int16_t deltaZ)
 {
 	for(int8_t n = 0; n < MAX_ACTIVE_ACTORS; n++)
@@ -191,6 +240,8 @@ void Player::move(int16_t deltaX, int16_t deltaZ)
 	x += deltaX;
 	z += deltaZ;
 }
+
+#endif
 
 #define NUM_WEAPON_FRAMES 4
 
@@ -310,3 +361,4 @@ void Player::shootWeapon()
 		WARNING("NO TARGET!\n");
 	}
 }
+

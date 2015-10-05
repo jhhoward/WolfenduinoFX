@@ -37,10 +37,15 @@ void Actor::update()
 		break;
 	case ActorState_Active:
 	{
-		frame = 0;
 		if(tryMove())
 		{
-			pickNewTargetCell();
+			frame = (engine.frameCount >> 2) & 0x3;
+			if(frame == 3)
+				frame = 1;
+		}
+		else
+		{
+			frame = 1;
 		}
 	}
 		break;
@@ -154,96 +159,110 @@ bool Actor::tryDropItem(uint8_t itemType, int cellX, int cellZ)
 	return false;
 }
 
+bool Actor::isPlayerColliding()
+{
+	if(x >= engine.player.x - MIN_ACTOR_DISTANCE && x <= engine.player.x + MIN_ACTOR_DISTANCE
+	&& z >= engine.player.z - MIN_ACTOR_DISTANCE && z <= engine.player.z + MIN_ACTOR_DISTANCE)
+	{
+		return true;
+	}
+	return false;
+}
+
 bool Actor::tryMove()
 {
-	int16_t newX = x;
-	int16_t newZ = z;
 	int movement = 1;
+
+	if(engine.map.isBlocked(targetCellX, targetCellZ))
+	{
+		engine.map.openDoorsAt(targetCellX, targetCellZ);
+		return false;
+	}
 
 	int16_t targetX = targetCellX * CELL_SIZE + CELL_SIZE / 2;
 	int16_t targetZ = targetCellZ * CELL_SIZE + CELL_SIZE / 2;
 
-	if(x < targetX)
-	{
-		if(targetX - x < movement)
-		{
-			newX = targetX;
-		}
-		else newX = x + movement;
-	}
-	else if(x > targetX)
-	{
-		if(x - targetX < movement)
-		{
-			newX = targetX;
-		}
-		else newX = x - movement;
-	}
-	if(z < targetZ)
-	{
-		if(targetZ - z < movement)
-		{
-			newZ = targetZ;
-		}
-		else newZ = z + movement;
-	}
-	else if(z > targetZ)
-	{
-		if(z - targetZ < movement)
-		{
-			newZ = targetZ;
-		}
-		else newZ = z - movement;
-	}
+	int8_t deltaX = clamp(targetX - x, -movement, movement);
+	int8_t deltaZ = clamp(targetZ - z, -movement, movement);
 
-	if(newX >= engine.player.x - MIN_ACTOR_DISTANCE && newX <= engine.player.x + MIN_ACTOR_DISTANCE
-	&& newZ >= engine.player.z - MIN_ACTOR_DISTANCE && newZ <= engine.player.z + MIN_ACTOR_DISTANCE)
+	x += deltaX;
+	z += deltaZ;
+
+	if(isPlayerColliding())
 	{
+		x -= deltaX;
+		z -= deltaZ;
 		return false;
 	}
 
-	x = newX;
-	z = newZ;
-
-	return (x == targetX && z == targetZ);
+	if(x == targetX && z == targetZ)
+	{
+		pickNewTargetCell();
+	}
+	return true;
 }
 
-void Actor::pickNewTargetCell()
+bool Actor::tryPickCell(int8_t newX, int8_t newZ)
 {
-	uint8_t newTargetCellX = targetCellX;
-	uint8_t newTargetCellZ = targetCellZ;
-
-	// TODO: better way of picking next tile
-	if(engine.player.x < x)
-	{
-		newTargetCellX --;
-	}
-	else
-	{
-		newTargetCellX ++;
-	}
-	if(engine.player.z < z)
-	{
-		newTargetCellZ --;
-	}
-	else
-	{
-		newTargetCellZ ++;
-	}
+	if(engine.map.isBlocked(newX, newZ) && !engine.map.isDoor(newX, newZ))
+		return false;
+	if(engine.map.isBlocked(targetCellX, newZ) && !engine.map.isDoor(targetCellX, newZ))
+		return false;
+	if(engine.map.isBlocked(newX, targetCellZ) && !engine.map.isDoor(newX, targetCellZ))
+		return false;
 
 	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
 		if(this != &engine.actors[n] && engine.actors[n].type != ActorType_Empty && engine.actors[n].hp > 0)
 		{
-			if(engine.actors[n].targetCellX == newTargetCellX && engine.actors[n].targetCellZ == newTargetCellZ)
-				return;
+			if(engine.actors[n].targetCellX == newX && engine.actors[n].targetCellZ == newZ)
+				return false;
 		}
 	}
 
-	if(engine.map.getTile(newTargetCellX, newTargetCellZ) == 0)
+	targetCellX = newX;
+	targetCellZ = newZ;
+
+	return true;
+}
+
+bool Actor::tryPickCells(int8_t deltaX, int8_t deltaZ)
+{
+	return tryPickCell(targetCellX + deltaX, targetCellZ + deltaZ)
+		|| tryPickCell(targetCellX + deltaX, targetCellZ) 
+		|| tryPickCell(targetCellX, targetCellZ + deltaZ) 
+		|| tryPickCell(targetCellX - deltaX, targetCellZ + deltaZ)
+		|| tryPickCell(targetCellX + deltaX, targetCellZ - deltaZ);
+}
+
+void Actor::pickNewTargetCell()
+{
+	int8_t deltaX = clamp(engine.player.x / CELL_SIZE - targetCellX, -1, 1);
+	int8_t deltaZ = clamp(engine.player.z / CELL_SIZE - targetCellZ, -1, 1);
+	uint8_t dodgeChance = random() & 0xff;
+
+	if(deltaX == 0)
 	{
-		targetCellX = newTargetCellX;
-		targetCellZ = newTargetCellZ;
+		if(dodgeChance < 64)
+		{
+			deltaX = -1;
+		}
+		else if(dodgeChance < 128)
+		{
+			deltaX = 1;
+		}
+	}
+	else if(deltaZ == 0)
+	{
+		if(dodgeChance < 64)
+		{
+			deltaZ = -1;
+		}
+		else if(dodgeChance < 128)
+		{
+			deltaZ = 1;
+		}
 	}
 
+	tryPickCells(deltaX, deltaZ);
 }

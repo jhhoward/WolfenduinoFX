@@ -743,7 +743,7 @@ void Renderer::drawQueuedSprite(uint8_t id)
 
 	int16_t sx1 = renderQueue[id].x - (dx >> 1);
 	int16_t sx2 = sx1 + dx;
-	int16_t uerror = dx >> 1;
+	int16_t uerror = dx;
 	int8_t u = 0;
 	int8_t du = frameWidth, ustep = 1;
 	int8_t v;

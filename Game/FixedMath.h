@@ -25,6 +25,9 @@ public:
 	{
 		return Sin((angle_t)(DEGREES_90 + (int16_t)x));
 	}
-}; 
+};
+
+int8_t clamp(int8_t x, int8_t lower, int8_t upper);
+uint16_t random();
 
 #endif

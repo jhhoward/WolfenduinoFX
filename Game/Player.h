@@ -35,6 +35,11 @@ public:
 private:
 	void updateWeapon();
 	void shootWeapon();
+
+#ifdef USE_SIMPLE_COLLISIONS
+	bool isPlayerColliding();
+	bool isPointColliding(int16_t x, int16_t z);
+#endif
 };
 
 #endif

@@ -48,7 +48,7 @@ int GetPaletteIndexFromColour(uint8_t* palette, uint8_t r, uint8_t g, uint8_t b)
 		int rdiff = (int) palette[n * 3] - (int) r;
 		int gdiff = (int) palette[n * 3 + 1] - (int) g;
 		int bdiff = (int) palette[n * 3 + 2] - (int) b;
-		int distance = (int) sqrt(rdiff * rdiff + gdiff * gdiff + bdiff * bdiff);
+		int distance = (int) sqrt((float)(rdiff * rdiff + gdiff * gdiff + bdiff * bdiff));
 		
 		if(bestPalette == -1 || distance < bestDistance)
 		{

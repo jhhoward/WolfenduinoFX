@@ -36,13 +36,13 @@ Actor* Engine::spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8
 {
 #if 1
 	// Check for existing actor
-	/*for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
 		if(actors[n].spawnId == spawnId)
 		{
 			return NULL;
 		}
-	}*/
+	}
 
 	// Find an empty slot
 	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)

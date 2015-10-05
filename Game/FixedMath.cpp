@@ -23,3 +23,21 @@ fixed_t FixedMath::Sin(angle_t x)
 	}
 }
 
+int8_t clamp(int8_t x, int8_t lower, int8_t upper)
+{
+	if(x < lower) return lower;
+	if(x > upper) return upper;
+	return x;
+}
+
+uint16_t random()
+{
+	static uint16_t randVal = 0xABC;
+
+    uint16_t lsb = randVal & 1;
+    randVal >>= 1;
+    if (lsb == 1)
+    	randVal ^= 0xB400u;
+
+	return randVal - 1;
+}
