@@ -5,12 +5,14 @@
 #include "Engine.h"
 #include "Defines.h"
 #include "FixedMath.h"
+#include "SpriteFrame.h"
 
 #define NULL_QUEUE_ITEM 0xff
-#define RENDER_QUEUE_CAPACITY 10
+#define RENDER_QUEUE_CAPACITY 8
 
 struct RenderQueueItem
 {
+	SpriteFrame* frame;
 	uint8_t* data;
 	uint8_t x, w;
 	uint8_t next;
@@ -21,7 +23,7 @@ class Renderer
 public:
 	void init();
 	void drawFrame();
-	void queueSprite(uint8_t* sprite, int16_t x, int16_t z);
+	void queueSprite(SpriteFrame* frame, uint8_t* sprite, int16_t x, int16_t z);
 
 #ifdef DEFER_RENDER
 	void drawDeferredFrame();
@@ -30,8 +32,8 @@ public:
 private:
 	void initWBuffer();
 	void drawFloorAndCeiling();  
-	void drawCellWall(uint8_t textureId, int x1, int z1, int x2, int z2);
-	void drawCell(int cellX, int cellZ);
+	void drawCellWall(uint8_t textureId, int8_t x1, int8_t z1, int8_t x2, int8_t z2);
+	void drawCell(int8_t cellX, int8_t cellZ);
 /*inline*/ void drawStrip(int16_t x, int16_t w, int8_t u, uint8_t textureId);
 	void drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint8_t textureId = 0, int8_t _u1 = 0, int8_t _u2 = 15);
 	void drawFrustumCells();
@@ -78,10 +80,12 @@ private:
 class BitPairReader
 {
 public:
-	BitPairReader(uint8_t* ptr, uint8_t offset = 0) : m_ptr(ptr)
+	BitPairReader(uint8_t* ptr, uint16_t offset = 0) 
 	{
-		m_readOffset = offset;
-		m_lastRead = pgm_read_byte(ptr);
+		uint16_t byteOffset = offset >> 2;
+		m_readOffset = (offset - (byteOffset << 2)) << 1;
+		m_ptr = ptr + byteOffset;
+		m_lastRead = pgm_read_byte(m_ptr);
 	}
 	
 	uint8_t read()

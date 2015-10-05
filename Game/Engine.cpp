@@ -9,9 +9,7 @@ void Engine::init()
 		actors[n].type = ActorType_Empty;
 		actors[n].spawnId = 0xff;
 	}
-//	player.x = player.z = 48;
-	player.z = CELL_SIZE * (MAP_SIZE - 2);
-	player.x = CELL_SIZE * MAP_SIZE / 2;
+
 	renderer.init();
 	map.init();
 	player.init();
@@ -36,18 +34,15 @@ void Engine::update()
 
 Actor* Engine::spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8_t cellZ)
 {
-	// Check if actor was already killed
-	if(map.isActorKilled(spawnId))
-		return NULL;
-
+#if 1
 	// Check for existing actor
-	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	/*for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
 		if(actors[n].spawnId == spawnId)
 		{
 			return NULL;
 		}
-	}
+	}*/
 
 	// Find an empty slot
 	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
@@ -70,5 +65,6 @@ Actor* Engine::spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8
 	}
 
 	WARNING("Could not find a slot for new actor\n");
+#endif
 	return NULL;
 }

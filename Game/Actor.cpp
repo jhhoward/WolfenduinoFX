@@ -72,7 +72,7 @@ void Actor::draw()
 {
 	int offset = frame; // == 3 ? 1 : frame;
 
-	engine.renderer.queueSprite((uint8_t*) Data_guardSprite + TEXTURE_STRIDE * TEXTURE_SIZE * offset, x, z);
+	engine.renderer.queueSprite((SpriteFrame*)&Data_guardSprite_frames[frame], (uint8_t*) Data_guardSprite, x, z);
 }
 
 void Actor::updateFrozenState()

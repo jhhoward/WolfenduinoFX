@@ -2,7 +2,8 @@
 #define DEFINES_H_
 
 #if defined (_WIN32)
-#define STANDARD_FILE_STREAMING
+//#define STANDARD_FILE_STREAMING
+#define PROGMEM_MAP_STREAMING
 #define EMULATE_GAMEBUINO 1
 //#define EMULATE_ARDUBOY 1 
 //#define EMULATE_HACKVISION 1
@@ -36,6 +37,8 @@
 #define EMULATE_UZEBOX 1
 
 #else // Gamebuino
+//#define PETIT_FATFS_FILE_STREAMING
+#define PROGMEM_MAP_STREAMING
 #define DISPLAYWIDTH LCDWIDTH
 #define DISPLAYHEIGHT LCDHEIGHT
 #endif
@@ -45,7 +48,7 @@
 
 // WIN32 specific
 #ifdef _WIN32
-#define ZOOM_SCALE 1
+#define ZOOM_SCALE 3
 
 #define PROGMEM
 #define pgm_read_byte(x) (*((uint8_t*)x))
@@ -53,6 +56,7 @@
 
 #define pgm_read_ptr(x) (*((uintptr_t*)x))
 
+#include <stdio.h>
 #define WARNING(msg, ...) printf((msg), __VA_ARGS__)
 #else
 #define WARNING(msg, ...)
@@ -99,7 +103,7 @@
 
 #define DOOR_FRAME_TEXTURE 19
 
-#define MAX_ACTIVE_ACTORS 10
+#define MAX_ACTIVE_ACTORS 4
 
 #define ACTOR_HITBOX_SIZE 16
 #define MIN_ACTOR_DISTANCE 32

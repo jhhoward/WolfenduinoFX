@@ -4,9 +4,14 @@
 
 #include <stdio.h>
 
+#ifdef PROGMEM_MAP_STREAMING
 #include "Data_Maps.h"
+#endif
+#ifdef PETIT_FATFS_FILE_STREAMING
+#include <petit_fatfs.h>
+#endif
 
-bool Map::isValid(int x, int z)
+bool Map::isValid(int8_t x, int8_t z)
 {
 	if(x < bufferX || z < bufferZ || x >= bufferX + MAP_BUFFER_SIZE || z >= bufferZ + MAP_BUFFER_SIZE)
 	{
@@ -30,6 +35,16 @@ void Map::init()
 #ifdef STANDARD_FILE_STREAMING
 	fopen_s(&m_mapStream, "wolf3d.dat", "rb");
 #endif
+#ifdef PETIT_FATFS_FILE_STREAMING
+	m_mapLoaded = false;
+	if(pf_mount(&m_fileSystem) == FR_OK)
+	{
+		if(pf_open("WOLF3D.DAT") == FR_OK)
+		{
+			m_mapLoaded = true;
+		}
+	}
+#endif
 	bufferX = 0;
 	bufferZ = 0;
 }
@@ -39,13 +54,13 @@ void Map::update()
 	updateDoors();
 }
 
-bool Map::isDoor(int cellX, int cellZ)
+bool Map::isDoor(int8_t cellX, int8_t cellZ)
 {
 	uint8_t tile = getTile(cellX, cellZ);
 	return tile >= Tile_FirstDoor && tile <= Tile_LastDoor;
 }
 
-bool Map::isBlocked(int cellX, int cellZ)
+bool Map::isBlocked(int8_t cellX, int8_t cellZ)
 {
 	uint8_t tile = getTile(cellX, cellZ);
 
@@ -58,7 +73,7 @@ bool Map::isBlocked(int cellX, int cellZ)
 		return true;
 
 	// Check if the door is closed
-	for(int n = 0; n < MAX_DOORS; n++)
+	for(int8_t n = 0; n < MAX_DOORS; n++)
 	{
 		if(doors[n].type != DoorType_None && doors[n].x == cellX && doors[n].z == cellZ && doors[n].open < 16)
 		{
@@ -69,13 +84,13 @@ bool Map::isBlocked(int cellX, int cellZ)
 	return false;
 }
 
-bool Map::isSolid(int cellX, int cellZ)
+bool Map::isSolid(int8_t cellX, int8_t cellZ)
 {
 	uint8_t tile = getTile(cellX, cellZ);
 	return tile >= Tile_FirstWall && tile <= Tile_LastWall && tile != MAP_OUT_OF_BOUNDS;
 }
 
-uint8_t Map::getTextureId(int cellX, int cellZ)
+uint8_t Map::getTextureId(int8_t cellX, int8_t cellZ)
 {
 	uint8_t tile = getTile(cellX, cellZ);
 	if(tile == MAP_OUT_OF_BOUNDS)
@@ -83,7 +98,7 @@ uint8_t Map::getTextureId(int cellX, int cellZ)
 	return tile - 1;
 }
 
-uint8_t Map::getTile(int x, int z)
+uint8_t Map::getTile(int8_t x, int8_t z)
 {
 	if(x < bufferX || z < bufferZ || x >= bufferX + MAP_BUFFER_SIZE || z >= bufferZ + MAP_BUFFER_SIZE)
 	{
@@ -93,7 +108,7 @@ uint8_t Map::getTile(int x, int z)
 	return getTileFast(x, z);
 }
 
-void Map::streamData(uint8_t* buffer, MapRead_Orientation orientation, int x, int z, int length)
+void Map::streamData(uint8_t* buffer, MapRead_Orientation orientation, int8_t x, int8_t z, int8_t length)
 {
 #ifdef STANDARD_FILE_STREAMING
 	if(m_mapStream)
@@ -104,26 +119,39 @@ void Map::streamData(uint8_t* buffer, MapRead_Orientation orientation, int x, in
 		return;
 	}
 #endif
-
+#ifdef PETIT_FATFS_FILE_STREAMING
+	if(m_mapLoaded)
+	{
+		int32_t offset = orientation == MapRead_Horizontal ? (z * MAP_SIZE + x) * 2 : (MAP_SIZE * MAP_SIZE * 2) + (x * MAP_SIZE + z) * 2;
+		WORD bytesRead;
+		pf_lseek(offset);
+		pf_read(buffer, length * 2, &bytesRead);
+	}
+#endif
 	//printf("Streaming %s, %d, %d\n", orientation == MapRead_Horizontal ? "Horizontal" : "Vertical", x, z, length);
 	// TODO: make this stream from SD card or decompress from huffman stream in progmem
+
+#ifdef PROGMEM_MAP_STREAMING
 	if(orientation == MapRead_Horizontal)
 	{
-		for(int n = 0; n < length; n++)
+		for(int8_t n = 0; n < length; n++)
 		{
-			buffer[n] = pgm_read_byte(&mapData[z * MAP_SIZE + x + n]);
+			buffer[n * 2] = pgm_read_byte(&mapData[z * MAP_SIZE + x + n]);
+			buffer[n * 2 + 1] = 0xff;
 		}
 	}
 	else
 	{
-		for(int n = 0; n < length; n++)
+		for(int8_t n = 0; n < length; n++)
 		{
-			buffer[n] = pgm_read_byte(&mapData[(z + n) * MAP_SIZE + x]);
+			buffer[n * 2] = pgm_read_byte(&mapData[(z + n) * MAP_SIZE + x]);
+			buffer[n * 2 + 1] = 0xff;
 		}
-	}	
+	}
+#endif
 }
 
-uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int x, int z)
+uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z)
 {
 	if(tile >= Tile_FirstDoor && tile <= Tile_LastDoor)
 	{
@@ -156,30 +184,30 @@ uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int x, int z)
 	return tile;
 }
 
-void Map::updateHorizontalSlice(int offsetZ)
+void Map::updateHorizontalSlice(int8_t offsetZ)
 {
 	streamData(m_streamBuffer, MapRead_Horizontal, bufferX, bufferZ + offsetZ, MAP_BUFFER_SIZE);
 
-	int targetZ	= (bufferZ + offsetZ) & 0xf;
+	int8_t targetZ	= (bufferZ + offsetZ) & 0xf;
 
-	for(int x = 0; x < MAP_BUFFER_SIZE; x++)
+	for(int8_t x = 0; x < MAP_BUFFER_SIZE; x++)
 	{
-		int targetX = (bufferX + x) & 0xf;
+		int8_t targetX = (bufferX + x) & 0xf;
 		uint8_t read = streamIn(m_streamBuffer[x * 2], m_streamBuffer[x * 2 + 1], bufferX + x, bufferZ + offsetZ);
 
 		m_mapBuffer[targetZ * MAP_BUFFER_SIZE + targetX] = read;
 	}
 }
 
-void Map::updateVerticalSlice(int offsetX)
+void Map::updateVerticalSlice(int8_t offsetX)
 {
 	streamData(m_streamBuffer, MapRead_Vertical, bufferX + offsetX, bufferZ, MAP_BUFFER_SIZE);
 
-	int targetX = (bufferX + offsetX) & 0xf;
+	int8_t targetX = (bufferX + offsetX) & 0xf;
 
-	for(int z = 0; z < MAP_BUFFER_SIZE; z++)
+	for(int8_t z = 0; z < MAP_BUFFER_SIZE; z++)
 	{
-		int targetZ = (bufferZ + z) & 0xf;
+		int8_t targetZ = (bufferZ + z) & 0xf;
 		uint8_t read = streamIn(m_streamBuffer[z * 2], m_streamBuffer[z * 2 + 1], bufferX + offsetX, bufferZ + z);
 
 		m_mapBuffer[targetZ * MAP_BUFFER_SIZE + targetX] = read;
@@ -188,7 +216,7 @@ void Map::updateVerticalSlice(int offsetX)
 
 void Map::updateEntireBuffer()
 {
-	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	for(int8_t n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
 		if(engine.actors[n].type != ActorType_Empty)
 		{
@@ -196,13 +224,13 @@ void Map::updateEntireBuffer()
 		}
 	}
 
-	for(int n = 0; n < MAP_BUFFER_SIZE; n++)
+	for(int8_t n = 0; n < MAP_BUFFER_SIZE; n++)
 	{
 		updateHorizontalSlice(n);
 	}
 }
 
-void Map::updateBufferPosition(int newX, int newZ)
+void Map::updateBufferPosition(int8_t newX, int8_t newZ)
 {
 	if(newX < 0)
 		newX = 0;
@@ -249,7 +277,7 @@ void Map::updateBufferPosition(int newX, int newZ)
 
 void Map::updateDoors()
 {
-	for(int n = 0; n < MAX_DOORS; n++)
+	for(int8_t n = 0; n < MAX_DOORS; n++)
 	{
 		if(doors[n].type != DoorType_None)
 		{
@@ -258,11 +286,11 @@ void Map::updateDoors()
 	}
 }
 
-void Map::streamInDoor(DoorType type, int x, int z)
+void Map::streamInDoor(DoorType type, int8_t x, int8_t z)
 {
-	int freeIndex = -1;
+	int8_t freeIndex = -1;
 
-	for(int n = 0; n < MAX_DOORS; n++)
+	for(int8_t n = 0; n < MAX_DOORS; n++)
 	{
 		if(freeIndex == -1 && doors[n].type == DoorType_None)
 		{
@@ -277,7 +305,7 @@ void Map::streamInDoor(DoorType type, int x, int z)
 
 	if(freeIndex == -1)
 	{
-		for(int n = 0; n < MAX_DOORS; n++)
+		for(int8_t n = 0; n < MAX_DOORS; n++)
 		{
 			if(doors[n].x < bufferX || doors[n].x >= bufferX + MAP_BUFFER_SIZE
 			|| doors[n].z < bufferZ || doors[n].z >= bufferZ + MAP_BUFFER_SIZE)
@@ -301,12 +329,12 @@ void Map::streamInDoor(DoorType type, int x, int z)
 	doors[freeIndex].type = type;
 }
 
-void Map::openDoorsAt(int x, int z)
+void Map::openDoorsAt(int8_t x, int8_t z)
 {
 	if(!isDoor(x, z))
 		return;
 
-	for(int n = 0; n < MAX_DOORS; n++)
+	for(int8_t n = 0; n < MAX_DOORS; n++)
 	{
 		if(doors[n].type != DoorType_None && doors[n].x == x && doors[n].z == z)
 		{
@@ -394,7 +422,7 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
 	int cellZ1 = z1 / CELL_SIZE;
 	int cellZ2 = z2 / CELL_SIZE;
 
-    int xdist = abs(cellX2 - cellX1);
+    int xdist = mabs(cellX2 - cellX1);
 
 	int partial, delta;
 	int deltafrac;
@@ -416,7 +444,7 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
             xstep = -1;
         }
 
-        deltafrac = abs(x2 - x1);
+        deltafrac = mabs(x2 - x1);
         delta = z2 - z1;
         ltemp = ((int32_t)delta * CELL_SIZE) / deltafrac;
         if (ltemp > 0x7fffl)
@@ -455,7 +483,7 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
         } while (x != cellX2);
     }
 
-    int zdist = abs(cellZ2 - cellZ1);
+    int zdist = mabs(cellZ2 - cellZ1);
 
     if (zdist > 0)
     {
@@ -470,7 +498,7 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
             zstep = -1;
         }
 
-        deltafrac = abs(z2 - z1);
+        deltafrac = mabs(z2 - z1);
         delta = x2 - x1;
         ltemp = ((int32_t)delta * CELL_SIZE)/deltafrac;
         if (ltemp > 0x7fffl)

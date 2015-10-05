@@ -70,8 +70,8 @@ void Player::update()
 	engine.map.updateBufferPosition(projectedX - MAP_BUFFER_SIZE / 2, projectedZ - MAP_BUFFER_SIZE / 2);
 
 	// Check for doors
-	int cellX = x / CELL_SIZE;
-	int cellZ = z / CELL_SIZE;
+	int8_t cellX = x / CELL_SIZE;
+	int8_t cellZ = z / CELL_SIZE;
 
 	engine.map.openDoorsAt(cellX, cellZ);
 
@@ -96,13 +96,13 @@ void Player::update()
 
 void Player::move(int16_t deltaX, int16_t deltaZ)
 {
-	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	for(int8_t n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
 		Actor& actor = engine.actors[n];
 		if(actor.type != ActorType_Empty && actor.hp > 0)
 		{
-			int16_t diffX = abs((x + deltaX) - actor.x);
-			int16_t diffZ = abs((z + deltaZ) - actor.z);
+			int16_t diffX = mabs((x + deltaX) - actor.x);
+			int16_t diffZ = mabs((z + deltaZ) - actor.z);
 
 			if(diffX < MIN_ACTOR_DISTANCE && diffZ < MIN_ACTOR_DISTANCE)
 			{
@@ -132,8 +132,8 @@ void Player::move(int16_t deltaX, int16_t deltaZ)
 		}
 	}
 
-	int cellX = x / CELL_SIZE;
-	int cellZ = z / CELL_SIZE;
+	int8_t cellX = x / CELL_SIZE;
+	int8_t cellZ = z / CELL_SIZE;
 
 	if(deltaX < 0)
 	{
@@ -243,15 +243,15 @@ void Player::updateWeapon()
 void Player::init()
 {
 	// Find player start tile
-	for(int j = 0; j < MAP_SIZE; j += MAP_BUFFER_SIZE)
+	for(int8_t j = 0; j < MAP_SIZE; j += MAP_BUFFER_SIZE)
 	{
-		for(int i = 0; i < MAP_SIZE; i += MAP_BUFFER_SIZE)
+		for(int8_t i = 0; i < MAP_SIZE; i += MAP_BUFFER_SIZE)
 		{
 			engine.map.updateBufferPosition(i, j);
 
-			for(int a = 0; a < MAP_BUFFER_SIZE; a++)
+			for(int8_t a = 0; a < MAP_BUFFER_SIZE; a++)
 			{
-				for(int b = 0; b < MAP_BUFFER_SIZE; b++)
+				for(int8_t b = 0; b < MAP_BUFFER_SIZE; b++)
 				{
 					uint8_t tile = engine.map.getTileFast(b, a);
 
@@ -275,7 +275,7 @@ void Player::shootWeapon()
 	int8_t closestActor = -1;
 	int16_t actorDistance = 0;
 	
-	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	for(int8_t n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
 		if(engine.actors[n].type != ActorType_Empty && engine.actors[n].hp > 0)
 		{

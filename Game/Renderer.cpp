@@ -3,7 +3,6 @@
 #include "FixedMath.h"
 #include "TileTypes.h"
 
-#include <math.h> // temp
 #include "Data_Walls.h"
 #include "Data_Pistol.h"
 #include "Data_Decorations.h"
@@ -11,7 +10,6 @@
 #include "Data_Items.h"
 
 #include <stdio.h>
-int overdraw = 0;
 
 void Renderer::init()
 {
@@ -19,16 +17,19 @@ void Renderer::init()
 
 void Renderer::drawWeapon()
 {
-	BitPairReader reader((uint8_t*)Data_pistolSprite + TEXTURE_STRIDE * TEXTURE_SIZE * engine.player.weapon.frame);
+	SpriteFrame* frame = (SpriteFrame*) &Data_pistolSprite_frames[engine.player.weapon.frame];
+	BitPairReader reader((uint8_t*)Data_pistolSprite, pgm_read_word(&frame->offset));
+	uint8_t frameWidth = pgm_read_byte(&frame->width);
+	uint8_t frameHeight = pgm_read_byte(&frame->height);
 
-	for(int i = 0; i < 16; i++)
+	for(int8_t i = 0; i < frameWidth; i++)
 	{
-		for(int j = 0; j < 16; j++)
+		for(int8_t j = frameHeight - 1; j >= 0; j--)
 		{
 			uint8_t pixel = reader.read();
 			if(pixel)
 			{
-				drawPixel(i + HALF_DISPLAYWIDTH - 8, DISPLAYHEIGHT - 16 + j, (pixel - 1) ? 0 : 1);
+				drawPixel(i + HALF_DISPLAYWIDTH - (frameWidth >> 1), DISPLAYHEIGHT - frameHeight + j, (pixel - 1) ? 0 : 1);
 			}
 		}
 	}
@@ -37,7 +38,7 @@ void Renderer::drawWeapon()
 void Renderer::drawFrame()
 {
 	renderQueueHead = NULL_QUEUE_ITEM;
-	for(int n = 0; n < RENDER_QUEUE_CAPACITY; n++)
+	for(int8_t n = 0; n < RENDER_QUEUE_CAPACITY; n++)
 	{
 		renderQueue[n].data = NULL;
 	}
@@ -49,7 +50,6 @@ void Renderer::drawFrame()
 	view.clipCos = FixedMath::Cos(-engine.player.direction + DEGREES_90 / 2);
 	view.clipSin = FixedMath::Sin(-engine.player.direction + DEGREES_90 / 2);
 
-	overdraw = 0;
 	view.cellX = engine.player.x / CELL_SIZE;
 	view.cellZ = engine.player.z / CELL_SIZE;
 	initWBuffer();
@@ -61,7 +61,7 @@ void Renderer::drawFrame()
 	drawBufferedCells();
 	drawDoors();
 
-	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	for(int8_t n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
 		if(engine.actors[n].type != ActorType_Empty && !engine.actors[n].flags.frozen)
 		{
@@ -137,8 +137,8 @@ void Renderer::drawDeferredFrame()
 
 void Renderer::drawBufferedCells()
 {
-	int xd, zd;
-	int x1, z1, x2, z2;
+	int8_t xd, zd;
+	int8_t x1, z1, x2, z2;
 
 	if(view.rotCos > 0)
 	{
@@ -167,9 +167,9 @@ void Renderer::drawBufferedCells()
 
 	if(mabs(view.rotCos) < mabs(view.rotSin))
 	{
-		for(int z = z1; z != z2; z += zd)
+		for(int8_t z = z1; z != z2; z += zd)
 		{
-			for(int x = x1; x != x2; x+= xd)
+			for(int8_t x = x1; x != x2; x+= xd)
 			{
 				drawCell(x, z);
 			}
@@ -177,9 +177,9 @@ void Renderer::drawBufferedCells()
 	}
 	else
 	{
-		for(int x = x1; x != x2; x+= xd)
+		for(int8_t x = x1; x != x2; x+= xd)
 		{
-			for(int z = z1; z != z2; z += zd)
+			for(int8_t z = z1; z != z2; z += zd)
 			{
 				drawCell(x, z);
 			}
@@ -189,7 +189,7 @@ void Renderer::drawBufferedCells()
 
 void Renderer::initWBuffer()
 {
-	for (int i=0; i<DISPLAYWIDTH; i++)
+	for (int8_t i=0; i<DISPLAYWIDTH; i++)
 		wbuffer[i] = 0;
 }
 
@@ -200,7 +200,7 @@ void Renderer::drawFloorAndCeiling()
 	memset(_displayBuffer, 0x00, 3*84);
 	for (int y=3, ofs=3*84; y<6; y++)
 	{
-		for (int x=0; x<84; x+=2)
+		for (int8_t x=0; x<84; x+=2)
 		{
 			_displayBuffer[ofs++] = 0x55;
 			_displayBuffer[ofs++] = 0x00;
@@ -248,13 +248,13 @@ void Renderer::drawFloorAndCeiling()
 }
 #endif
 
-void Renderer::drawCellWall(uint8_t textureId, int x1, int z1, int x2, int z2)
+void Renderer::drawCellWall(uint8_t textureId, int8_t x1, int8_t z1, int8_t x2, int8_t z2)
 {
 	drawWall(x1 * CELL_SIZE, z1 * CELL_SIZE, x2 * CELL_SIZE, z2 * CELL_SIZE, textureId);
 	//drawWall(x2 * CELL_SIZE, z2 * CELL_SIZE, x1 * CELL_SIZE, z1 * CELL_SIZE);
 }
 
-void Renderer::drawCell(int cellX, int cellZ)
+void Renderer::drawCell(int8_t cellX, int8_t cellZ)
 {
 	// clip cells out of frustum view
 	if(isFrustrumClipped(cellX, cellZ))
@@ -266,12 +266,12 @@ void Renderer::drawCell(int cellX, int cellZ)
 	
 	if(tile >= Tile_FirstDecoration && tile <= Tile_LastDecoration)
 	{
-		queueSprite((uint8_t*)Data_decorations + (tile - Tile_FirstDecoration) * TEXTURE_SIZE * TEXTURE_STRIDE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
+		queueSprite((SpriteFrame*) &Data_decorations_frames[tile - Tile_FirstDecoration], (uint8_t*)Data_decorations, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
 		return;
 	}
 	if(tile >= Tile_FirstBlockingDecoration && tile <= Tile_LastBlockingDecoration)
 	{
-		queueSprite((uint8_t*)Data_blockingDecorations + (tile - Tile_FirstBlockingDecoration) * TEXTURE_SIZE * TEXTURE_STRIDE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
+		queueSprite((SpriteFrame*) &Data_blockingDecorations_frames[tile - Tile_FirstBlockingDecoration], (uint8_t*)Data_blockingDecorations, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
 		return;
 	}
 	/*if(tile >= Tile_FirstActor && tile <= Tile_LastActor)
@@ -281,7 +281,7 @@ void Renderer::drawCell(int cellX, int cellZ)
 	}*/
 	if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
 	{
-		queueSprite((uint8_t*)Data_itemSprites + (tile - Tile_FirstItem) * TEXTURE_SIZE * TEXTURE_STRIDE, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
+		queueSprite((SpriteFrame*) &Data_itemSprites_frames[(tile - Tile_FirstItem)], (uint8_t*)Data_itemSprites, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
 		return;
 	}
 
@@ -553,10 +553,6 @@ void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint
 	{
 		if (x >= 0 && x < DISPLAYWIDTH && w > wbuffer[x])
 		{        
-			if(wbuffer[x] != 0)
-			{
-				overdraw++;
-			}
 			if(w <= 255)
 			{
 				wbuffer[x] = (uint8_t) w;
@@ -640,8 +636,9 @@ void Renderer::drawDoors()
 	}
 }
 
-void Renderer::queueSprite(uint8_t* sprite, int16_t _x, int16_t _z)
+void Renderer::queueSprite(SpriteFrame* frame, uint8_t* spriteData, int16_t _x, int16_t _z)
 {
+#if 1
 	int cellX = _x / CELL_SIZE;
 	int cellZ = _z / CELL_SIZE;
 
@@ -694,7 +691,8 @@ void Renderer::queueSprite(uint8_t* sprite, int16_t _x, int16_t _z)
 
 	renderQueue[newItem].x = x;
 	renderQueue[newItem].w = w;
-	renderQueue[newItem].data = sprite;
+	renderQueue[newItem].frame = frame;
+	renderQueue[newItem].data = spriteData;
 
 	if(renderQueueHead == NULL_QUEUE_ITEM)
 	{
@@ -728,23 +726,27 @@ void Renderer::queueSprite(uint8_t* sprite, int16_t _x, int16_t _z)
 			}
 		}
 	}
+#endif
 }
 
 void Renderer::drawQueuedSprite(uint8_t id)
 {
+	uint8_t frameWidth = pgm_read_byte(&renderQueue[id].frame->width);
+	uint8_t frameHeight = pgm_read_byte(&renderQueue[id].frame->height);
 	int16_t halfW = renderQueue[id].w >> 1;
-	int y1 = (HALF_DISPLAYHEIGHT) - halfW;
 	int y2 = (HALF_DISPLAYHEIGHT) + halfW;
+	int y1 = y2 - (renderQueue[id].w * frameHeight) / (CELL_SIZE / 2);
 
-	// transform the end points into screen space
 	int16_t w = renderQueue[id].w;
-	int16_t sx1 = renderQueue[id].x - halfW;
-	int16_t sx2 = sx1 + w;
 
-	int16_t dx = w;
+	int16_t dx = (w * frameWidth) / (CELL_SIZE / 2);
+
+	int16_t sx1 = renderQueue[id].x - (dx >> 1);
+	int16_t sx2 = sx1 + dx;
 	int16_t uerror = dx >> 1;
 	int8_t u = 0;
-	int8_t du = 16, ustep = 1;
+	int8_t du = frameWidth, ustep = 1;
+	int8_t v;
 
 	for (int x = sx1; x <= sx2; x++)
 	{
@@ -752,12 +754,14 @@ void Renderer::drawQueuedSprite(uint8_t id)
 		{        
 			int verror = halfW;
 
-			BitPairReader textureReader((uint8_t*) renderQueue[id].data + u * TEXTURE_STRIDE);
+			BitPairReader textureReader((uint8_t*) renderQueue[id].data, pgm_read_word(&renderQueue[id].frame->offset) + frameHeight * u);
 			uint8_t texData = textureReader.read();
 
-			for(int y = y1; y <= y2; y++)
+			v = 0;
+
+			for(int y = y2; y >= y1 && y >= 0 && v < frameHeight; y--)
 			{
-				if(y >= 0 && y < DISPLAYHEIGHT)
+				if(y < DISPLAYHEIGHT)
 				{
 					switch(texData)
 					{
@@ -784,16 +788,16 @@ void Renderer::drawQueuedSprite(uint8_t id)
 #endif
 						break;
 					}
-
 				}
-
 				verror -= 15;
 
 				while(verror < 0)
 				{
 					texData = textureReader.read();
 					verror += w;
+					v++;
 				}
+
 			}
 		}
 
@@ -801,7 +805,7 @@ void Renderer::drawQueuedSprite(uint8_t id)
 
 		if(dx > 0)
 		{
-			while(uerror < 0)
+			while(u < frameWidth - 1 && uerror < 0)
 			{
 				u += ustep;
 				uerror += dx;
