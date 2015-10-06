@@ -263,7 +263,7 @@ void Actor::pickNewTargetCell()
 {
 	int8_t deltaX = clamp(engine.player.x / CELL_SIZE - targetCellX, -1, 1);
 	int8_t deltaZ = clamp(engine.player.z / CELL_SIZE - targetCellZ, -1, 1);
-	uint8_t dodgeChance = random() & 0xff;
+	uint8_t dodgeChance = getRandomNumber() & 0xff;
 
 	if(deltaX == 0)
 	{

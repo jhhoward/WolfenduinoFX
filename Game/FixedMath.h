@@ -28,6 +28,6 @@ public:
 };
 
 int8_t clamp(int8_t x, int8_t lower, int8_t upper);
-uint16_t random();
+uint16_t getRandomNumber();
 
 #endif
