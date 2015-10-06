@@ -21,6 +21,7 @@ void Renderer::drawWeapon()
 	BitPairReader reader((uint8_t*)Data_pistolSprite, pgm_read_word(&frame->offset));
 	uint8_t frameWidth = pgm_read_byte(&frame->width);
 	uint8_t frameHeight = pgm_read_byte(&frame->height);
+	uint8_t x = HALF_DISPLAYWIDTH - 8 + pgm_read_byte(&frame->xOffset);
 
 	for(int8_t i = 0; i < frameWidth; i++)
 	{
@@ -29,7 +30,7 @@ void Renderer::drawWeapon()
 			uint8_t pixel = reader.read();
 			if(pixel)
 			{
-				drawPixel(i + HALF_DISPLAYWIDTH - (frameWidth >> 1), DISPLAYHEIGHT - frameHeight + j, (pixel - 1) ? 0 : 1);
+				drawPixel(i + x, DISPLAYHEIGHT - frameHeight + j, (pixel - 1) ? 0 : 1);
 			}
 		}
 	}
@@ -69,6 +70,15 @@ void Renderer::drawFrame()
 		}
 	}
 
+	for(int8_t n = 0; n < MAX_ACTIVE_ITEMS; n++)
+	{
+		if(engine.map.items[n].type != 0)
+		{
+			int16_t x = engine.map.items[n].x * CELL_SIZE + CELL_SIZE / 2, z = engine.map.items[n].z * CELL_SIZE + CELL_SIZE / 2;
+			queueSprite((SpriteFrame*) &Data_itemSprites_frames[(engine.map.items[n].type - Tile_FirstItem)], (uint8_t*)Data_itemSprites, x, z);
+		}
+	}
+	
 	/*queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 2));
 	queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 3));
 	queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 4));
@@ -279,11 +289,11 @@ void Renderer::drawCell(int8_t cellX, int8_t cellZ)
 		queueSprite((uint8_t*)Data_guardSprite, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
 		return;
 	}*/
-	if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
+	/*if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
 	{
 		queueSprite((SpriteFrame*) &Data_itemSprites_frames[(tile - Tile_FirstItem)], (uint8_t*)Data_itemSprites, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
 		return;
-	}
+	}*/
 
 	if(tile >= Tile_FirstWall && tile <= Tile_LastWall)
 	{
@@ -684,7 +694,7 @@ void Renderer::queueSprite(SpriteFrame* frame, uint8_t* spriteData, int16_t _x, 
 		}
 		else
 		{
-			WARNING("Out of queue space!\n");
+			//WARNING("Out of queue space!\n");
 			return;
 		}
 	}
@@ -741,7 +751,7 @@ void Renderer::drawQueuedSprite(uint8_t id)
 
 	int16_t dx = (w * frameWidth) / (CELL_SIZE / 2);
 
-	int16_t sx1 = renderQueue[id].x - (dx >> 1);
+	int16_t sx1 = renderQueue[id].x - halfW + (w * pgm_read_byte(&renderQueue[id].frame->xOffset)) / (CELL_SIZE / 2);
 	int16_t sx2 = sx1 + dx;
 	int16_t uerror = dx;
 	int8_t u = 0;

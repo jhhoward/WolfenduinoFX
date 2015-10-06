@@ -1,11 +1,11 @@
 #include "SpriteFrame.h"
 
 const SpriteFrame Data_decorations_frames[] PROGMEM = {
-	{ 0, 15, 16 },
-	{ 240, 11, 4 },
-	{ 284, 11, 4 },
-	{ 328, 15, 16 },
-	{ 568, 15, 16 },
+	{ 0, 15, 16, 1 },
+	{ 240, 11, 4, 5 },
+	{ 284, 11, 4, 5 },
+	{ 328, 15, 16, 1 },
+	{ 568, 15, 16, 1 },
 };
 
 const uint8_t Data_decorations[] PROGMEM = {

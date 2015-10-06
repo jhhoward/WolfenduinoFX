@@ -10,6 +10,7 @@ struct SpriteFrame
 {
 	int width, height;
 	vector<uint8_t> data;
+	int xoffset;
 	int offset;
 };
 
@@ -109,7 +110,7 @@ SpriteFrame EncodeFrame(vector<uint8_t>& data, int width, int height, int offset
 	}
 
 	// Crop bottom side
-	blank = true;
+	/*blank = true;
 	for(int j = height - 1; j >= 0 && blank; j--)
 	{
 		for(int i = 0; i < height && blank; i++)
@@ -120,7 +121,7 @@ SpriteFrame EncodeFrame(vector<uint8_t>& data, int width, int height, int offset
 				blank = false;
 		}
 		y2 = j + 1;
-	}
+	}*/
 
 	printf("%d %d -> %d %d\n", x1, y1, x2, y2);
 	/*x1 = 0;
@@ -131,6 +132,7 @@ SpriteFrame EncodeFrame(vector<uint8_t>& data, int width, int height, int offset
 	SpriteFrame frame;
 	frame.width = x2 - x1;
 	frame.height = y2 - y1;
+	frame.xoffset = x1;
 
 	for(int i = x1; i < x2; i++)
 	{
@@ -201,7 +203,7 @@ void OutputSpriteFile(char* filename, char* varName, vector<SpriteFrame> data)
 		fprintf(fs, "const SpriteFrame %s_frames[] PROGMEM = {\n", varName);
 		for(int n = 0; n < data.size(); n++)
 		{
-			fprintf(fs, "\t{ %d, %d, %d },\n", data[n].offset, data[n].width, data[n].height);
+			fprintf(fs, "\t{ %d, %d, %d, %d },\n", data[n].offset, data[n].width, data[n].height, data[n].xoffset);
 		}
 		fprintf(fs, "};\n\n");
 

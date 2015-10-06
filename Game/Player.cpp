@@ -92,6 +92,16 @@ void Player::update()
 		engine.map.openDoorsAt(cellX, cellZ - 1);
 	}
 
+	// Collect any items
+	for(int8_t n = 0; n < MAX_ACTIVE_ITEMS; n++)
+	{
+		if(engine.map.items[n].type != 0 && engine.map.items[n].x == cellX && engine.map.items[n].z == cellZ)
+		{
+			// Collect this item
+			engine.map.items[n].type = 0;
+			engine.map.markItemCollected(engine.map.items[n].spawnId);
+		}
+	}
 }
 
 #ifdef USE_SIMPLE_COLLISIONS

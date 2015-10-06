@@ -42,10 +42,18 @@ public:
 
 	void update();
 
-	DoorType type;
+	uint8_t type;
 	int8_t x, z;
 	uint8_t open : 6;
 	uint8_t state : 2;
+};
+
+class Item
+{
+public:
+	uint8_t type;
+	int8_t x, z;
+	uint8_t spawnId;
 };
 
 class Map
@@ -68,6 +76,7 @@ public:
 	int8_t bufferX;
 	int8_t bufferZ;
 	Door doors[MAX_DOORS];
+	Item items[MAX_ACTIVE_ITEMS];
 
 	uint8_t m_mapBuffer[MAP_BUFFER_SIZE * MAP_BUFFER_SIZE];
 
@@ -75,6 +84,7 @@ public:
 
 	void update();
 	void openDoorsAt(int8_t x, int8_t z);
+	bool placeItem(uint8_t type, int8_t x, int8_t z, uint8_t spawnId);
 
 	bool isItemCollected(uint8_t spawnId)
 	{

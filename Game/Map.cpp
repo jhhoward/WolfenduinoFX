@@ -167,10 +167,11 @@ uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z)
 	}
 	else if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
 	{
-		if(isItemCollected(metadata))
+		if(!isItemCollected(metadata))
 		{
-			return Tile_Empty;
+			placeItem(tile, x, z, metadata);
 		}
+		return Tile_Empty;
 	}
 	else if(tile >= Tile_FirstActor && tile <= Tile_LastActor)
 	{
@@ -537,4 +538,46 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
     }
 
     return true;
+}
+
+bool Map::placeItem(uint8_t type, int8_t x, int8_t z, uint8_t spawnId)
+{
+	int8_t slot = -1;
+
+	for(int8_t n = 0; n < MAX_ACTIVE_ITEMS; n++)
+	{
+		if(items[n].spawnId == 0xff)
+		{
+			slot = n;
+		}
+		else if(spawnId != DYNAMIC_ITEM_ID && items[n].spawnId == spawnId)
+		{
+			return false;
+		}
+	}
+
+	if(slot == -1)
+	{
+		for(int8_t n = 0; n < MAX_ACTIVE_ITEMS; n++)
+		{
+			if(!isValid(items[n].x, items[n].z))
+			{
+				slot = n;
+				break;
+			}
+		}
+	}
+
+	if(slot == -1)
+	{
+		WARNING("No room to spawn item!\n");
+		return false;
+	}
+
+	items[slot].type = type;
+	items[slot].spawnId = spawnId;
+	items[slot].x = x;
+	items[slot].z = z;
+
+	return true;
 }

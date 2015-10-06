@@ -1,10 +1,10 @@
 #include "SpriteFrame.h"
 
 const SpriteFrame Data_pistolSprite_frames[] PROGMEM = {
-	{ 0, 9, 9 },
-	{ 81, 9, 11 },
-	{ 180, 11, 16 },
-	{ 356, 9, 14 },
+	{ 0, 9, 9, 4 },
+	{ 81, 9, 11, 4 },
+	{ 180, 11, 16, 3 },
+	{ 356, 9, 14, 4 },
 };
 
 const uint8_t Data_pistolSprite[] PROGMEM = {

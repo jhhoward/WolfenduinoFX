@@ -14,6 +14,8 @@ enum ActorState
 	ActorState_Idle,
 	ActorState_Active,
 	ActorState_Injured,
+	ActorState_Aiming,
+	ActorState_Shooting,
 	ActorState_Dying,
 	ActorState_Dead
 };

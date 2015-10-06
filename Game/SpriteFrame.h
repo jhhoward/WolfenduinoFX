@@ -5,6 +5,7 @@ struct SpriteFrame
 {
 	uint16_t offset;
 	uint8_t width, height;
+	uint8_t xOffset;
 };
 
 #endif

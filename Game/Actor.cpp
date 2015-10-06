@@ -2,6 +2,7 @@
 #include "Actor.h"
 
 #include "Data_Guard.h"
+#include "TileTypes.h"
 
 void Actor::init(uint8_t id, uint8_t actorType, uint8_t cellX, uint8_t cellZ)
 {
@@ -47,7 +48,23 @@ void Actor::update()
 		{
 			frame = 1;
 		}
+		if(engine.map.isClearLine(x, z, engine.player.x, engine.player.z) && (random() & 0xf) == 0)
+		{
+			switchState(ActorState_Aiming);
+		}
 	}
+		break;
+	case ActorState_Aiming:
+		if(updateFrame)
+		{
+			switchState(ActorState_Shooting);
+		}
+		break;
+	case ActorState_Shooting:
+		if(updateFrame)
+		{
+			switchState(ActorState_Active);
+		}
 		break;
 	case ActorState_Injured:
 		if(updateFrame)
@@ -59,7 +76,7 @@ void Actor::update()
 		if(updateFrame)
 		{
 			frame++;
-			if(frame == 8)
+			if(frame == 9)
 				switchState(ActorState_Dead);
 		}
 		break;
@@ -103,6 +120,7 @@ void Actor::damage(int amount)
 	{
 		switchState(ActorState_Dying);
 		engine.map.markActorKilled(spawnId);
+		dropItem(Tile_Item_Clip);
 	}
 	else
 	{
@@ -117,13 +135,19 @@ void Actor::switchState(uint8_t newState)
 	switch(newState)
 	{
 	case ActorState_Injured:
-		frame = 4;
+		frame = 5;
 		break;
 	case ActorState_Dying:
-		frame = 4;
+		frame = 5;
 		break;
 	case ActorState_Dead:
-		frame = 8;
+		frame = 9;
+		break;
+	case ActorState_Aiming:
+		frame = 3;
+		break;
+	case ActorState_Shooting:
+		frame = 4;
 		break;
 	default:
 		break;
@@ -153,7 +177,7 @@ bool Actor::tryDropItem(uint8_t itemType, int cellX, int cellZ)
 	uint8_t tile = engine.map.getTile(cellX, cellZ);
 	if(tile == 0)
 	{
-		// drop here
+		engine.map.placeItem(itemType, cellX, cellZ, DYNAMIC_ITEM_ID);
 		return true;
 	}
 	return false;
