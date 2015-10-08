@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MapCompressor", "Tools\MapC
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageEncoder", "Tools\ImageEncoder\ImageEncoder.vcxproj", "{D7DF0A68-0C89-4908-8E6E-12BD0B0D7838}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AudioEncoder", "Tools\AudioEncoder\AudioEncoder.vcxproj", "{F235DD72-0508-4A1D-AF9D-3FB8841BB4F8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -27,6 +29,10 @@ Global
 		{D7DF0A68-0C89-4908-8E6E-12BD0B0D7838}.Debug|Win32.Build.0 = Debug|Win32
 		{D7DF0A68-0C89-4908-8E6E-12BD0B0D7838}.Release|Win32.ActiveCfg = Release|Win32
 		{D7DF0A68-0C89-4908-8E6E-12BD0B0D7838}.Release|Win32.Build.0 = Release|Win32
+		{F235DD72-0508-4A1D-AF9D-3FB8841BB4F8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F235DD72-0508-4A1D-AF9D-3FB8841BB4F8}.Debug|Win32.Build.0 = Debug|Win32
+		{F235DD72-0508-4A1D-AF9D-3FB8841BB4F8}.Release|Win32.ActiveCfg = Release|Win32
+		{F235DD72-0508-4A1D-AF9D-3FB8841BB4F8}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
