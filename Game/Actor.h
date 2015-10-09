@@ -41,6 +41,9 @@ public:
 
 	bool isPlayerColliding();
 
+	void shootPlayer();
+	bool shouldShootPlayer();
+
 	uint8_t spawnId;
 	uint8_t type;
 	int16_t x, z;

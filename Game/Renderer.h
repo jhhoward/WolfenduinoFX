@@ -29,6 +29,8 @@ public:
 	void drawDeferredFrame();
 #endif
 
+	int8_t damageIndicator;
+
 private:
 	void initWBuffer();
 	void drawFloorAndCeiling();  
@@ -42,6 +44,7 @@ private:
 
 	void drawQueuedSprite(uint8_t id);
 	void drawWeapon();
+	void drawDamage();
 
 	inline bool isFrustrumClipped(int16_t x, int16_t z)
 	{

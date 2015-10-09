@@ -48,7 +48,7 @@ void Actor::update()
 		{
 			frame = 1;
 		}
-		if(engine.map.isClearLine(x, z, engine.player.x, engine.player.z) && (random() & 0xf) == 0)
+		if(shouldShootPlayer())
 		{
 			switchState(ActorState_Aiming);
 		}
@@ -63,6 +63,7 @@ void Actor::update()
 	case ActorState_Shooting:
 		if(updateFrame)
 		{
+			shootPlayer();
 			switchState(ActorState_Active);
 		}
 		break;
@@ -289,4 +290,34 @@ void Actor::pickNewTargetCell()
 	}
 
 	tryPickCells(deltaX, deltaZ);
+}
+
+bool Actor::shouldShootPlayer()
+{
+	if(engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
+	{
+		int dx = abs(engine.player.x - x) / CELL_SIZE;
+		int dz = abs(engine.player.z - z) / CELL_SIZE;
+		int dist = max(dx, dz);
+		int chance = 16 / dist;
+
+		return (random() & 0xff) < chance;
+	}
+	return false;
+}
+
+void Actor::shootPlayer()
+{
+	if(engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
+	{
+		int dx = abs(engine.player.x - x) / CELL_SIZE;
+		int dz = abs(engine.player.z - z) / CELL_SIZE;
+		int dist = max(dx, dz);
+		int hitchance = 256 - dist * 16;
+
+		if((random() & 0xff) < hitchance)
+		{
+			engine.renderer.damageIndicator = 5;
+		}
+	}
 }

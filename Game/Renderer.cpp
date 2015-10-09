@@ -15,6 +15,24 @@ void Renderer::init()
 {
 }
 
+void Renderer::drawDamage()
+{
+	if(damageIndicator > 0)
+	{
+		damageIndicator --;
+		for(int x = 0; x < DISPLAYWIDTH; x++)
+		{
+			setPixel(x, 0);
+			setPixel(x, DISPLAYHEIGHT - 1);
+		}
+		for(int y = 0; y < DISPLAYHEIGHT; y++)
+		{
+			setPixel(0, y);
+			setPixel(DISPLAYWIDTH - 1, y);
+		}
+	}
+}
+
 void Renderer::drawWeapon()
 {
 	SpriteFrame* frame = (SpriteFrame*) &Data_pistolSprite_frames[engine.player.weapon.frame];
@@ -119,6 +137,7 @@ void Renderer::drawFrame()
 	}
 
 	drawWeapon();
+	drawDamage();
 #endif
 }
 
