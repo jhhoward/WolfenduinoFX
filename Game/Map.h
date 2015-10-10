@@ -78,6 +78,8 @@ public:
 	Door doors[MAX_DOORS];
 	Item items[MAX_ACTIVE_ITEMS];
 
+	int8_t currentLevel;
+
 	uint8_t m_mapBuffer[MAP_BUFFER_SIZE * MAP_BUFFER_SIZE];
 
 	void updateBufferPosition(int8_t newX, int8_t newZ);

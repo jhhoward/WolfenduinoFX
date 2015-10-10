@@ -10,6 +10,7 @@ Player::Player()
 	weapon.ammo = 8;
 	weapon.frame = 0;
 	weapon.debounce = false;
+	hp = 100;
 }
 
 void Player::update()

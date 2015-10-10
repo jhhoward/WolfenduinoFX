@@ -21,6 +21,7 @@ public:
 
 	int16_t x, z;
 	angle_t direction;
+	uint8_t hp;
 
 	struct
 	{
