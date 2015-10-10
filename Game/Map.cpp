@@ -1,6 +1,7 @@
 #include "Engine.h"
 #include "Map.h"
 #include "TileTypes.h"
+#include "Sounds.h"
 
 #include <stdio.h>
 
@@ -339,6 +340,10 @@ void Map::openDoorsAt(int8_t x, int8_t z)
 	{
 		if(doors[n].type != DoorType_None && doors[n].x == x && doors[n].z == z)
 		{
+			if(doors[n].state != DoorState_Opening && doors[n].open == 0)
+			{
+				Platform.playSound(Sound_OpenDoor);
+			}
 			doors[n].state = DoorState_Opening;
 			return;
 		}
@@ -361,6 +366,10 @@ void Door::update()
 		if(open > 0)
 		{
 			open --;
+		}
+		if(open == 16)
+		{
+			Platform.playSound(Sound_CloseDoor);
 		}
 		else state = DoorState_Idle;
 		break;

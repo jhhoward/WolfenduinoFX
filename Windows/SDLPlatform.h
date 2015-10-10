@@ -10,6 +10,7 @@ public:
 	void init();
 	void run();
 	void drawPixel(uint8_t x, uint8_t y, uint8_t colour);
+	void playSound(uint8_t id) {}
 	
 private:
 	void drawPixel(SDL_Surface *surface, int x, int y, Uint32 pixel);

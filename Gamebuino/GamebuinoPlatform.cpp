@@ -1,4 +1,5 @@
 #include "GamebuinoPlatform.h"
+#include "Data_Audio.h"
 
 GamebuinoPlatform Platform;
 extern Gamebuino gb;
@@ -40,4 +41,7 @@ void GamebuinoPlatform::update()
 		
 }
 
-	
+void GamebuinoPlatform::playSound(uint8_t id)
+{
+	gb.sound.playPattern((const uint16_t*)pgm_read_word(&Data_AudioPatterns[id]), 0);
+}

@@ -17,6 +17,7 @@ void setup(void)
 	gb.begin();
 	//gb.titleScreen(F("WOLF3D DEMO\n\nControls:\n \25 strafe\n \26 run "));
 	gb.display.persistence = true; //false;
+	gb.display.autoUpdate = false;
 	gb.battery.show = false;
 	gb.setFrameRate(30);
 	
@@ -33,6 +34,7 @@ void loop()
 	{
 		Platform.update();
 		engine.update();
+		gb.display.update();
 	}
 }
 	

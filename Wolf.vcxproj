@@ -19,6 +19,7 @@
     <ClInclude Include="Game\Platform.h" />
     <ClInclude Include="Game\Player.h" />
     <ClInclude Include="Game\Renderer.h" />
+    <ClInclude Include="Game\Sounds.h" />
     <ClInclude Include="Game\SpriteFrame.h" />
     <ClInclude Include="Game\TileTypes.h" />
     <ClInclude Include="Game\TrigLUT.h" />

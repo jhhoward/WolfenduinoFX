@@ -32,7 +32,8 @@ inline void drawPixel(uint8_t x, uint8_t y, uint8_t colour)
 class GamebuinoPlatform : public PlatformBase
 {
 public:
-	
+	void playSound(uint8_t id);
+
 	void update();
 };
 

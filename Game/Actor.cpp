@@ -1,5 +1,6 @@
 #include "Engine.h"
 #include "Actor.h"
+#include "Sounds.h"
 
 #include "Data_Guard.h"
 #include "TileTypes.h"
@@ -48,7 +49,7 @@ void Actor::update()
 		{
 			frame = 1;
 		}
-		if(engine.map.isClearLine(x, z, engine.player.x, engine.player.z) && (random() & 0xf) == 0)
+		if(engine.map.isClearLine(x, z, engine.player.x, engine.player.z) && (getRandomNumber() & 0xf) == 0)
 		{
 			switchState(ActorState_Aiming);
 		}
@@ -148,6 +149,7 @@ void Actor::switchState(uint8_t newState)
 		break;
 	case ActorState_Shooting:
 		frame = 4;
+		Platform.playSound(Sound_GuardAttack);
 		break;
 	default:
 		break;

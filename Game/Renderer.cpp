@@ -264,8 +264,16 @@ void Renderer::drawCellWall(uint8_t textureId, int8_t x1, int8_t z1, int8_t x2, 
 	//drawWall(x2 * CELL_SIZE, z2 * CELL_SIZE, x1 * CELL_SIZE, z1 * CELL_SIZE);
 }
 
+#if defined(PLATFORM_GAMEBUINO)
+extern Gamebuino gb;
+#endif
+
 void Renderer::drawCell(int8_t cellX, int8_t cellZ)
 {
+#if defined(PLATFORM_GAMEBUINO)
+	// HACK: Keep calling update so that sound doesn't slow down. Ugh..
+	gb.update();
+#endif
 	// clip cells out of frustum view
 	if(isFrustrumClipped(cellX, cellZ))
 		return;

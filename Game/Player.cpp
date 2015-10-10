@@ -2,6 +2,7 @@
 #include "Player.h"
 #include "TileTypes.h"
 #include "FixedMath.h"
+#include "Sounds.h"
 
 Player::Player()
 {
@@ -100,6 +101,7 @@ void Player::update()
 			// Collect this item
 			engine.map.items[n].type = 0;
 			engine.map.markItemCollected(engine.map.items[n].spawnId);
+			Platform.playSound(Sound_CollectAmmo);
 		}
 	}
 }
@@ -331,6 +333,8 @@ void Player::init()
 
 void Player::shootWeapon()
 {
+	Platform.playSound(Sound_AttackPistol);
+
 	int16_t rotCos = FixedMath::Cos(-direction);
 	int16_t rotSin = FixedMath::Sin(-direction);
 	int8_t closestActor = -1;
