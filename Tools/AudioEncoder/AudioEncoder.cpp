@@ -308,8 +308,17 @@ void writeData(char* filename, vector<AudioPattern>& patterns)
 					}
 				}
 			}
-			fprintf(fs, "\n};\n");
+			fprintf(fs, "\n};\n\n");
 		}
+
+		fprintf(fs, "#define NUM_AUDIO_PATTERNS %d\n", patterns.size());
+		fprintf(fs, "const uintptr_t* Data_AudioPatterns[NUM_AUDIO_PATTERNS] PROGMEM = {\n");
+		for(int p = 0; p < patterns.size(); p++)
+		{
+			fprintf(fs, "\tData_Audio%02d,\n", p);
+		}
+		fprintf(fs, "};\n\n");
+
 		fclose(fs);
 	}
 	else
@@ -333,6 +342,26 @@ int main(int argc, char* argv[])
 	{
 		AudioPattern pattern = loadData(argv[n + 2]);
 		patterns.push_back(pattern);
+	}
+
+	if(numInputFiles == 1 && patterns[0].data.size() == 0)
+	{
+		patterns.clear();
+		bool reading = true;
+		int counter = 0;
+
+		while(reading)
+		{
+			char filename[100];
+			sprintf(filename, "%s%02d.raw", argv[2], counter);
+			counter++;
+			AudioPattern pattern = loadData(filename);
+			if(pattern.data.size() > 0)
+			{
+				patterns.push_back(pattern);
+			}
+			else reading = false;
+		}
 	}
 	
 	writeData(argv[1], patterns);
