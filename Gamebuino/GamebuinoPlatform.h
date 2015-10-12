@@ -6,6 +6,7 @@
 //#include <EEPROM.h>
 #include <avr/pgmspace.h>
 #include "Platform.h"
+#include "Arduino.h"
 
 extern int y_lut[];
 inline void setPixel(uint8_t x, uint8_t y)
@@ -36,6 +37,9 @@ public:
 
 	void update();
 };
+
+void ERROR(const char* msg);
+
 
 extern GamebuinoPlatform Platform;
 

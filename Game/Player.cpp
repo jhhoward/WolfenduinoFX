@@ -6,105 +6,178 @@
 
 Player::Player()
 {
-	weapon.type = WeaponType_Pistol;
-	weapon.ammo = 8;
-	weapon.frame = 0;
-	weapon.debounce = false;
-	hp = 100;
 }
 
 void Player::update()
 {
-	bool strafe = Platform.readInput() & Input_Btn_A;
-    
-	int16_t movement = MOVEMENT;
-	int16_t turn = TURN;
 	int16_t cos_dir = FixedMath::Cos(direction);
 	int16_t sin_dir = FixedMath::Sin(direction);
-	int16_t oldX = x;
-	int16_t oldZ = z;
-	int16_t deltaX = 0, deltaZ = 0;
-    
-	updateWeapon();
-    
-	if (Platform.readInput() & Input_Dpad_Down)
+
+	if(hp > 0)
 	{
-		deltaX -= (movement * cos_dir) >> (FIXED_SHIFT);
-		deltaZ -= (movement * sin_dir) >> (FIXED_SHIFT);
-	}
-    
-	if (Platform.readInput() & Input_Dpad_Up)
-	{
-		deltaX += (movement * cos_dir) >> (FIXED_SHIFT);
-		deltaZ += (movement * sin_dir) >> (FIXED_SHIFT);
-	}
-    
-	if (Platform.readInput() & Input_Dpad_Left)
-	{
-		if (strafe)
+		bool strafe = Platform.readInput() & Input_Btn_A;
+
+		if(Platform.readInput() == Input_Btn_A)
 		{
-			deltaX += (movement * sin_dir) >> (FIXED_SHIFT);
-			deltaZ -= (movement * cos_dir) >> (FIXED_SHIFT);
+			if(!ticksSinceStrafePressed)
+			{
+				ticksSinceStrafePressed = 1;
+			}
+			else if(ticksSinceStrafePressed > 1)
+			{
+				ticksSinceStrafePressed = 0;
+				if(weapon.type == WeaponType_Pistol)
+				{
+					weapon.type = WeaponType_Knife;
+				}
+				else if(weapon.ammo > 0)
+				{
+					weapon.type = WeaponType_Pistol;
+				}
+			}
 		}
-		else
-			direction -= turn;
-	}	
-    
-	if (Platform.readInput() & Input_Dpad_Right)
-	{
-		if (strafe)
+		else if(!Platform.readInput())
 		{
-			deltaX -= (movement * sin_dir) >> (FIXED_SHIFT);
-			deltaZ += (movement * cos_dir) >> (FIXED_SHIFT);
+			if(ticksSinceStrafePressed > 0)
+			{
+				ticksSinceStrafePressed ++;
+				if(ticksSinceStrafePressed > 15)
+				{
+					ticksSinceStrafePressed = 0;
+				}
+			}
 		}
-		else
-			direction += turn;
-	}
+		else ticksSinceStrafePressed = 0;
+
+		int16_t movement = MOVEMENT;
+		int16_t turn = TURN;
+		int16_t oldX = x;
+		int16_t oldZ = z;
+		int16_t deltaX = 0, deltaZ = 0;
+    
+		updateWeapon();
+    
+		if (Platform.readInput() & Input_Dpad_Down)
+		{
+			deltaX -= (movement * cos_dir) >> (FIXED_SHIFT);
+			deltaZ -= (movement * sin_dir) >> (FIXED_SHIFT);
+		}
+    
+		if (Platform.readInput() & Input_Dpad_Up)
+		{
+			deltaX += (movement * cos_dir) >> (FIXED_SHIFT);
+			deltaZ += (movement * sin_dir) >> (FIXED_SHIFT);
+		}
+    
+		if (Platform.readInput() & Input_Dpad_Left)
+		{
+			if (strafe)
+			{
+				deltaX += (movement * sin_dir) >> (FIXED_SHIFT);
+				deltaZ -= (movement * cos_dir) >> (FIXED_SHIFT);
+			}
+			else
+				direction -= turn;
+		}	
+    
+		if (Platform.readInput() & Input_Dpad_Right)
+		{
+			if (strafe)
+			{
+				deltaX -= (movement * sin_dir) >> (FIXED_SHIFT);
+				deltaZ += (movement * cos_dir) >> (FIXED_SHIFT);
+			}
+			else
+				direction += turn;
+		}
   
-	move(deltaX, deltaZ);
+		move(deltaX, deltaZ);
 
-	//int16_t projectedX = x / CELL_SIZE;
-	//int16_t projectedZ = z / CELL_SIZE;
+		//int16_t projectedX = x / CELL_SIZE;
+		//int16_t projectedZ = z / CELL_SIZE;
 
+		// Check for doors
+		int8_t cellX = x / CELL_SIZE;
+		int8_t cellZ = z / CELL_SIZE;
+
+		engine.map.openDoorsAt(cellX, cellZ);
+
+		if(cos_dir > 0)
+		{
+			engine.map.openDoorsAt(cellX + 1, cellZ);
+		}
+		else
+		{
+			engine.map.openDoorsAt(cellX - 1, cellZ);
+		}
+		if(sin_dir > 0)
+		{
+			engine.map.openDoorsAt(cellX, cellZ + 1);
+		}
+		else
+		{
+			engine.map.openDoorsAt(cellX, cellZ - 1);
+		}
+
+		// Collect any items
+		for(int8_t n = 0; n < MAX_ACTIVE_ITEMS; n++)
+		{
+			if(engine.map.items[n].type != 0 && engine.map.items[n].x == cellX && engine.map.items[n].z == cellZ)
+			{
+				// Collect this item
+				switch(engine.map.items[n].type)
+				{
+				case Tile_Item_Clip:
+					if(weapon.ammo == 0 && weapon.type == WeaponType_Knife)
+					{
+						weapon.type = WeaponType_Pistol;
+					}
+					weapon.ammo = min(weapon.ammo + 8, 99);
+					Platform.playSound(Sound_CollectAmmo);
+					break;
+				case Tile_Item_FirstAid:
+					hp = min(100, hp + 25);
+					break;
+				case Tile_Item_Food:
+					hp = min(100, hp + 10);
+					break;
+				}
+				engine.map.items[n].type = 0;
+				engine.map.markItemCollected(engine.map.items[n].spawnId);
+			}
+		}
+	}
+	else
+	{
+		int16_t rotCos = FixedMath::Cos(-direction);
+		int16_t rotSin = FixedMath::Sin(-direction);
+		int16_t xt = (int16_t)(FIXED_TO_INT(rotSin * (int32_t)(engine.actors[killer].x - x)) + FIXED_TO_INT(rotCos * (int32_t)(engine.actors[killer].z - z)));
+
+		if(xt > 0)
+		{
+			direction += TURN;
+		}
+		else
+		{
+			direction -= TURN;
+		}
+		rotCos = FixedMath::Cos(-direction);
+		rotSin = FixedMath::Sin(-direction);
+
+		int16_t newXt = (int16_t)(FIXED_TO_INT(rotSin * (int32_t)(engine.actors[killer].x - x)) + FIXED_TO_INT(rotCos * (int32_t)(engine.actors[killer].z - z)));
+		if((xt < 0 && newXt >= 0) || (xt > 0 && newXt <= 0))
+		{
+			engine.gameState = GameState_Dead;
+			engine.frameCount = 0;
+		}
+		engine.renderer.damageIndicator = 5;
+	}
+
+	// Update the stream position
 	int16_t projectedX = x / CELL_SIZE + cos_dir / 19;
 	int16_t projectedZ = z / CELL_SIZE + sin_dir / 19;
 
 	engine.map.updateBufferPosition(projectedX - MAP_BUFFER_SIZE / 2, projectedZ - MAP_BUFFER_SIZE / 2);
-
-	// Check for doors
-	int8_t cellX = x / CELL_SIZE;
-	int8_t cellZ = z / CELL_SIZE;
-
-	engine.map.openDoorsAt(cellX, cellZ);
-
-	if(cos_dir > 0)
-	{
-		engine.map.openDoorsAt(cellX + 1, cellZ);
-	}
-	else
-	{
-		engine.map.openDoorsAt(cellX - 1, cellZ);
-	}
-	if(sin_dir > 0)
-	{
-		engine.map.openDoorsAt(cellX, cellZ + 1);
-	}
-	else
-	{
-		engine.map.openDoorsAt(cellX, cellZ - 1);
-	}
-
-	// Collect any items
-	for(int8_t n = 0; n < MAX_ACTIVE_ITEMS; n++)
-	{
-		if(engine.map.items[n].type != 0 && engine.map.items[n].x == cellX && engine.map.items[n].z == cellZ)
-		{
-			// Collect this item
-			engine.map.items[n].type = 0;
-			engine.map.markItemCollected(engine.map.items[n].spawnId);
-			Platform.playSound(Sound_CollectAmmo);
-		}
-	}
 }
 
 #ifdef USE_SIMPLE_COLLISIONS
@@ -287,8 +360,8 @@ void Player::updateWeapon()
 			weapon.frame = 1;
 			break;
 		case 4:
-			shootWeapon();
 			weapon.frame = 2;
+			shootWeapon();
 			break;
 		case 6:
 			weapon.frame = 3;
@@ -306,6 +379,12 @@ void Player::updateWeapon()
 
 void Player::init()
 {
+	weapon.type = WeaponType_Pistol;
+	weapon.ammo = 8;
+	weapon.frame = 0;
+	weapon.debounce = false;
+	hp = 100;
+
 	// Find player start tile
 	for(int8_t j = 0; j < MAP_SIZE; j += MAP_BUFFER_SIZE)
 	{
@@ -336,6 +415,11 @@ void Player::shootWeapon()
 {
 	Platform.playSound(Sound_AttackPistol);
 
+	if(weapon.type != WeaponType_Knife)
+	{
+		weapon.ammo--;
+	}
+
 	int16_t rotCos = FixedMath::Cos(-direction);
 	int16_t rotSin = FixedMath::Sin(-direction);
 	int8_t closestActor = -1;
@@ -348,7 +432,7 @@ void Player::shootWeapon()
 			int16_t zt = (int16_t)(FIXED_TO_INT(rotCos * (int32_t)(engine.actors[n].x - x)) - FIXED_TO_INT(rotSin * (int32_t)(engine.actors[n].z - z)));
 			int16_t xt = (int16_t)(FIXED_TO_INT(rotSin * (int32_t)(engine.actors[n].x - x)) + FIXED_TO_INT(rotCos * (int32_t)(engine.actors[n].z - z)));
 
-			if(zt > CLIP_PLANE && xt > -ACTOR_HITBOX_SIZE / 2 && xt < ACTOR_HITBOX_SIZE / 2)
+			if(zt > CLIP_PLANE && xt > -ACTOR_HITBOX_SIZE / 2 && xt < ACTOR_HITBOX_SIZE / 2 && (zt < INT_TO_FIXED(CELL_SIZE) || weapon.type != WeaponType_Knife))
 			{
 				if(closestActor == -1 || zt < actorDistance)
 				{
@@ -361,9 +445,28 @@ void Player::shootWeapon()
 
 	if(closestActor != -1)
 	{
-		if(engine.map.isClearLine(x, z, engine.actors[closestActor].x, engine.actors[closestActor].z))
+		if(weapon.type == WeaponType_Knife)
 		{
-			engine.actors[closestActor].damage(10);
+			uint8_t damage = getRandomNumber() >> 4;
+			engine.actors[closestActor].damage(damage);
+		}
+		else if(engine.map.isClearLine(x, z, engine.actors[closestActor].x, engine.actors[closestActor].z))
+		{
+			int8_t dist = engine.actors[closestActor].getPlayerCellDistance();
+			int damage;
+
+			if (dist < 2)
+				damage = getRandomNumber() / 4;
+			else if (dist<4)
+				damage = getRandomNumber() / 6;
+			else
+			{
+				if ( (getRandomNumber() / 12) < dist)           // missed
+					goto missed;
+				damage = getRandomNumber() / 6;
+			}
+			
+			engine.actors[closestActor].damage(damage);
 			WARNING("BANG!\n");
 		}
 		else
@@ -375,5 +478,30 @@ void Player::shootWeapon()
 	{
 		WARNING("NO TARGET!\n");
 	}
+
+missed:
+	if(weapon.type != WeaponType_Knife && weapon.ammo == 0)
+	{
+		weapon.type = WeaponType_Knife;
+		weapon.time = 0;
+		weapon.frame = 0;
+		weapon.shooting = false;
+	}
+
 }
 
+void Player::damage(uint8_t amount)
+{
+	WARNING("Player damage: %d\n", (int)amount);
+	engine.renderer.damageIndicator = 5;
+
+	if(amount > hp)
+	{
+		hp = 0;
+		// Dead
+	}
+	else
+	{
+		hp -= amount;
+	}
+}

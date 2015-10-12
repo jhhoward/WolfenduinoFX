@@ -30,7 +30,12 @@ int8_t clamp(int8_t x, int8_t lower, int8_t upper)
 	return x;
 }
 
-uint16_t getRandomNumber()
+uint8_t getRandomNumber()
+{
+	return getRandomNumber16() & 0xff;
+}
+
+uint16_t getRandomNumber16()
 {
 	static uint16_t randVal = 0xABC;
 
@@ -39,5 +44,5 @@ uint16_t getRandomNumber()
     if (lsb == 1)
     	randVal ^= 0xB400u;
 
-	return randVal - 1;
+	return (randVal - 1);
 }

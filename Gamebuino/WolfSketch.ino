@@ -8,6 +8,8 @@
 #endif
 
 Gamebuino gb;
+long lastMillis = 0;
+uint16_t millisBehind = 0;
 
 /** Arduino interface routines **/
 void setup(void) 
@@ -26,16 +28,41 @@ void setup(void)
 #endif
 
 	engine.init();
+	gb.sound.setVolume(0, 0);
+	lastMillis = millis();
+}
+
+#define FRAME_MS (1000 / 20)
+#define MAX_BEHIND (FRAME_MS * 5)
+
+void ERROR(const char* msg)
+{
+	engine.renderer.drawString(msg, 0, 0);
+	gb.display.update();
 }
 
 void loop()
 {
-	if(gb.update())
+	gb.update();
+	Platform.update();
+
+	long newMillis = millis();
+	millisBehind += newMillis - lastMillis;
+	
+	if(millisBehind > MAX_BEHIND)
 	{
-		Platform.update();
-		engine.update();
-		gb.display.update();
+		millisBehind = MAX_BEHIND;
 	}
+	
+	while(millisBehind > FRAME_MS)
+	{
+		engine.update();
+		millisBehind -= FRAME_MS;
+	}
+	lastMillis = newMillis;
+
+	engine.draw();
+	gb.display.update();
 }
 	
 #ifdef PETIT_FATFS_FILE_STREAMING

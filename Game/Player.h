@@ -18,10 +18,14 @@ public:
 	void init();
 	void update();
 	void move(int16_t deltaX, int16_t deltaZ);
+	void damage(uint8_t amount);
 
 	int16_t x, z;
 	angle_t direction;
 	uint8_t hp;
+	uint8_t killer;
+
+	uint8_t ticksSinceStrafePressed;
 
 	struct
 	{

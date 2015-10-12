@@ -14,7 +14,7 @@ void Actor::init(uint8_t id, uint8_t actorType, uint8_t cellX, uint8_t cellZ)
 	z = cellZ * CELL_SIZE + CELL_SIZE / 2;
 	targetCellX = cellX;
 	targetCellZ = cellZ;
-	hp = 20;
+	hp = 25;
 }
 
 void Actor::update()
@@ -65,6 +65,12 @@ void Actor::update()
 		if(updateFrame)
 		{
 			shootPlayer();
+			switchState(ActorState_Recoiling);
+		}
+		break;
+	case ActorState_Recoiling:
+		if(updateFrame)
+		{
 			switchState(ActorState_Active);
 		}
 		break;
@@ -146,6 +152,7 @@ void Actor::switchState(uint8_t newState)
 		frame = 9;
 		break;
 	case ActorState_Aiming:
+	case ActorState_Recoiling:
 		frame = 3;
 		break;
 	case ActorState_Shooting:
@@ -266,7 +273,7 @@ void Actor::pickNewTargetCell()
 {
 	int8_t deltaX = clamp(engine.player.x / CELL_SIZE - targetCellX, -1, 1);
 	int8_t deltaZ = clamp(engine.player.z / CELL_SIZE - targetCellZ, -1, 1);
-	uint8_t dodgeChance = getRandomNumber() & 0xff;
+	uint8_t dodgeChance = getRandomNumber();
 
 	if(deltaX == 0)
 	{
@@ -294,16 +301,20 @@ void Actor::pickNewTargetCell()
 	tryPickCells(deltaX, deltaZ);
 }
 
+int8_t Actor::getPlayerCellDistance()
+{
+	int8_t dx = abs(engine.player.x - x) / CELL_SIZE;
+	int8_t dz = abs(engine.player.z - z) / CELL_SIZE;
+	return max(dx, dz);
+}
+
 bool Actor::shouldShootPlayer()
 {
 	if(engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
 	{
-		int dx = abs(engine.player.x - x) / CELL_SIZE;
-		int dz = abs(engine.player.z - z) / CELL_SIZE;
-		int dist = max(dx, dz);
-		int chance = 16 / dist;
+		int chance = 16 / getPlayerCellDistance();
 
-		return (random() & 0xff) < chance;
+		return getRandomNumber() < chance;
 	}
 	return false;
 }
@@ -312,14 +323,35 @@ void Actor::shootPlayer()
 {
 	if(engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
 	{
-		int dx = abs(engine.player.x - x) / CELL_SIZE;
-		int dz = abs(engine.player.z - z) / CELL_SIZE;
-		int dist = max(dx, dz);
+		int8_t dist = getPlayerCellDistance();
 		int hitchance = 256 - dist * 16;
 
-		if((random() & 0xff) < hitchance)
+		if(getRandomNumber() < hitchance)
 		{
-			engine.renderer.damageIndicator = 5;
+			uint8_t damage;
+
+			if (dist < 2)
+                damage = getRandomNumber()>>2;
+            else if (dist<4)
+                damage = getRandomNumber()>>3;
+            else
+                damage = getRandomNumber()>>4;
+
+			if(damage > 0)
+			{
+				engine.player.damage(damage);
+				if(engine.player.hp == 0)
+				{
+					for(int8_t id = 0; id < MAX_ACTIVE_ACTORS; id++)
+					{
+						if(this == &engine.actors[id])
+						{
+							engine.player.killer = id;
+							break;
+						}
+					}
+				}
+			}
 		}
 	}
 }

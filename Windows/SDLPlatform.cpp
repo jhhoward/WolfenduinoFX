@@ -82,12 +82,13 @@ void SDLPlatform::run()
 		SDL_RenderClear ( m_appRenderer );
 
 		engine.update();
+		engine.draw();
 
 		SDL_UpdateTexture(m_screenTexture, NULL, m_screenSurface->pixels, m_screenSurface->pitch);
 		SDL_RenderCopy(m_appRenderer, m_screenTexture, NULL, NULL);
 		SDL_RenderPresent(m_appRenderer);
 
-		SDL_Delay(1000 / 30);
+		SDL_Delay(1000 / 20);
 	}
 
 	SDL_Quit();

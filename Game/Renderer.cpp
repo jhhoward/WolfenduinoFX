@@ -5,9 +5,13 @@
 
 #include "Data_Walls.h"
 #include "Data_Pistol.h"
+#include "Data_Knife.h"
+#include "Data_Machinegun.h"
 #include "Data_Decorations.h"
 #include "Data_BlockingDecorations.h"
 #include "Data_Items.h"
+#include "Data_Font.h"
+
 
 #include <stdio.h>
 
@@ -35,8 +39,27 @@ void Renderer::drawDamage()
 
 void Renderer::drawWeapon()
 {
-	SpriteFrame* frame = (SpriteFrame*) &Data_pistolSprite_frames[engine.player.weapon.frame];
-	BitPairReader reader((uint8_t*)Data_pistolSprite, pgm_read_word(&frame->offset));
+	SpriteFrame* frame;
+	uint8_t* data;
+	
+	switch(engine.player.weapon.type)
+	{
+	case WeaponType_Knife:
+		frame = (SpriteFrame*) &Data_knifeSprite_frames[engine.player.weapon.frame];
+		data = (uint8_t*) Data_knifeSprite;
+		break;
+	case WeaponType_Pistol:
+		frame = (SpriteFrame*) &Data_pistolSprite_frames[engine.player.weapon.frame];
+		data = (uint8_t*) Data_pistolSprite;
+		break;
+	case WeaponType_MachineGun:
+		frame = (SpriteFrame*) &Data_machinegunSprite_frames[engine.player.weapon.frame];
+		data = (uint8_t*) Data_machinegunSprite;
+		break;
+	}
+	
+
+	BitPairReader reader((uint8_t*)data, pgm_read_word(&frame->offset));
 	uint8_t frameWidth = pgm_read_byte(&frame->width);
 	uint8_t frameHeight = pgm_read_byte(&frame->height);
 	uint8_t x = HALF_DISPLAYWIDTH - 8 + pgm_read_byte(&frame->xOffset);
@@ -138,6 +161,20 @@ void Renderer::drawFrame()
 
 	drawWeapon();
 	drawDamage();
+
+	// Draw HUD
+	uint8_t hudHeight = DISPLAYHEIGHT - FONT_HEIGHT;
+	drawGlyph('+' - FIRST_FONT_GLYPH, 0, hudHeight);
+	drawInt(engine.player.hp, (FONT_WIDTH + 1) * 3, hudHeight);
+	drawGlyph('*' - FIRST_FONT_GLYPH, DISPLAYWIDTH - (FONT_WIDTH + 1) * 4, hudHeight);
+	drawInt(engine.player.weapon.ammo, DISPLAYWIDTH - (FONT_WIDTH + 1), hudHeight);
+	//drawString(PSTR("*99"), DISPLAYWIDTH - (FONT_WIDTH + 1) * 3, DISPLAYHEIGHT - FONT_HEIGHT);
+	/*int y = 4;
+	drawString(PSTR("* CAN I PLAY, DADDY?"), 0, y); y += FONT_HEIGHT + 1;
+	drawString(PSTR("  DON'T HURT ME!"), 0, y); y += FONT_HEIGHT + 1;
+	drawString(PSTR("  BRING 'EM ON!"), 0, y); y += FONT_HEIGHT + 1;
+	drawString(PSTR("  I AM DEATH"), 0, y); y += FONT_HEIGHT + 1;
+	drawString(PSTR("       INCARNATE!"), 0, y); y += FONT_HEIGHT + 1;*/
 #endif
 }
 
@@ -848,5 +885,79 @@ void Renderer::drawQueuedSprite(uint8_t id)
 				uerror += dx;
 			}
 		}
+	}
+}
+
+void Renderer::drawGlyph(char glyph, uint8_t x, uint8_t y)
+{
+	uint8_t* ptr = (uint8_t*) (Data_font + glyph * FONT_GLYPH_BYTE_SIZE);
+	uint8_t readMask = 1;
+	uint8_t read = pgm_read_byte(ptr++);
+
+	for(int i = 0; i < FONT_WIDTH; i++)
+	{
+		for(int j = 0; j < FONT_HEIGHT; j++)
+		{
+			uint8_t colour = (read & readMask) ? 0 : 1;
+			drawPixel(x + i, y + j, colour);
+			readMask <<= 1;
+			if(readMask == 0)
+			{
+				readMask = 1;
+				read = pgm_read_byte(ptr++);
+			}
+		}
+//		clearPixel(x + i, y);
+	//	clearPixel(x + i, y + FONT_HEIGHT + 1);
+	}
+	for(int j = 0; j < FONT_HEIGHT; j++)
+	{
+		clearPixel(x + FONT_WIDTH, y + j);
+	}
+}
+
+void Renderer::drawString(const char* str, uint8_t x, uint8_t y)
+{
+	char* ptr = (char*) str;
+	char current = 0;
+	uint8_t startX = x;
+
+	do
+	{
+		current = pgm_read_byte(ptr);
+		ptr++;
+
+		if(current >= FIRST_FONT_GLYPH && current <= LAST_FONT_GLYPH)
+		{
+			drawGlyph(current - FIRST_FONT_GLYPH, x, y);
+		}
+
+		x += FONT_WIDTH + 1;
+
+		if(current == '\n')
+		{
+			x = startX;
+			y += FONT_HEIGHT + 1;
+		}
+	} while(current);
+}
+
+void Renderer::drawInt(int8_t val, uint8_t x, uint8_t y)
+{
+	unsigned char c, i;
+
+	for(i = 0; i < 3; i++)
+	{
+		c = val % 10;
+		if(val > 0 || i == 0) 
+		{
+			drawGlyph(c + '0' - FIRST_FONT_GLYPH, x, y);
+		}
+		else
+		{
+			drawGlyph(' ' - FIRST_FONT_GLYPH, x, y);
+		}
+		x -= FONT_WIDTH + 1;
+		val = val / 10;
 	}
 }

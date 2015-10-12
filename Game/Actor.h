@@ -16,6 +16,7 @@ enum ActorState
 	ActorState_Injured,
 	ActorState_Aiming,
 	ActorState_Shooting,
+	ActorState_Recoiling,
 	ActorState_Dying,
 	ActorState_Dead
 };
@@ -43,6 +44,7 @@ public:
 
 	void shootPlayer();
 	bool shouldShootPlayer();
+	int8_t getPlayerCellDistance();
 
 	uint8_t spawnId;
 	uint8_t type;

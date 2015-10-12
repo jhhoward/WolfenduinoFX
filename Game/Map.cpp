@@ -33,16 +33,44 @@ bool Map::isValid(int8_t x, int8_t z)
 
 void Map::init()
 {
+	for(int n = 0; n < 256 / 8; n++)
+	{
+		m_itemState[n] = 0;
+		m_actorState[n] = 0;
+	}
+
+	for(int n = 0; n < MAX_DOORS; n++)
+	{
+		doors[n].type = DoorType_None;
+	}
+
+	for(int n = 0; n < MAX_ACTIVE_ITEMS; n++)
+	{
+		items[n].type = 0;
+	}
+}
+
+void Map::initStreaming()
+{
 #ifdef STANDARD_FILE_STREAMING
 	fopen_s(&m_mapStream, "wolf3d.dat", "rb");
 #endif
 #ifdef PETIT_FATFS_FILE_STREAMING
 	m_mapLoaded = false;
-	if(pf_mount(&m_fileSystem) == FR_OK)
+	while(!m_mapLoaded)
 	{
-		if(pf_open("WOLF3D.DAT") == FR_OK)
+		if(pf_mount(&m_fileSystem) == FR_OK)
 		{
-			m_mapLoaded = true;
+			if(pf_open("WOLF3D.DAT") == FR_OK)
+			{
+				m_mapLoaded = true;
+			}
+			else ERROR(PSTR("NO WOLF3D.DAT FOUND!"));
+		}
+		else ERROR(PSTR("SD CARD MOUNT ERROR"));
+		if(!m_mapLoaded)
+		{
+			//Delay(500);
 		}
 	}
 #endif
@@ -109,7 +137,7 @@ uint8_t Map::getTile(int8_t x, int8_t z)
 	return getTileFast(x, z);
 }
 
-void Map::streamData(uint8_t* buffer, MapRead_Orientation orientation, int8_t x, int8_t z, int8_t length)
+void Map::streamData(uint8_t* buffer, uint8_t orientation, int8_t x, int8_t z, int8_t length)
 {
 #ifdef STANDARD_FILE_STREAMING
 	if(m_mapStream)
@@ -123,10 +151,28 @@ void Map::streamData(uint8_t* buffer, MapRead_Orientation orientation, int8_t x,
 #ifdef PETIT_FATFS_FILE_STREAMING
 	if(m_mapLoaded)
 	{
-		int32_t offset = orientation == MapRead_Horizontal ? (z * MAP_SIZE + x) * 2 : (MAP_SIZE * MAP_SIZE * 2) + (x * MAP_SIZE + z) * 2;
+		int16_t _x = x;
+		int16_t _z = z;
+		int32_t offset = orientation == MapRead_Horizontal ? (_z * MAP_SIZE + _x) * 2 : (MAP_SIZE * MAP_SIZE * 2) + (_x * MAP_SIZE + _z) * 2;
 		WORD bytesRead;
-		pf_lseek(offset);
-		pf_read(buffer, length * 2, &bytesRead);
+		int errorCount = 0;
+
+		do
+		{
+			if(pf_lseek(offset) == FR_OK)
+			{
+				if(pf_read(buffer, length * 2, &bytesRead) != FR_OK)
+				{
+					bytesRead = 0;
+				}
+			}
+			errorCount ++;
+			if(errorCount > 3)
+			{
+				ERROR(PSTR("ERROR READING SD CARD"));
+			}
+		}
+		while(bytesRead < length * 2);
 	}
 #endif
 	//printf("Streaming %s, %d, %d\n", orientation == MapRead_Horizontal ? "Horizontal" : "Vertical", x, z, length);
@@ -178,7 +224,18 @@ uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z)
 	{
 		if(!isActorKilled(metadata))
 		{
-			engine.spawnActor(metadata, tile, x, z);
+			switch(tile)
+			{
+			case Tile_Actor_Guard_Hard:
+				if(engine.difficulty < Difficulty_Hard)
+					return Tile_Empty;
+			case Tile_Actor_Guard_Medium:
+				if(engine.difficulty < Difficulty_Medium)
+					return Tile_Empty;
+			case Tile_Actor_Guard_Easy:
+				engine.spawnActor(metadata, ActorType_Guard, x, z);
+				break;
+			}
 		}
 		return Tile_Empty;
 	}
@@ -366,10 +423,10 @@ void Door::update()
 		if(open > 0)
 		{
 			open --;
-		}
-		if(open == 16)
-		{
-			Platform.playSound(Sound_CloseDoor);
+			if(open == 16)
+			{
+				Platform.playSound(Sound_CloseDoor);
+			}
 		}
 		else state = DoorState_Idle;
 		break;
@@ -555,7 +612,7 @@ bool Map::placeItem(uint8_t type, int8_t x, int8_t z, uint8_t spawnId)
 
 	for(int8_t n = 0; n < MAX_ACTIVE_ITEMS; n++)
 	{
-		if(items[n].spawnId == 0xff)
+		if(items[n].type == 0)
 		{
 			slot = n;
 		}

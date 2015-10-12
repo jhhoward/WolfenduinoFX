@@ -4,32 +4,85 @@ Engine engine;
 
 void Engine::init()
 {
+	menu.init();
+	difficulty = Difficulty_Medium;
+	map.initStreaming();
+	gameState = GameState_Menu;
+}
+
+void Engine::startLevel()
+{
 	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
 		actors[n].type = ActorType_Empty;
 		actors[n].spawnId = 0xff;
 	}
 
-	renderer.init();
 	map.init();
+	renderer.init();
 	player.init();
 
 	frameCount = 0;
+	gameState = GameState_Playing;
 }
 
 void Engine::update()
 {
-	player.update();
-	map.update();
-
-	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	if(gameState == GameState_Playing)
 	{
-		actors[n].update();
+		player.update();
+
+		if(player.hp > 0)
+		{
+			map.update();
+			for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+			{
+				actors[n].update();
+			}
+		}
+	}
+	else if(gameState == GameState_Menu)
+	{
+		menu.update();
 	}
 
-	renderer.drawFrame();
-
 	frameCount ++;
+}
+
+void Engine::draw()
+{
+	if(gameState == GameState_Menu)
+	{
+		menu.draw();
+	}
+	else if(gameState == GameState_Playing)
+	{
+		renderer.drawFrame();
+	}
+	else if(gameState == GameState_Dead)
+	{
+		if(frameCount < 30)
+		{
+			for(int n = 0; n < DISPLAYWIDTH * (DISPLAYHEIGHT / 15); n++)
+			{
+				uint8_t x = (n + getRandomNumber16() + getRandomNumber16()) % DISPLAYWIDTH;
+				uint8_t y = (n + getRandomNumber16() + getRandomNumber16()) % DISPLAYHEIGHT;
+
+				setPixel(x, y);
+			}
+		}
+		else
+		{
+			for(uint8_t x = 0; x < DISPLAYWIDTH; x++)
+			{
+				for(uint8_t y = 0; y < DISPLAYHEIGHT; y++)
+				{
+					setPixel(x, y);
+				}
+			}
+			startLevel();
+		}
+	}
 }
 
 Actor* Engine::spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8_t cellZ)

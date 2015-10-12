@@ -53,6 +53,7 @@
 #define ZOOM_SCALE 3
 
 #define PROGMEM
+#define PSTR
 #define pgm_read_byte(x) (*((uint8_t*)x))
 #define pgm_read_word(x) (*((uint16_t*)x))
 
@@ -60,8 +61,11 @@
 
 #include <stdio.h>
 #define WARNING(msg, ...) printf((msg), __VA_ARGS__)
+#define ERROR(msg) printf(msg)
 #else
 #define WARNING(msg, ...)
+#define pgm_read_ptr(x) pgm_read_word(x)
+
 #endif
 // end
 
@@ -113,5 +117,11 @@
 
 #define ACTOR_HITBOX_SIZE 16
 #define MIN_ACTOR_DISTANCE 32
+
+#define FIRST_FONT_GLYPH 32
+#define LAST_FONT_GLYPH 95
+#define FONT_WIDTH 3
+#define FONT_HEIGHT 5
+#define FONT_GLYPH_BYTE_SIZE 2
 
 #endif

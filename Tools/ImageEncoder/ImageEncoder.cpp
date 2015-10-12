@@ -18,7 +18,8 @@ enum EncodeMode
 {
 	Encode_Invalid = -1,
 	Encode_Texture,
-	Encode_Sprite
+	Encode_Sprite,
+	Encode_Font
 };
 
 uint8_t texturePalette[] = 
@@ -35,6 +36,14 @@ uint8_t texturePaletteSprite[] =
 	255, 255, 255,		// white
 	0, 0, 0,			// black
 	127, 127, 127		// grey
+};
+
+uint8_t fontPalette[] = 
+{
+	255, 255, 255,		// white
+	0, 0, 0,			// black
+	0, 0, 0,			// black
+	0, 0, 0,			// black
 };
 
 EncodeMode encodeMode = Encode_Invalid;
@@ -233,6 +242,49 @@ void OutputSpriteFile(char* filename, char* varName, vector<SpriteFrame> data)
 	}
 }
 
+#define GLYPHS_X 8
+#define GLYPHS_Y 8
+
+vector<uint8_t> EncodeFont(vector<uint8_t> data, int width, int height)
+{
+	int glyphWidth = (width / GLYPHS_X) - 1;
+	int glyphHeight = (height / GLYPHS_Y) - 1;
+	vector<uint8_t> output;
+
+	for(int y = 0; y < GLYPHS_Y; y++)
+	{
+		for(int x = 0; x < GLYPHS_X; x++)
+		{
+			uint8_t buffer = 0;
+			int bufferPosition = 0;
+			for(int i = 0; i < glyphWidth; i++)
+			{
+				for(int j = 0; j < glyphHeight; j++)
+				{
+					int position = ((y * (glyphHeight + 1) + j) * width + (x * (glyphWidth + 1) + i)) * 4;
+					uint8_t* palette = fontPalette;
+					int index = GetPaletteIndexFromColour(fontPalette, data[position], data[position + 1], data[position + 2]);
+
+					if(index)
+						buffer |= (1 << bufferPosition);
+					bufferPosition++;
+					if(bufferPosition == 8)
+					{
+						output.push_back(buffer);
+						buffer = 0;
+						bufferPosition = 0;
+					}
+				}
+			}
+			if(bufferPosition != 0)
+			{
+				output.push_back(buffer);
+			}
+		}
+	}
+
+	return output;
+}
 
 vector<uint8_t> EncodeImage(vector<uint8_t> data, int width, int height)
 {
@@ -303,7 +355,7 @@ void OutputFile(char* filename, char* varName, vector<uint8_t> data, int width, 
 void PrintUsage(char* processName)
 {
 	printf("Usage:\n"
-			"%s [input.png] [output.inc.h] [varName] [texture|sprite]\n", processName);
+			"%s [input.png] [output.inc.h] [varName] [texture|sprite|font]\n", processName);
 }
 
 int main(int argc, char* argv[])
@@ -321,6 +373,10 @@ int main(int argc, char* argv[])
 	else if(!strcmp(argv[4], "sprite"))
 	{
 		encodeMode = Encode_Sprite;
+	}
+	else if(!strcmp(argv[4], "font"))
+	{
+		encodeMode = Encode_Font;
 	}
 	
 	if(encodeMode == Encode_Invalid)
@@ -350,6 +406,11 @@ int main(int argc, char* argv[])
 			}
 			printf("\n");
 			OutputSpriteFile(outputFilename, varName, frames);
+		}
+		else if(encodeMode == Encode_Font)
+		{
+			vector<uint8_t> encoded = EncodeFont(image, width, height);
+			OutputFile(outputFilename, varName, encoded, width, height, false);
 		}
 		else
 		{

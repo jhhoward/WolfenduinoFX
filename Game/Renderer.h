@@ -25,6 +25,11 @@ public:
 	void drawFrame();
 	void queueSprite(SpriteFrame* frame, uint8_t* sprite, int16_t x, int16_t z);
 
+	void drawGlyph(char glyph, uint8_t x, uint8_t y);
+	void drawString(const char* str, uint8_t x, uint8_t y);
+	void drawInt(int8_t val, uint8_t x, uint8_t y);
+
+
 #ifdef DEFER_RENDER
 	void drawDeferredFrame();
 #endif

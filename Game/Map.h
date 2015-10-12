@@ -59,6 +59,7 @@ public:
 class Map
 {
 public:
+	void initStreaming();
 	void init();
 	bool isValid(int8_t cellX, int8_t cellZ);
 	bool isBlocked(int8_t cellX, int8_t cellZ);
@@ -116,7 +117,7 @@ public:
 	bool isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2);
 
 private:
-	void streamData(uint8_t* buffer, MapRead_Orientation orientation, int8_t x, int8_t z, int8_t length);
+	void streamData(uint8_t* buffer, uint8_t orientation, int8_t x, int8_t z, int8_t length);
 	void updateHorizontalSlice(int8_t offsetZ);
 	void updateVerticalSlice(int8_t offsetX);
 	void updateEntireBuffer();

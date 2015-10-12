@@ -7,7 +7,7 @@ enum
 	Sound_CloseDoor,
 	Sound_AttackPistol,
 	Sound_GuardAttack,
-	Sound_CollectAmmo
+	Sound_CollectAmmo,
 };
 
 #endif
