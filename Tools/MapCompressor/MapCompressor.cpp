@@ -21,20 +21,9 @@ Takes a raw output of the wolf3d map (64x64) and puts into a format that the gam
 #define RLE_TOKEN 0xff
 #define USE_RLE_TOKEN 0
 
-// input 
-uint8_t layer1[MAP_SIZE * MAP_SIZE];
-uint8_t layer2[MAP_SIZE * MAP_SIZE];
-
-// output
-uint8_t outlayer[MAP_SIZE * MAP_SIZE];
-
-int outChunkOffsets[NUM_MAP_CHUNKS];
-uint8_t outData[MAP_SIZE * MAP_SIZE];
-uint8_t idData[MAP_SIZE * MAP_SIZE];
-int outDataLength = 0;
-
 using namespace std;
 
+#if 0
 struct HuffmanNode
 {
 	HuffmanNode* left;
@@ -276,325 +265,366 @@ void CompressMap()
 
 	printf("Total data size: %d\n", compressedMap.size() / 8);
 }
+#endif
 
-void ConvertTiles()
+class Map
 {
-	for(int y = 0; y < MAP_SIZE; y++)
+public:
+	// input 
+	uint8_t layer1[MAP_SIZE * MAP_SIZE];
+	uint8_t layer2[MAP_SIZE * MAP_SIZE];
+
+	// output
+	uint8_t outlayer[MAP_SIZE * MAP_SIZE];
+
+	uint8_t outData[MAP_SIZE * MAP_SIZE];
+	uint8_t idData[MAP_SIZE * MAP_SIZE];
+
+	int outChunkOffsets[NUM_MAP_CHUNKS];
+	int outDataLength;
+
+	void ConvertTiles()
 	{
-		for(int x = 0; x < MAP_SIZE; x++)
+		for(int y = 0; y < MAP_SIZE; y++)
 		{
-			uint8_t l1 = layer1[y * MAP_SIZE + x];
-			uint8_t l2 = layer2[y * MAP_SIZE + x];
-			uint8_t outTile = 0;
-			if(l1 < AREATILE)
+			for(int x = 0; x < MAP_SIZE; x++)
 			{
-				switch(l1)
+				uint8_t l1 = layer1[y * MAP_SIZE + x];
+				uint8_t l2 = layer2[y * MAP_SIZE + x];
+				uint8_t outTile = 0;
+				if(l1 < AREATILE)
 				{
-				case 90:
-					outTile = Tile_Door_Generic_Vertical;
+					switch(l1)
+					{
+					case 90:
+						outTile = Tile_Door_Generic_Vertical;
+						break;
+					case 92:
+					case 94:
+					case 96:
+					case 98:
+					case 100:
+						outTile = Tile_Door_Elevator_Vertical;
+						break;
+					case 91:
+						outTile = Tile_Door_Generic_Horizontal;
+						break;
+					case 93:
+					case 95:
+					case 97:
+					case 99:
+					case 101:
+						outTile = Tile_Door_Elevator_Horizontal;
+						break;
+					default:
+						outTile = l1;
+						break;
+					}
+				}
+
+				switch(l2)
+				{
+					// Player starts
+				case 19:
+				case 20:
+				case 21:
+				case 22:
+					outTile = Tile_PlayerStart_North + l2 - 19;
 					break;
-				case 92:
-				case 94:
-				case 96:
-				case 98:
-				case 100:
-					outTile = Tile_Door_Elevator_Vertical;
+				
+					// Guard
+				case 180:
+				case 181:
+				case 182:
+				case 183:
+				case 184:
+				case 185:
+				case 186:
+				case 187:
+					outTile = Tile_Actor_Guard_Hard;
 					break;
-				case 91:
-					outTile = Tile_Door_Generic_Horizontal;
+				case 144:
+				case 145:
+				case 146:
+				case 147:
+				case 148:
+				case 149:
+				case 150:
+				case 151:
+					outTile = Tile_Actor_Guard_Medium;
 					break;
-				case 93:
-				case 95:
-				case 97:
-				case 99:
-				case 101:
-					outTile = Tile_Door_Elevator_Horizontal;
+				case 108:
+				case 109:
+				case 110:
+				case 111:
+				case 112:
+				case 113:
+				case 114:
+				case 115:
+					outTile = Tile_Actor_Guard_Easy;
 					break;
-				default:
-					outTile = l1;
+				case 124:
+					outTile = Tile_Decoration_DeadGuard;
+					break;
+
+					// SS
+				case 198:
+				case 199:
+				case 200:
+				case 201:
+				case 202:
+				case 203:
+				case 204:
+				case 205:
+					outTile = Tile_Actor_SS_Hard;
+					break;
+				case 162:
+				case 163:
+				case 164:
+				case 165:
+				case 166:
+				case 167:
+				case 168:
+				case 169:
+					outTile = Tile_Actor_SS_Medium;
+					break;
+				case 126:
+				case 127:
+				case 128:
+				case 129:
+				case 130:
+				case 131:
+				case 132:
+				case 133:
+					outTile = Tile_Actor_SS_Easy;
+					break;
+
+					// static items:
+				case 23:
+					// puddle
+					break;
+				case 24:
+					outTile = Tile_BlockingDecoration_Barrel;
+					break;
+				case 25:
+					outTile = Tile_BlockingDecoration_TableChairs;
+					break;
+				case 26:
+					outTile = Tile_BlockingDecoration_FloorLamp;
+					break;
+				case 27:
+					outTile = Tile_Decoration_Chandelier;
+					break;
+				case 28:
+					outTile = Tile_BlockingDecoration_HangingSkeleton;
+					break;
+				case 29:
+					outTile = Tile_Item_BadFood;
+					break;
+				case 30:
+					outTile = Tile_BlockingDecoration_Pillar;
+					break;
+				case 31:
+					outTile = Tile_BlockingDecoration_Tree;
+					break;
+				case 32:
+					outTile = Tile_Decoration_Skeleton;
+					break;
+				case 33:
+					outTile = Tile_BlockingDecoration_Sink;
+					break;
+				case 34:
+					outTile = Tile_BlockingDecoration_Plant;
+					break;
+				case 35:
+					outTile = Tile_BlockingDecoration_Vase;
+					break;
+				case 36:
+					outTile = Tile_BlockingDecoration_Table;
+					break;
+				case 37:
+					outTile = Tile_Decoration_OverheadLamp;
+					break;
+				case 38:
+					outTile = Tile_Decoration_KitchenStuff;
+					break;
+				case 39:
+					outTile = Tile_BlockingDecoration_SuitOfArmour;
+					break;
+				case 40:
+					// hanging cage
+					break;
+				case 41:
+					// skeleton in cage
+					break;
+				case 42:
+					// skeleton relaxed
+					break;
+				case 43:
+					outTile = Tile_Item_Key1;
+					break;
+				case 44:
+					outTile = Tile_Item_Key2;
+					break;
+				case 45:
+					// bed (blocking)
+					break;
+				case 46:
+					// pot (non blocking)
+					break;
+				case 47:
+					outTile = Tile_Item_Food;
+					break;
+				case 48:
+					outTile = Tile_Item_FirstAid;
+					break;
+				case 49:
+					outTile = Tile_Item_Clip;
+					break;
+				case 50:
+					outTile = Tile_Item_MachineGun;
+					break;
+				case 51:
+					outTile = Tile_Item_ChainGun;
+					break;
+				case 52:
+					outTile = Tile_Item_Cross;
+					break;
+				case 53:
+					outTile = Tile_Item_Chalice;
+					break;
+				case 54:
+					outTile = Tile_Item_Bible;
+					break;
+				case 55:
+					outTile = Tile_Item_Crown;
+					break;
+				case 56:
+					// 1 up
+					break;
+				case 57:
+					outTile = Tile_BlockingDecoration_Barrel;
+					break;
+				case 58:
+					outTile = Tile_BlockingDecoration_Well;
+					break;
+				case 59:
+					outTile = Tile_BlockingDecoration_Well;
+					break;
+				case 60:
+					// gibs?
+					break;
+				case 61:
+					// flag
+					break;
+				case 98: // secret push wall
+					idData[y * MAP_SIZE + x] = outTile;
+					outTile = Tile_SecretPushWall;
 					break;
 				}
+				outlayer[y * MAP_SIZE + x] = outTile;
 			}
-
-			switch(l2)
-			{
-				// Player starts
-			case 19:
-			case 20:
-			case 21:
-			case 22:
-				outTile = Tile_PlayerStart_North + l2 - 19;
-				break;
-				
-				// Guard
-			case 180:
-			case 181:
-			case 182:
-			case 183:
-			case 184:
-			case 185:
-			case 186:
-			case 187:
-				outTile = Tile_Actor_Guard_Hard;
-				break;
-			case 144:
-			case 145:
-			case 146:
-			case 147:
-			case 148:
-			case 149:
-			case 150:
-			case 151:
-				outTile = Tile_Actor_Guard_Medium;
-				break;
-			case 108:
-			case 109:
-			case 110:
-			case 111:
-			case 112:
-			case 113:
-			case 114:
-			case 115:
-				outTile = Tile_Actor_Guard_Easy;
-				break;
-			case 124:
-				outTile = Tile_Decoration_DeadGuard;
-				break;
-
-				// SS
-			case 198:
-			case 199:
-			case 200:
-			case 201:
-			case 202:
-			case 203:
-			case 204:
-			case 205:
-				outTile = Tile_Actor_SS_Hard;
-				break;
-			case 162:
-			case 163:
-			case 164:
-			case 165:
-			case 166:
-			case 167:
-			case 168:
-			case 169:
-				outTile = Tile_Actor_SS_Medium;
-				break;
-			case 126:
-			case 127:
-			case 128:
-			case 129:
-			case 130:
-			case 131:
-			case 132:
-			case 133:
-				outTile = Tile_Actor_SS_Easy;
-				break;
-
-				// static items:
-			case 23:
-				// puddle
-				break;
-			case 24:
-				outTile = Tile_BlockingDecoration_Barrel;
-				break;
-			case 25:
-				outTile = Tile_BlockingDecoration_TableChairs;
-				break;
-			case 26:
-				outTile = Tile_BlockingDecoration_FloorLamp;
-				break;
-			case 27:
-				outTile = Tile_Decoration_Chandelier;
-				break;
-			case 28:
-				outTile = Tile_BlockingDecoration_HangingSkeleton;
-				break;
-			case 29:
-				outTile = Tile_Item_BadFood;
-				break;
-			case 30:
-				outTile = Tile_BlockingDecoration_Pillar;
-				break;
-			case 31:
-				outTile = Tile_BlockingDecoration_Tree;
-				break;
-			case 32:
-				outTile = Tile_Decoration_Skeleton;
-				break;
-			case 33:
-				outTile = Tile_BlockingDecoration_Sink;
-				break;
-			case 34:
-				outTile = Tile_BlockingDecoration_Plant;
-				break;
-			case 35:
-				outTile = Tile_BlockingDecoration_Vase;
-				break;
-			case 36:
-				outTile = Tile_BlockingDecoration_Table;
-				break;
-			case 37:
-				outTile = Tile_Decoration_OverheadLamp;
-				break;
-			case 38:
-				outTile = Tile_Decoration_KitchenStuff;
-				break;
-			case 39:
-				outTile = Tile_BlockingDecoration_SuitOfArmour;
-				break;
-			case 40:
-				// hanging cage
-				break;
-			case 41:
-				// skeleton in cage
-				break;
-			case 42:
-				// skeleton relaxed
-				break;
-			case 43:
-				outTile = Tile_Item_Key1;
-				break;
-			case 44:
-				outTile = Tile_Item_Key2;
-				break;
-			case 45:
-				// bed (blocking)
-				break;
-			case 46:
-				// pot (non blocking)
-				break;
-			case 47:
-				outTile = Tile_Item_Food;
-				break;
-			case 48:
-				outTile = Tile_Item_FirstAid;
-				break;
-			case 49:
-				outTile = Tile_Item_Clip;
-				break;
-			case 50:
-				outTile = Tile_Item_MachineGun;
-				break;
-			case 51:
-				outTile = Tile_Item_ChainGun;
-				break;
-			case 52:
-				outTile = Tile_Item_Cross;
-				break;
-			case 53:
-				outTile = Tile_Item_Chalice;
-				break;
-			case 54:
-				outTile = Tile_Item_Bible;
-				break;
-			case 55:
-				outTile = Tile_Item_Crown;
-				break;
-			case 56:
-				// 1 up
-				break;
-			case 57:
-				outTile = Tile_BlockingDecoration_Barrel;
-				break;
-			case 58:
-				outTile = Tile_BlockingDecoration_Well;
-				break;
-			case 59:
-				outTile = Tile_BlockingDecoration_Well;
-				break;
-			case 60:
-				// gibs?
-				break;
-			case 61:
-				// flag
-				break;
-			case 98: // secret push wall
-				idData[y * MAP_SIZE + x] = outTile;
-				outTile = Tile_SecretPushWall;
-				break;
-			}
-			outlayer[y * MAP_SIZE + x] = outTile;
 		}
 	}
-}
 
-void GenerateIds()
-{
-	uint8_t itemId = 0;
-	uint8_t actorId = 0;
-
-	for(int y = 0; y < MAP_SIZE; y++)
+	void GenerateIds()
 	{
+		uint8_t itemId = 0;
+		uint8_t actorId = 0;
+
+		for(int y = 0; y < MAP_SIZE; y++)
+		{
+			for(int x = 0; x < MAP_SIZE; x++)
+			{
+				uint8_t id = 0;
+				uint8_t tile = outlayer[y * MAP_SIZE + x];
+				if(tile >= Tile_FirstActor && tile <= Tile_LastActor)
+				{
+					id = actorId;
+					actorId++;
+				}
+				if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
+				{
+					id = itemId;
+					itemId++;
+				}
+
+				if(tile == Tile_SecretPushWall)
+				{
+					id = idData[y * MAP_SIZE + x];
+				}
+
+				idData[y * MAP_SIZE + x] = id;
+			}
+		}
+	}
+
+	void Write(FILE* fs)
+	{
+		for(int y = 0; y < MAP_SIZE; y++)
+		{
+			for(int x = 0; x < MAP_SIZE; x++)
+			{
+				fwrite(&outlayer[y * MAP_SIZE + x], 1, 1, fs);
+				fwrite(&idData[y * MAP_SIZE + x], 1, 1, fs);
+			}
+		}
 		for(int x = 0; x < MAP_SIZE; x++)
 		{
-			uint8_t id = 0;
-			uint8_t tile = outlayer[y * MAP_SIZE + x];
-			if(tile >= Tile_FirstActor && tile <= Tile_LastActor)
+			for(int y = 0; y < MAP_SIZE; y++)
 			{
-				id = actorId;
-				actorId++;
+				fwrite(&outlayer[y * MAP_SIZE + x], 1, 1, fs);
+				fwrite(&idData[y * MAP_SIZE + x], 1, 1, fs);
 			}
-			if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
-			{
-				id = itemId;
-				itemId++;
-			}
-
-			if(tile == Tile_SecretPushWall)
-			{
-				id = idData[y * MAP_SIZE + x];
-			}
-
-			idData[y * MAP_SIZE + x] = id;
 		}
 	}
-}
+};
 
 int main(int argc, char* argv[])
 {
+#if 0
 	if(argc != 3)
 	{
 		printf("Usage: %s [input] [output]\n\n", argv[0]);
 		return 0;
 	}
-
 	FILE* fs = fopen(argv[1], "rb");
 	if(!fs)
 	{
 		printf("Error opening %s\n", argv[1]);
 		return 0;
 	}
+#endif
 
-	fread(layer1, 1, MAP_SIZE * MAP_SIZE, fs);
-	fread(layer2, 1, MAP_SIZE * MAP_SIZE, fs);
+	vector<Map> maps;
+
+	for(int n = 0; n < 10; n++)
+	{
+		Map map;
+		char filename[50];
+		sprintf_s(filename, "Assets/RawMaps/rawmap%d.dat", n);
+		FILE* fs = fopen(filename, "rb");
+
+		fread(map.layer1, 1, MAP_SIZE * MAP_SIZE, fs);
+		fread(map.layer2, 1, MAP_SIZE * MAP_SIZE, fs);
+
+		fclose(fs);
+
+		map.ConvertTiles();
+		map.GenerateIds();
+		maps.push_back(map);
+	}
+
+	FILE* fs = fopen("wolf3d.dat", "wb");
+
+	for(int n = 0; n < 10; n++)
+	{
+		maps[n].Write(fs);
+	}
 
 	fclose(fs);
 
-	ConvertTiles();
-	GenerateIds();
-
-	fs = fopen("wolf3d.dat", "wb");
-	for(int y = 0; y < MAP_SIZE; y++)
-	{
-		for(int x = 0; x < MAP_SIZE; x++)
-		{
-			fwrite(&outlayer[y * MAP_SIZE + x], 1, 1, fs);
-			fwrite(&idData[y * MAP_SIZE + x], 1, 1, fs);
-		}
-	}
-	for(int x = 0; x < MAP_SIZE; x++)
-	{
-		for(int y = 0; y < MAP_SIZE; y++)
-		{
-			fwrite(&outlayer[y * MAP_SIZE + x], 1, 1, fs);
-			fwrite(&idData[y * MAP_SIZE + x], 1, 1, fs);
-		}
-	}
-	fclose(fs);
-
+#if 0
 	fs = fopen(argv[2], "w");
 	if(!fs)
 	{
@@ -630,6 +660,6 @@ int main(int argc, char* argv[])
 	fclose(fs);
 
 	CompressMap();
-
+#endif
 	return 0;
 }

@@ -151,6 +151,7 @@ void Map::streamData(uint8_t* buffer, uint8_t orientation, int8_t x, int8_t z, i
 	if(m_mapStream)
 	{
 		int32_t offset = orientation == MapRead_Horizontal ? (z * MAP_SIZE + x) * 2 : (MAP_SIZE * MAP_SIZE * 2) + (x * MAP_SIZE + z) * 2;
+		offset += currentLevel * MAP_SIZE * MAP_SIZE * 4;
 		fseek(m_mapStream, offset, SEEK_SET);
 		fread(buffer, 1, length * 2, m_mapStream);
 		return;
@@ -383,6 +384,18 @@ void Map::streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z)
 		for(int8_t n = 0; n < MAX_DOORS; n++)
 		{
 			if(doors[n].type != DoorType_SecretPushWall && !isValid(doors[n].x, doors[n].z))
+			{
+				freeIndex = n;
+				break;
+			}
+		}
+	}
+
+	if(freeIndex == -1)
+	{
+		for(int8_t n = 0; n < MAX_DOORS; n++)
+		{
+			if(doors[n].type != DoorType_SecretPushWall && engine.renderer.isFrustrumClipped(doors[n].x, doors[n].z))
 			{
 				freeIndex = n;
 				break;

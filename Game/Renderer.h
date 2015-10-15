@@ -36,6 +36,16 @@ public:
 
 	int8_t damageIndicator;
 
+	inline bool isFrustrumClipped(int16_t x, int16_t z)
+	{
+		if((view.clipCos * (x - view.cellX) - view.clipSin * (z - view.cellZ)) < -FIXED_ONE)
+			return true;
+		if((view.clipSin * (x - view.cellX) + view.clipCos * (z - view.cellZ)) < -FIXED_ONE)
+			return true;
+
+		return false;
+	}
+
 private:
 	void initWBuffer();
 	void drawFloorAndCeiling();  
@@ -51,15 +61,6 @@ private:
 	void drawWeapon();
 	void drawDamage();
 
-	inline bool isFrustrumClipped(int16_t x, int16_t z)
-	{
-		if((view.clipCos * (x - view.cellX) - view.clipSin * (z - view.cellZ)) < -FIXED_ONE)
-			return true;
-		if((view.clipSin * (x - view.cellX) + view.clipCos * (z - view.cellZ)) < -FIXED_ONE)
-			return true;
-
-		return false;
-	}
 
 	struct 
 	{
