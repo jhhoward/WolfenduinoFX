@@ -105,11 +105,11 @@
 #define MOVEMENT 7
 #define TURN 3
 #define MIN_WALL_DISTANCE 8
-#define MAX_DOORS 6
+#define MAX_DOORS 10
 
 #define DOOR_FRAME_TEXTURE 19
 
-#define MAX_ACTIVE_ACTORS 10
+#define MAX_ACTIVE_ACTORS 5
 #define MAX_ACTIVE_ITEMS 10
 
 #define EMPTY_ITEM_SLOT 0xff

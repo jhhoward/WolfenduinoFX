@@ -12,6 +12,14 @@
 #include <petit_fatfs.h>
 #endif
 
+const int8_t PushWallDirections[] PROGMEM =
+{
+	0, -1,		// North
+	1, 0,		// East
+	0, 1,		// South
+	-1, 0		// West
+};
+
 bool Map::isValid(int8_t x, int8_t z)
 {
 	if(x < bufferX || z < bufferZ || x >= bufferX + MAP_BUFFER_SIZE || z >= bufferZ + MAP_BUFFER_SIZE)
@@ -104,7 +112,7 @@ bool Map::isBlocked(int8_t cellX, int8_t cellZ)
 	// Check if the door is closed
 	for(int8_t n = 0; n < MAX_DOORS; n++)
 	{
-		if(doors[n].type != DoorType_None && doors[n].x == cellX && doors[n].z == cellZ && doors[n].open < 16)
+		if(doors[n].type != DoorType_None && doors[n].x == cellX && doors[n].z == cellZ && (doors[n].type == DoorType_SecretPushWall || doors[n].open < 16))
 		{
 			return true;
 		}
@@ -205,11 +213,11 @@ uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z)
 		//if(tile & 0x1)
 		if(tile == Tile_Door_Generic_Horizontal)
 		{
-			streamInDoor(DoorType_StandardHorizontal, x, z);
+			streamInDoor(DoorType_StandardHorizontal, metadata, x, z);
 		}
 		else if(tile == Tile_Door_Generic_Vertical)
 		{
-			streamInDoor(DoorType_StandardVertical, x, z);
+			streamInDoor(DoorType_StandardVertical, metadata, x, z);
 		}
 	}
 	else if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
@@ -236,6 +244,14 @@ uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z)
 				engine.spawnActor(metadata, ActorType_Guard, x, z);
 				break;
 			}
+		}
+		return Tile_Empty;
+	}
+	else if(tile == Tile_SecretPushWall)
+	{
+		if(engine.gameState == GameState_Loading)
+		{
+			streamInDoor(DoorType_SecretPushWall, metadata, x, z);
 		}
 		return Tile_Empty;
 	}
@@ -345,7 +361,7 @@ void Map::updateDoors()
 	}
 }
 
-void Map::streamInDoor(DoorType type, int8_t x, int8_t z)
+void Map::streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z)
 {
 	int8_t freeIndex = -1;
 
@@ -366,8 +382,7 @@ void Map::streamInDoor(DoorType type, int8_t x, int8_t z)
 	{
 		for(int8_t n = 0; n < MAX_DOORS; n++)
 		{
-			if(doors[n].x < bufferX || doors[n].x >= bufferX + MAP_BUFFER_SIZE
-			|| doors[n].z < bufferZ || doors[n].z >= bufferZ + MAP_BUFFER_SIZE)
+			if(doors[n].type != DoorType_SecretPushWall && !isValid(doors[n].x, doors[n].z))
 			{
 				freeIndex = n;
 				break;
@@ -381,38 +396,78 @@ void Map::streamInDoor(DoorType type, int8_t x, int8_t z)
 		return;
 	}
 
+	if(type == DoorType_SecretPushWall)
+		WARNING("Creating secret push wall at %d %d!\n", x, z);
+
 	doors[freeIndex].x = x;
 	doors[freeIndex].z = z;
 	doors[freeIndex].open = 0;
 	doors[freeIndex].state = DoorState_Idle;
 	doors[freeIndex].type = type;
+	doors[freeIndex].texture = metadata;
 }
 
-void Map::openDoorsAt(int8_t x, int8_t z)
+void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction)
 {
-	if(!isDoor(x, z))
-		return;
+//	if(!isDoor(x, z))
+		//return;
 
 	for(int8_t n = 0; n < MAX_DOORS; n++)
 	{
 		if(doors[n].type != DoorType_None && doors[n].x == x && doors[n].z == z)
 		{
-			if(doors[n].state != DoorState_Opening && doors[n].open == 0)
+			if(doors[n].type == DoorType_SecretPushWall)
 			{
-				Platform.playSound(Sound_OpenDoor);
+				if(direction != Direction_None)
+				{
+					int8_t offX = pgm_read_byte(&PushWallDirections[(direction) * 2]);
+					int8_t offZ = pgm_read_byte(&PushWallDirections[(direction) * 2 + 1]);
+
+					if(engine.map.isValid(x + offX, z + offZ) && !engine.map.isSolid(x + offX, z + offZ))
+					{
+						doors[n].state = DoorState_FirstPushWallState + direction;
+					}
+				}
 			}
-			doors[n].state = DoorState_Opening;
+			else
+			{
+				if(doors[n].state != DoorState_Opening && doors[n].open == 0)
+				{
+					Platform.playSound(Sound_OpenDoor);
+				}
+				doors[n].state = DoorState_Opening;
+			}
 			return;
 		}
 	}
 }
 
-
 void Door::update()
 {
 	switch(state)
 	{
+	case DoorState_PushNorth:
+	case DoorState_PushEast:
+	case DoorState_PushSouth:
+	case DoorState_PushWest:
+		open++;
+		if(open == CELL_SIZE)
+		{
+			open = 0;
+			int8_t offX = pgm_read_byte(&PushWallDirections[(state - DoorState_FirstPushWallState) * 2]);
+			int8_t offZ = pgm_read_byte(&PushWallDirections[(state - DoorState_FirstPushWallState) * 2 + 1]);
+
+			x += offX;
+			z += offZ;
+			if(!engine.map.isValid(x + offX, z + offZ) || engine.map.isSolid(x + offX, z + offZ))
+			{
+				state = DoorState_Idle;
+			}
+		}
+		break;
 	case DoorState_Opening:
+		open++;
+		break;
 		if(open < DOOR_MAX_OPEN)
 		{
 			open ++;

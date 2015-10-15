@@ -552,6 +552,150 @@ void Renderer::drawCell(int8_t cellX, int8_t cellZ)
 
 }
 
+#ifdef PERSPECTIVE_CORRECT_TEXTURE_MAPPING
+// draws one side of a cell
+void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint8_t textureId, int8_t _u1, int8_t _u2)
+{
+	// find position of wall edges relative to eye
+
+	int16_t z2 = (int16_t)(FIXED_TO_INT(view.rotCos * (int32_t)(_x1-view.x)) - FIXED_TO_INT(view.rotSin * (int32_t)(_z1-view.z)));
+	int16_t x2 = (int16_t)(FIXED_TO_INT(view.rotSin * (int32_t)(_x1-view.x)) + FIXED_TO_INT(view.rotCos * (int32_t)(_z1-view.z)));
+	int16_t z1 = (int16_t)(FIXED_TO_INT(view.rotCos * (int32_t)(_x2-view.x)) - FIXED_TO_INT(view.rotSin * (int32_t)(_z2-view.z)));
+	int16_t x1 = (int16_t)(FIXED_TO_INT(view.rotSin * (int32_t)(_x2-view.x)) + FIXED_TO_INT(view.rotCos * (int32_t)(_z2-view.z)));
+
+	// clip to the front pane
+	if ((z1<CLIP_PLANE) && (z2<CLIP_PLANE))
+		return;
+	if (z1 < CLIP_PLANE)
+	{
+		x1 += (CLIP_PLANE-z1) * (x2-x1) / (z2-z1);
+		z1 = CLIP_PLANE;
+	}
+	else if (z2 < CLIP_PLANE)
+	{
+		x2 += (CLIP_PLANE-z2) * (x1-x2) / (z1-z2);
+		z2 = CLIP_PLANE;
+	}
+
+	// apply perspective projection
+	int16_t vx1 = (int16_t)(x1 * NEAR_PLANE * CAMERA_SCALE / z1);  
+	int16_t vx2 = (int16_t)(x2 * NEAR_PLANE * CAMERA_SCALE / z2); 
+
+	// transform the end points into screen space
+	int16_t sx1 = (int16_t)((DISPLAYWIDTH / 2) + vx1);
+	int16_t sx2 = (int16_t)((DISPLAYWIDTH / 2) + vx2) - 1;
+
+	// clamp to the visible portion of the screen
+	int16_t firstx = max(sx1, 0);
+	int16_t lastx = min(sx2, DISPLAYWIDTH-1);
+	if (lastx < firstx)
+		return;
+
+	int16_t w1 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE) / z1);
+	int16_t w2 = (int16_t)((CELL_SIZE * NEAR_PLANE * CAMERA_SCALE) / z2);
+	int16_t dx = sx2 - sx1;
+	int16_t werror = dx >> 1;
+	int16_t uerror = werror;
+	int16_t w = w1;
+	int16_t du, ustep;
+	int16_t dw, wstep;
+
+	int16_t u1 = _u1 * w1;
+	int16_t u2 = _u2 * w2;
+	int16_t u = _u1;
+	int16_t z = z1;
+	int8_t dz, zstep;
+	int16_t zerror = werror;
+	if(z1 < z2)
+	{
+		dz = z2 - z1;
+		zstep = 1;
+	}
+	else
+	{
+		dz = z1 - z2;
+		zstep = -1;
+	}
+
+	if(w1 < w2)
+	{
+		dw = w2 - w1;
+		wstep = 1;
+	}
+	else
+	{
+		dw = w1 - w2;
+		wstep = -1;
+	}
+
+	if(u1 < u2)
+	{
+		du = u2 - u1;
+		ustep = 1;
+	}
+	else
+	{
+		du = u1 - u2;
+		ustep = -1;
+	}
+
+//	for (int x=firstx; x<=lastx; x++)
+	for (int x=sx1; x<=sx2; x++)
+	{
+		if (x >= 0 && x < DISPLAYWIDTH && w > wbuffer[x])
+		{        
+			if(w <= 255)
+			{
+				wbuffer[x] = (uint8_t) w;
+			}
+			else
+			{
+				wbuffer[x] = 255;
+			}
+
+#ifdef DEFER_RENDER
+			ubuffer[x] = u;
+			texbuffer[x] = textureId;
+#else
+			int16_t testOutU = (u * z) / (CELL_SIZE * NEAR_PLANE * CAMERA_SCALE);
+			float interpX = (float)(x - sx1) / (float)(sx2 - sx1);
+			float u1OverZ = (float)_u1 / (float) z1;
+			float u2OverZ = (float)_u2 / (float) z2;
+			float interpUOverZ = (interpX * u2OverZ) + (1.0f - interpX) * u1OverZ;
+			float interpZ = (interpX * z2) + (1.0f - interpX) * z1;
+			float interpU = interpUOverZ * interpZ;
+			uint8_t outU = (uint8_t) interpU;
+			outU = (uint8_t)testOutU;
+			outU = clamp(outU, 0, 15);
+			drawStrip(x, w, outU, textureId);
+#endif
+		}
+
+		werror -= dw;
+		uerror -= du;
+		zerror -= dz;
+
+		if(dx > 0)
+		{
+			while(werror < 0)
+			{
+				w += wstep;
+				werror += dx;
+			}
+			while(uerror < 0)
+			{
+				u += ustep;
+				uerror += dx;
+			}
+			while(zerror < 0)
+			{
+				z += zstep;
+				zerror += dx;
+			}
+		}
+	}
+}
+#else
 // draws one side of a cell
 void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint8_t textureId, int8_t _u1, int8_t _u2)
 {
@@ -662,6 +806,7 @@ void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint
 		}
 	}
 }
+#endif
 
 void Renderer::drawDoors()
 {
@@ -669,42 +814,83 @@ void Renderer::drawDoors()
 	{
 		Door& door = engine.map.doors[n];
 		uint8_t textureId = 18;
-		int offset = door.open;
-		if(offset >= 16)
+
+		if(!engine.map.isValid(door.x, door.z))
 		{
 			continue;
 		}
+		
+		if(door.type == DoorType_SecretPushWall)
+		{
+			int16_t doorX = door.x * CELL_SIZE;
+			int16_t doorZ = door.z * CELL_SIZE;
 
-		if(door.x < engine.map.bufferX || door.z < engine.map.bufferZ
-			|| door.x >= engine.map.bufferX + MAP_BUFFER_SIZE || door.z >= engine.map.bufferZ + MAP_BUFFER_SIZE)
-		{
-			continue;
-		}
+			switch(door.state)
+			{
+			case DoorState_PushNorth:
+				doorZ -= door.open;
+				break;
+			case DoorState_PushEast:
+				doorX += door.open;
+				break;
+			case DoorState_PushSouth:
+				doorZ += door.open;
+				break;
+			case DoorState_PushWest:
+				doorX -= door.open;
+				break;
+			}
 
-		if(door.type == DoorType_StandardVertical)
-		{
-			if(view.x < door.x * CELL_SIZE + CELL_SIZE / 2)
+			if(view.x < doorX)
 			{
-				drawWall(door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + CELL_SIZE, 
-					door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + offset * 2, textureId, 0, 15 - offset);
+				drawWall(doorX, doorZ + CELL_SIZE, doorX, doorZ, door.texture, 0, 15);
 			}
-			else
+			else if(view.x > doorX)
 			{
-				drawWall(door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + offset * 2, 
-					door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + CELL_SIZE, textureId, 15 - offset, 0);
+				drawWall(doorX + CELL_SIZE, doorZ, doorX + CELL_SIZE, doorZ + CELL_SIZE, door.texture, 0, 15);
+			}
+			if(view.z > doorZ + CELL_SIZE)
+			{
+				drawWall(doorX + CELL_SIZE, doorZ + CELL_SIZE, doorX, doorZ + CELL_SIZE, door.texture, 0, 15);
+			}
+			else if(view.z < doorZ)
+			{
+				drawWall(doorX, doorZ, doorX + CELL_SIZE, doorZ, door.texture, 0, 15);
 			}
 		}
-		else if(door.type == DoorType_StandardHorizontal)
+		else
 		{
-			if(view.z > door.z * CELL_SIZE + CELL_SIZE / 2)
+			int offset = door.open;
+			if(offset >= 16)
 			{
-				drawWall(door.x * CELL_SIZE + CELL_SIZE, door.z * CELL_SIZE + CELL_SIZE / 2, 
-					door.x * CELL_SIZE + offset * 2, door.z * CELL_SIZE + CELL_SIZE / 2, textureId, 0, 15 - offset);
+				continue;
 			}
-			else
+
+			if(door.type == DoorType_StandardVertical)
 			{
-				drawWall(door.x * CELL_SIZE + offset * 2, door.z * CELL_SIZE + CELL_SIZE / 2, 
-					door.x * CELL_SIZE + CELL_SIZE, door.z * CELL_SIZE + CELL_SIZE / 2, textureId, 15 - offset, 0);
+				if(view.x < door.x * CELL_SIZE + CELL_SIZE / 2)
+				{
+					drawWall(door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + CELL_SIZE, 
+						door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + offset * 2, textureId, 0, 15 - offset);
+				}
+				else
+				{
+					drawWall(door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + offset * 2, 
+						door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + CELL_SIZE, textureId, 15 - offset, 0);
+				}
+			}
+			else if(door.type == DoorType_StandardHorizontal)
+			{
+				if(view.z > door.z * CELL_SIZE + CELL_SIZE / 2)
+				{
+					drawWall(door.x * CELL_SIZE + CELL_SIZE, door.z * CELL_SIZE + CELL_SIZE / 2, 
+						door.x * CELL_SIZE + offset * 2, door.z * CELL_SIZE + CELL_SIZE / 2, textureId, 0, 15 - offset);
+				}
+				else
+				{
+					drawWall(door.x * CELL_SIZE + offset * 2, door.z * CELL_SIZE + CELL_SIZE / 2, 
+						door.x * CELL_SIZE + CELL_SIZE, door.z * CELL_SIZE + CELL_SIZE / 2, textureId, 15 - offset, 0);
+				}
 			}
 		}
 	}

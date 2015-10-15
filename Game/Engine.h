@@ -25,6 +25,7 @@
 enum
 {
 	GameState_Menu,
+	GameState_Loading,
 	GameState_Playing,
 	GameState_Dead
 };

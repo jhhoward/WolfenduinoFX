@@ -8,10 +8,20 @@ void Engine::init()
 	difficulty = Difficulty_Medium;
 	map.initStreaming();
 	gameState = GameState_Menu;
+
+	// hacks
+	difficulty = Difficulty_Baby;
+	startLevel();
+	player.x = 1121;
+	player.z = 730;
+	player.x = 1106;
+	player.z = 835;
+	player.direction = DEGREES_180;
 }
 
 void Engine::startLevel()
 {
+	gameState = GameState_Loading;
 	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
 		actors[n].type = ActorType_Empty;

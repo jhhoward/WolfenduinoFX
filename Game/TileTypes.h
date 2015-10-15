@@ -95,6 +95,8 @@ enum TileType
 	Tile_Decoration_Chandelier,
 	Tile_LastDecoration = Tile_Decoration_Chandelier,
 
+	Tile_SecretPushWall,
+
 	NUM_TILE_TYPES
 };
 

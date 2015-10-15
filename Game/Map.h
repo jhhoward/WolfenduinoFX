@@ -23,14 +23,35 @@ enum DoorType
 {
 	DoorType_None,
 	DoorType_StandardHorizontal,
-	DoorType_StandardVertical
+	DoorType_StandardVertical,
+	DoorType_ExitHorizontal,
+	DoorType_ExitVertical,
+	DoorType_Locked1Horizontal,
+	DoorType_Locked1Vertical,
+	DoorType_Locked2Horizontal,
+	DoorType_Locked2Vertical,
+	DoorType_SecretPushWall
 };
 
 enum DoorState
 {
 	DoorState_Idle = 0,
 	DoorState_Opening,
-	DoorState_Closing
+	DoorState_Closing,
+	DoorState_PushNorth,
+	DoorState_PushEast,
+	DoorState_PushSouth,
+	DoorState_PushWest,
+	DoorState_FirstPushWallState = DoorState_PushNorth
+};
+
+enum Direction
+{
+	Direction_None = -1,
+	Direction_North,
+	Direction_East,
+	Direction_South,
+	Direction_West,
 };
 
 #define DOOR_MAX_OPEN 63
@@ -44,8 +65,9 @@ public:
 
 	uint8_t type;
 	int8_t x, z;
-	uint8_t open : 6;
-	uint8_t state : 2;
+	uint8_t open;
+	uint8_t state;
+	uint8_t texture;
 };
 
 class Item
@@ -86,7 +108,7 @@ public:
 	void updateBufferPosition(int8_t newX, int8_t newZ);
 
 	void update();
-	void openDoorsAt(int8_t x, int8_t z);
+	void openDoorsAt(int8_t x, int8_t z, int8_t direction);
 	bool placeItem(uint8_t type, int8_t x, int8_t z, uint8_t spawnId);
 
 	bool isItemCollected(uint8_t spawnId)
@@ -123,7 +145,7 @@ private:
 	void updateEntireBuffer();
 	void updateDoors();
 	uint8_t streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z);
-	void streamInDoor(DoorType type, int8_t x, int8_t z);
+	void streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z);
 	
 	uint8_t m_itemState[256 / 8];
 	uint8_t m_actorState[256 / 8];

@@ -511,6 +511,10 @@ void ConvertTiles()
 			case 61:
 				// flag
 				break;
+			case 98: // secret push wall
+				idData[y * MAP_SIZE + x] = outTile;
+				outTile = Tile_SecretPushWall;
+				break;
 			}
 			outlayer[y * MAP_SIZE + x] = outTile;
 		}
@@ -538,6 +542,12 @@ void GenerateIds()
 				id = itemId;
 				itemId++;
 			}
+
+			if(tile == Tile_SecretPushWall)
+			{
+				id = idData[y * MAP_SIZE + x];
+			}
+
 			idData[y * MAP_SIZE + x] = id;
 		}
 	}

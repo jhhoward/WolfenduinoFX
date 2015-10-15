@@ -100,23 +100,29 @@ void Player::update()
 		int8_t cellX = x / CELL_SIZE;
 		int8_t cellZ = z / CELL_SIZE;
 
-		engine.map.openDoorsAt(cellX, cellZ);
+		engine.map.openDoorsAt(cellX, cellZ, Direction_None);
 
-		if(cos_dir > 0)
+		if(mabs(cos_dir) > mabs(sin_dir))
 		{
-			engine.map.openDoorsAt(cellX + 1, cellZ);
+			if(cos_dir > 0)
+			{
+				engine.map.openDoorsAt(cellX + 1, cellZ, Direction_East);
+			}
+			else
+			{
+				engine.map.openDoorsAt(cellX - 1, cellZ, Direction_West);
+			}
 		}
 		else
 		{
-			engine.map.openDoorsAt(cellX - 1, cellZ);
-		}
-		if(sin_dir > 0)
-		{
-			engine.map.openDoorsAt(cellX, cellZ + 1);
-		}
-		else
-		{
-			engine.map.openDoorsAt(cellX, cellZ - 1);
+			if(sin_dir > 0)
+			{
+				engine.map.openDoorsAt(cellX, cellZ + 1, Direction_South);
+			}
+			else
+			{
+				engine.map.openDoorsAt(cellX, cellZ - 1, Direction_North);
+			}
 		}
 
 		// Collect any items
@@ -403,7 +409,6 @@ void Player::init()
 						x = (i + b) * CELL_SIZE + CELL_SIZE / 2;
 						z = (j + a) * CELL_SIZE + CELL_SIZE / 2;
 						direction = (uint8_t)((tile - Tile_PlayerStart_North - 1) * DEGREES_90);
-						return;
 					}
 				}
 			}

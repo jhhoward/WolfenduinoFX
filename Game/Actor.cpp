@@ -209,7 +209,7 @@ bool Actor::tryMove()
 
 	if(engine.map.isBlocked(targetCellX, targetCellZ))
 	{
-		engine.map.openDoorsAt(targetCellX, targetCellZ);
+		engine.map.openDoorsAt(targetCellX, targetCellZ, Direction_None);
 		return false;
 	}
 
