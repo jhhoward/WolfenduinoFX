@@ -8,10 +8,12 @@ void Engine::init()
 	difficulty = Difficulty_Medium;
 	map.initStreaming();
 	gameState = GameState_Menu;
-	map.currentLevel = 1;
+	map.currentLevel = 0;
 	// hacks
-	//difficulty = Difficulty_Baby;
-	//startLevel();
+	difficulty = Difficulty_Baby;
+	startLevel();
+	player.x = 650;
+	player.z = 1514;
 	/*player.x = 1121;
 	player.z = 730;
 	player.x = 1106;
@@ -19,8 +21,12 @@ void Engine::init()
 	player.direction = DEGREES_180;*/
 }
 
-void Engine::startLevel()
+void Engine::startLevel(bool resetPlayer)
 {
+	if(resetPlayer)
+	{
+		player.hp = 0;
+	}
 	gameState = GameState_Loading;
 	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
@@ -38,22 +44,38 @@ void Engine::startLevel()
 
 void Engine::update()
 {
-	if(gameState == GameState_Playing)
+	switch(gameState)
 	{
-		player.update();
-
-		if(player.hp > 0)
+	case GameState_Playing:
 		{
-			map.update();
-			for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+			player.update();
+
+			if(player.hp > 0)
 			{
-				actors[n].update();
+				map.update();
+				for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+				{
+					actors[n].update();
+				}
+			}
+
+			if(Platform.readInput() & Input_Btn_C)
+			{
+				gameState = GameState_PauseMenu;
+				engine.menu.switchMenu(Menu_Paused);
 			}
 		}
-	}
-	else if(gameState == GameState_Menu)
-	{
-		menu.update();
+		break;
+	case GameState_Menu:
+	case GameState_PauseMenu:
+		{
+			menu.update();
+		}
+		break;
+	case GameState_FinishedLevel:
+		map.currentLevel++;
+		startLevel(false);
+		break;
 	}
 
 	frameCount ++;
@@ -61,37 +83,44 @@ void Engine::update()
 
 void Engine::draw()
 {
-	if(gameState == GameState_Menu)
+	switch(gameState)
 	{
-		menu.draw();
-	}
-	else if(gameState == GameState_Playing)
-	{
-		renderer.drawFrame();
-	}
-	else if(gameState == GameState_Dead)
-	{
-		if(frameCount < 30)
+	case GameState_Menu:
+	case GameState_PauseMenu:
 		{
-			for(int n = 0; n < DISPLAYWIDTH * (DISPLAYHEIGHT / 15); n++)
-			{
-				uint8_t x = (n + getRandomNumber16() + getRandomNumber16()) % DISPLAYWIDTH;
-				uint8_t y = (n + getRandomNumber16() + getRandomNumber16()) % DISPLAYHEIGHT;
-
-				setPixel(x, y);
-			}
+			menu.draw();
 		}
-		else
+		break;
+	case GameState_Playing:
 		{
-			for(uint8_t x = 0; x < DISPLAYWIDTH; x++)
+			renderer.drawFrame();
+		}
+		break;
+	case GameState_Loading:
+		{
+			clearDisplay(1);
+			renderer.drawString(PSTR("GET PSYCHED!"), 20, 21);
+		}
+		break;
+	case GameState_Dead:
+		{
+			if(frameCount < 30)
 			{
-				for(uint8_t y = 0; y < DISPLAYHEIGHT; y++)
+				for(int n = 0; n < DISPLAYWIDTH * (DISPLAYHEIGHT / 15); n++)
 				{
+					uint8_t x = (n + getRandomNumber16() + getRandomNumber16()) % DISPLAYWIDTH;
+					uint8_t y = (n + getRandomNumber16() + getRandomNumber16()) % DISPLAYHEIGHT;
+
 					setPixel(x, y);
 				}
 			}
-			startLevel();
+			else
+			{
+				clearDisplay(0);
+				startLevel();
+			}
 		}
+		break;
 	}
 }
 

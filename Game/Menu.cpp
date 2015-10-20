@@ -9,6 +9,7 @@ typedef void (*MenuFn)(void);
 
 // Main menu
 const char Str_Wolfenduino3D[] PROGMEM = "WOLFENDUINO 3D";
+const char Str_Continue[] PROGMEM = "CONTINUE";
 const char Str_NewGame[] PROGMEM = "NEW GAME";
 const char Str_Sound[] PROGMEM = "SOUND:";
 const char Str_On[] PROGMEM = "ON";
@@ -18,6 +19,16 @@ const char Str_Quit[] PROGMEM = "QUIT";
 const void* Menu_Main[] PROGMEM = 
 {
 	Str_Wolfenduino3D,
+	Str_NewGame,		MENU_CALLBACK(&Menu::newGame),
+	Str_Sound,			MENU_CALLBACK(&Menu::toggleSound),
+	Str_Quit,			MENU_CALLBACK(&Menu::quit),
+	MENU_ENTRY_END
+};
+
+const void* Menu_Paused[] PROGMEM = 
+{
+	Str_Wolfenduino3D,
+	Str_Continue,		MENU_CALLBACK(&Menu::continueGame),
 	Str_NewGame,		MENU_CALLBACK(&Menu::newGame),
 	Str_Sound,			MENU_CALLBACK(&Menu::toggleSound),
 	Str_Quit,			MENU_CALLBACK(&Menu::quit),
@@ -49,6 +60,11 @@ void Menu::toggleSound()
 void Menu::newGame()
 {
 	engine.menu.switchMenu((MenuData*) Menu_ChooseDifficulty);
+}
+
+void Menu::continueGame()
+{
+	engine.gameState = GameState_Playing;
 }
 
 #ifdef PLATFORM_GAMEBUINO
@@ -94,9 +110,7 @@ void Menu::init()
 
 void Menu::draw()
 {
-	for(int j = 0; j < DISPLAYHEIGHT; j++)
-		for(int i = 0; i < DISPLAYWIDTH; i++)
-			clearPixel(i, j);
+	clearDisplay(1);
 
 	engine.renderer.drawString((const char*)pgm_read_ptr(&currentMenu[0]), 5, 1);
 	int index = 1;
@@ -143,6 +157,22 @@ void Menu::update()
 			MenuFn fn = (MenuFn)pgm_read_ptr(&currentMenu[currentSelection * 2 + 2]);
 			fn();
 		}
+		if(Platform.readInput() & Input_Btn_C)
+		{
+			if(engine.gameState == GameState_PauseMenu)
+				continueGame();
+		}
+		if(Platform.readInput() & Input_Btn_B)
+		{
+			if(currentMenu == Menu_ChooseDifficulty)
+			{
+				switchMenu(engine.gameState == GameState_Menu ? Menu_Main : Menu_Paused);
+			}
+			else if(currentMenu == Menu_Paused)
+			{
+				continueGame();
+			}
+		}
 	}
 	debounceInput = Platform.readInput() != 0;
 }
@@ -166,4 +196,5 @@ void Menu::switchMenu(MenuData* newMenu)
 {
 	currentMenu = newMenu;
 	currentSelection = 0;
+	debounceInput = true;
 }

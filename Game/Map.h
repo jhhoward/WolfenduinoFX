@@ -24,12 +24,12 @@ enum DoorType
 	DoorType_None,
 	DoorType_StandardHorizontal,
 	DoorType_StandardVertical,
-	DoorType_ExitHorizontal,
-	DoorType_ExitVertical,
 	DoorType_Locked1Horizontal,
 	DoorType_Locked1Vertical,
 	DoorType_Locked2Horizontal,
 	DoorType_Locked2Vertical,
+	DoorType_ExitHorizontal,
+	DoorType_ExitVertical,
 	DoorType_SecretPushWall
 };
 

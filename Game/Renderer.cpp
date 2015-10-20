@@ -813,7 +813,7 @@ void Renderer::drawDoors()
 	for(int n = 0; n < MAX_DOORS; n++)
 	{
 		Door& door = engine.map.doors[n];
-		uint8_t textureId = 18;
+		uint8_t textureId = door.texture;
 
 		if(!engine.map.isValid(door.x, door.z))
 		{
@@ -866,7 +866,7 @@ void Renderer::drawDoors()
 				continue;
 			}
 
-			if(door.type == DoorType_StandardVertical)
+			if((door.type & 0x1) == 0)
 			{
 				if(view.x < door.x * CELL_SIZE + CELL_SIZE / 2)
 				{
@@ -879,7 +879,7 @@ void Renderer::drawDoors()
 						door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + CELL_SIZE, textureId, 15 - offset, 0);
 				}
 			}
-			else if(door.type == DoorType_StandardHorizontal)
+			else
 			{
 				if(view.z > door.z * CELL_SIZE + CELL_SIZE / 2)
 				{

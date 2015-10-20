@@ -24,7 +24,12 @@ enum TileType
 	Tile_Wall15,
 	Tile_Wall16,
 	Tile_Wall17,
-	Tile_LastWall = Tile_Wall17,
+	Tile_Wall18,
+	Tile_Wall19,
+	Tile_Wall20,
+	Tile_ExitSwitchWall,
+	Tile_Wall22,
+	Tile_LastWall = Tile_Wall22,
 
 	// Doors
 	Tile_FirstDoor,

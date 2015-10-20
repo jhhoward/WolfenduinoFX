@@ -41,5 +41,6 @@ inline void clearPixel(uint8_t x, uint8_t y)
 {
 	Platform.drawPixel(x, y, 1);
 }
+void clearDisplay(uint8_t colour);
 
 #endif

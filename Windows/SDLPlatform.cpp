@@ -148,3 +148,14 @@ void SDLPlatform::drawPixel(uint8_t x, uint8_t y, uint8_t colour)
 		drawPixel(m_screenSurface, x, y, white);
 	}*/
 }
+
+void clearDisplay(uint8_t colour)
+{
+	for(int y = 0; y < DISPLAYHEIGHT; y++)
+	{
+		for(int x = 0; x < DISPLAYWIDTH; x++)
+		{
+			drawPixel(x, y, colour);
+		}
+	}
+}

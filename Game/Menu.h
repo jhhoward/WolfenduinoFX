@@ -25,6 +25,9 @@ public:
 	static void skillMedium();
 	static void skillHard();
 	static void toggleSound();
+	static void continueGame();
 };
+
+extern const void* Menu_Paused[];
 
 #endif

@@ -385,11 +385,15 @@ void Player::updateWeapon()
 
 void Player::init()
 {
-	weapon.type = WeaponType_Pistol;
-	weapon.ammo = 8;
+	if(hp == 0)
+	{
+		weapon.type = WeaponType_Pistol;
+		weapon.ammo = 8;
+		hp = 100;
+	}
+
 	weapon.frame = 0;
 	weapon.debounce = false;
-	hp = 100;
 
 	// Find player start tile
 	for(int8_t j = 0; j < MAP_SIZE; j += MAP_BUFFER_SIZE)

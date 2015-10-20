@@ -316,6 +316,13 @@ public:
 					case 101:
 						outTile = Tile_Door_Elevator_Horizontal;
 						break;
+					case 21:
+						if((y > 0 && (layer1[(y - 1) * MAP_SIZE + x] == 0 || layer1[(y - 1) * MAP_SIZE + x] >= AREATILE))
+						|| (y < MAP_SIZE - 1 && (layer1[(y + 1) * MAP_SIZE + x] == 0 || layer1[(y + 1) * MAP_SIZE + x] >= AREATILE)))
+							outTile = 22;
+						else
+							outTile = 21;
+						break;
 					default:
 						outTile = l1;
 						break;

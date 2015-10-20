@@ -211,15 +211,10 @@ uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z)
 {
 	if(tile >= Tile_FirstDoor && tile <= Tile_LastDoor)
 	{
-		//if(tile & 0x1)
-		if(tile == Tile_Door_Generic_Horizontal)
-		{
-			streamInDoor(DoorType_StandardHorizontal, metadata, x, z);
-		}
-		else if(tile == Tile_Door_Generic_Vertical)
-		{
-			streamInDoor(DoorType_StandardVertical, metadata, x, z);
-		}
+		uint8_t textureId = 18;
+		if(tile == Tile_Door_Elevator_Horizontal || tile == Tile_Door_Elevator_Vertical)
+			textureId = 12;
+		streamInDoor(tile - Tile_FirstDoor + 1, textureId, x, z);
 	}
 	else if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
 	{
@@ -424,6 +419,13 @@ void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction)
 {
 //	if(!isDoor(x, z))
 		//return;
+	if(direction != Direction_None)
+	{
+		if(getTile(x, z) == Tile_ExitSwitchWall)
+		{
+			engine.gameState = GameState_FinishedLevel;
+		}
+	}
 
 	for(int8_t n = 0; n < MAX_DOORS; n++)
 	{
