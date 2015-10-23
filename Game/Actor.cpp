@@ -10,8 +10,8 @@ void Actor::init(uint8_t id, uint8_t actorType, uint8_t cellX, uint8_t cellZ)
 	spawnId = id;
 	type = actorType;
 	state = ActorState_Idle;
-	x = cellX * CELL_SIZE + CELL_SIZE / 2;
-	z = cellZ * CELL_SIZE + CELL_SIZE / 2;
+	x = CELL_TO_WORLD(cellX) + CELL_SIZE / 2;
+	z = CELL_TO_WORLD(cellZ) + CELL_SIZE / 2;
 	targetCellX = cellX;
 	targetCellZ = cellZ;
 	hp = 25;
@@ -107,8 +107,8 @@ void Actor::draw()
 
 void Actor::updateFrozenState()
 {
-	int cellX = x / CELL_SIZE;
-	int cellZ = z / CELL_SIZE;
+	int cellX = WORLD_TO_CELL(x);
+	int cellZ = WORLD_TO_CELL(z);
 
 	flags.frozen = cellX < engine.map.bufferX || cellZ < engine.map.bufferZ || cellX >= engine.map.bufferX + MAP_BUFFER_SIZE || cellZ >= engine.map.bufferZ + MAP_BUFFER_SIZE;
 }
@@ -166,8 +166,8 @@ void Actor::switchState(uint8_t newState)
 
 void Actor::dropItem(uint8_t itemType)
 {
-	int cellX = x / CELL_SIZE;
-	int cellZ = z / CELL_SIZE;
+	int cellX = WORLD_TO_CELL(x);
+	int cellZ = WORLD_TO_CELL(z);
 
 	if(tryDropItem(itemType, cellX, cellZ))
 		return;
@@ -213,8 +213,8 @@ bool Actor::tryMove()
 		return false;
 	}
 
-	int16_t targetX = targetCellX * CELL_SIZE + CELL_SIZE / 2;
-	int16_t targetZ = targetCellZ * CELL_SIZE + CELL_SIZE / 2;
+	int16_t targetX = CELL_TO_WORLD(targetCellX) + CELL_SIZE / 2;
+	int16_t targetZ = CELL_TO_WORLD(targetCellZ) + CELL_SIZE / 2;
 
 	int8_t deltaX = clamp(targetX - x, -movement, movement);
 	int8_t deltaZ = clamp(targetZ - z, -movement, movement);
@@ -271,8 +271,8 @@ bool Actor::tryPickCells(int8_t deltaX, int8_t deltaZ)
 
 void Actor::pickNewTargetCell()
 {
-	int8_t deltaX = clamp(engine.player.x / CELL_SIZE - targetCellX, -1, 1);
-	int8_t deltaZ = clamp(engine.player.z / CELL_SIZE - targetCellZ, -1, 1);
+	int8_t deltaX = clamp(WORLD_TO_CELL(engine.player.x) - targetCellX, -1, 1);
+	int8_t deltaZ = clamp(WORLD_TO_CELL(engine.player.z) - targetCellZ, -1, 1);
 	uint8_t dodgeChance = getRandomNumber();
 
 	if(deltaX == 0)
@@ -303,8 +303,8 @@ void Actor::pickNewTargetCell()
 
 int8_t Actor::getPlayerCellDistance()
 {
-	int8_t dx = abs(engine.player.x - x) / CELL_SIZE;
-	int8_t dz = abs(engine.player.z - z) / CELL_SIZE;
+	int8_t dx = WORLD_TO_CELL(abs(engine.player.x - x));
+	int8_t dz = WORLD_TO_CELL(abs(engine.player.z - z));
 	return max(dx, dz);
 }
 

@@ -554,10 +554,10 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
     int         xfrac,yfrac,deltafrac;
     unsigned    value,intercept;
 	*/
-	int cellX1 = x1 / CELL_SIZE;
-	int cellX2 = x2 / CELL_SIZE;
-	int cellZ1 = z1 / CELL_SIZE;
-	int cellZ2 = z2 / CELL_SIZE;
+	int cellX1 = WORLD_TO_CELL(x1);
+	int cellX2 = WORLD_TO_CELL(x2);
+	int cellZ1 = WORLD_TO_CELL(z1);
+	int cellZ2 = WORLD_TO_CELL(z2);
 
     int xdist = mabs(cellX2 - cellX1);
 
@@ -572,12 +572,12 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
     {
         if (cellX2 > cellX1)
         {
-            partial = ((cellX1 + 1) * CELL_SIZE - x1);
+            partial = (CELL_TO_WORLD(cellX1 + 1) - x1);
             xstep = 1;
         }
         else
         {
-            partial = (x1 - cellX1 * CELL_SIZE);
+            partial = (x1 - CELL_TO_WORLD(cellX1));
             xstep = -1;
         }
 
@@ -596,7 +596,7 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
         cellX2 += xstep;
         do
         {
-            z = zfrac / CELL_SIZE;
+            z = WORLD_TO_CELL(zfrac);
             zfrac += zstep;
 
             uint8_t tile = getTile(x, z);
@@ -626,12 +626,12 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
     {
         if (cellZ2 > cellZ1)
         {
-            partial = ((cellZ1 + 1) * CELL_SIZE - z1);
+            partial = (CELL_TO_WORLD(cellZ1 + 1) - z1);
             zstep = 1;
         }
         else
         {
-            partial = (z1 - cellZ1 * CELL_SIZE);
+            partial = (z1 - CELL_TO_WORLD(cellZ1));
             zstep = -1;
         }
 
@@ -650,7 +650,7 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
         cellZ2 += zstep;
         do
         {
-            x = xfrac / CELL_SIZE;
+            x = WORLD_TO_CELL(xfrac);
             xfrac += xstep;
 
             uint8_t tile = getTile(x, z);

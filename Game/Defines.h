@@ -80,6 +80,16 @@
 #define mabs(x) ((x) < 0 ? -(x) : (x))
 
 #define CELL_SIZE 32
+#define CELL_SIZE_SHIFT 5
+
+#if 0
+#define CELL_TO_WORLD(x) ((x) * CELL_SIZE)
+#define WORLD_TO_CELL(x) ((x) / CELL_SIZE)
+#else
+#define CELL_TO_WORLD(x) ((x) << CELL_SIZE_SHIFT)
+#define WORLD_TO_CELL(x) ((x) >> CELL_SIZE_SHIFT)
+#endif
+
 #define MAP_SIZE 64
 #define MAP_BUFFER_SIZE 16
 //#define MAP_SIZE 16

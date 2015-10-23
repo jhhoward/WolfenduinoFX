@@ -97,8 +97,8 @@ void Player::update()
 		//int16_t projectedZ = z / CELL_SIZE;
 
 		// Check for doors
-		int8_t cellX = x / CELL_SIZE;
-		int8_t cellZ = z / CELL_SIZE;
+		int8_t cellX = WORLD_TO_CELL(x);
+		int8_t cellZ = WORLD_TO_CELL(z);
 
 		engine.map.openDoorsAt(cellX, cellZ, Direction_None);
 
@@ -180,8 +180,8 @@ void Player::update()
 	}
 
 	// Update the stream position
-	int16_t projectedX = x / CELL_SIZE + cos_dir / 19;
-	int16_t projectedZ = z / CELL_SIZE + sin_dir / 19;
+	int16_t projectedX = WORLD_TO_CELL(x) + cos_dir / 19;
+	int16_t projectedZ = WORLD_TO_CELL(z) + sin_dir / 19;
 
 	engine.map.updateBufferPosition(projectedX - MAP_BUFFER_SIZE / 2, projectedZ - MAP_BUFFER_SIZE / 2);
 }
@@ -207,8 +207,8 @@ bool Player::isPlayerColliding()
 
 bool Player::isPointColliding(int16_t pointX, int16_t pointZ)
 {
-	int8_t cellX = pointX / CELL_SIZE;
-	int8_t cellZ = pointZ / CELL_SIZE;
+	int8_t cellX = WORLD_TO_CELL(pointX);
+	int8_t cellZ = WORLD_TO_CELL(pointZ);
 
 	return (engine.map.isBlocked(cellX, cellZ));
 }
@@ -410,8 +410,8 @@ void Player::init()
 
 					if(tile >= Tile_PlayerStart_North && tile <= Tile_PlayerStart_West)
 					{
-						x = (i + b) * CELL_SIZE + CELL_SIZE / 2;
-						z = (j + a) * CELL_SIZE + CELL_SIZE / 2;
+						x = CELL_TO_WORLD(i + b) + CELL_SIZE / 2;
+						z = CELL_TO_WORLD(j + a) + CELL_SIZE / 2;
 						direction = (uint8_t)((tile - Tile_PlayerStart_North - 1) * DEGREES_90);
 					}
 				}

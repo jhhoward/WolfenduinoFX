@@ -92,8 +92,8 @@ void Renderer::drawFrame()
 	view.clipCos = FixedMath::Cos(-engine.player.direction + DEGREES_90 / 2);
 	view.clipSin = FixedMath::Sin(-engine.player.direction + DEGREES_90 / 2);
 
-	view.cellX = engine.player.x / CELL_SIZE;
-	view.cellZ = engine.player.z / CELL_SIZE;
+	view.cellX = WORLD_TO_CELL(engine.player.x);
+	view.cellZ = WORLD_TO_CELL(engine.player.z);
 	initWBuffer();
 
 #if !defined(DEFER_RENDER)
@@ -115,15 +115,11 @@ void Renderer::drawFrame()
 	{
 		if(engine.map.items[n].type != 0)
 		{
-			int16_t x = engine.map.items[n].x * CELL_SIZE + CELL_SIZE / 2, z = engine.map.items[n].z * CELL_SIZE + CELL_SIZE / 2;
+			int16_t x = CELL_TO_WORLD(engine.map.items[n].x) + CELL_SIZE / 2, z = CELL_TO_WORLD(engine.map.items[n].z) + CELL_SIZE / 2;
 			queueSprite((SpriteFrame*) &Data_itemSprites_frames[(engine.map.items[n].type - Tile_FirstItem)], (uint8_t*)Data_itemSprites, x, z);
 		}
 	}
 	
-	/*queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 2));
-	queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 3));
-	queueSprite((uint8_t*)Data_guardSprite, CELL_SIZE * (MAP_SIZE / 2 + 2), CELL_SIZE * (MAP_SIZE - 4));
-	*/
 #if 0
 	int fill1 = 0;
 	int fill2 = 0;
@@ -314,12 +310,6 @@ void Renderer::drawFloorAndCeiling()
 }
 #endif
 
-void Renderer::drawCellWall(uint8_t textureId, int8_t x1, int8_t z1, int8_t x2, int8_t z2)
-{
-	drawWall(x1 * CELL_SIZE, z1 * CELL_SIZE, x2 * CELL_SIZE, z2 * CELL_SIZE, textureId);
-	//drawWall(x2 * CELL_SIZE, z2 * CELL_SIZE, x1 * CELL_SIZE, z1 * CELL_SIZE);
-}
-
 #if defined(PLATFORM_GAMEBUINO)
 extern Gamebuino gb;
 #endif
@@ -337,138 +327,131 @@ void Renderer::drawCell(int8_t cellX, int8_t cellZ)
 	uint8_t tile = engine.map.getTileFast(cellX, cellZ);
 	if (tile == 0)
 		return;
+
+	int16_t worldX = CELL_TO_WORLD(cellX);
+	int16_t worldZ = CELL_TO_WORLD(cellZ);
 	
 	if(tile >= Tile_FirstDecoration && tile <= Tile_LastDecoration)
 	{
-		queueSprite((SpriteFrame*) &Data_decorations_frames[tile - Tile_FirstDecoration], (uint8_t*)Data_decorations, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
+		queueSprite((SpriteFrame*) &Data_decorations_frames[tile - Tile_FirstDecoration], (uint8_t*)Data_decorations, worldX + CELL_SIZE / 2, worldZ + CELL_SIZE / 2);
 		return;
 	}
 	if(tile >= Tile_FirstBlockingDecoration && tile <= Tile_LastBlockingDecoration)
 	{
-		queueSprite((SpriteFrame*) &Data_blockingDecorations_frames[tile - Tile_FirstBlockingDecoration], (uint8_t*)Data_blockingDecorations, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
+		queueSprite((SpriteFrame*) &Data_blockingDecorations_frames[tile - Tile_FirstBlockingDecoration], (uint8_t*)Data_blockingDecorations, worldX + CELL_SIZE / 2, worldZ + CELL_SIZE / 2);
 		return;
 	}
-	/*if(tile >= Tile_FirstActor && tile <= Tile_LastActor)
-	{
-		queueSprite((uint8_t*)Data_guardSprite, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
-		return;
-	}*/
-	/*if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
-	{
-		queueSprite((SpriteFrame*) &Data_itemSprites_frames[(tile - Tile_FirstItem)], (uint8_t*)Data_itemSprites, cellX * CELL_SIZE + CELL_SIZE / 2, cellZ * CELL_SIZE + CELL_SIZE / 2);
-		return;
-	}*/
 
 	if(tile >= Tile_FirstWall && tile <= Tile_LastWall)
 	{
 		uint8_t textureId = tile - Tile_FirstWall; //engine.map.getTextureId(cellX, cellZ);
 
-		if (view.z < cellZ * CELL_SIZE)
+		if (view.z < worldZ)
 		{
-			if (view.x > cellX * CELL_SIZE)
+			if (view.x > worldX)
 			{
 				// north west quadrant
-				if (view.z < cellZ * CELL_SIZE)
+				if (view.z < worldZ)
 				{
 					if(engine.map.isDoor(cellX, cellZ - 1))
 					{
-						drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ, cellX+1, cellZ);  // south wall
+						drawWall(worldX, worldZ, worldX + CELL_SIZE, worldZ, DOOR_FRAME_TEXTURE);  // south wall
 					}
 					else if(!engine.map.isSolid(cellX, cellZ - 1))
 					{
-						drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
+						drawWall(worldX, worldZ, worldX + CELL_SIZE, worldZ, textureId);  // south wall
 					}
 				}
-				if (view.x > (cellX+1) * CELL_SIZE)
+				if (view.x > worldX + CELL_SIZE)
 				{
 					if(engine.map.isDoor(cellX + 1, cellZ))
 					{
-						drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+						drawWall(worldX + CELL_SIZE, worldZ, worldX + CELL_SIZE, worldZ + CELL_SIZE, DOOR_FRAME_TEXTURE);  // east wall
 					}
 					else if(!engine.map.isSolid(cellX+1, cellZ))
 					{
-						drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+						drawWall(worldX + CELL_SIZE, worldZ, worldX + CELL_SIZE, worldZ + CELL_SIZE, textureId);  // east wall
 					}
 				}
 			}
 			else
 			{
 				// north east quadrant
-				if (view.z < cellZ * CELL_SIZE)
+				if (view.z < worldZ)
 				{
 					if(engine.map.isDoor(cellX, cellZ-1))
 					{
-						drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ, cellX+1, cellZ);  // south wall
+						drawWall(worldX, worldZ, worldX + CELL_SIZE, worldZ, DOOR_FRAME_TEXTURE);  // south wall
 					}
 					else if(!engine.map.isSolid(cellX, cellZ-1))
 					{
-						drawCellWall(textureId, cellX, cellZ, cellX+1, cellZ);  // south wall
+						drawWall(worldX, worldZ, worldX + CELL_SIZE, worldZ, textureId);  // south wall
 					}
 				}
-				if (view.x< cellX * CELL_SIZE)
+				if (view.x < worldX)
 				{
 					if(engine.map.isDoor(cellX-1, cellZ))
 					{
-						drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ+1, cellX, cellZ);  // west wall
+						drawWall(worldX, worldZ + CELL_SIZE, worldX, worldZ, DOOR_FRAME_TEXTURE);  // west wall
 					}
 					else if(!engine.map.isSolid(cellX-1, cellZ))
 					{
-						drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
+						drawWall(worldX, worldZ + CELL_SIZE, worldX, worldZ, textureId);  // west wall
 					}
 				}
 			}
 		}
 		else
 		{
-			if (view.x > cellX * CELL_SIZE)
+			if (view.x > worldX)
 			{
 				// south west quadrant
-				if (view.z > (cellZ+1) * CELL_SIZE)
+				if (view.z > worldZ + CELL_SIZE)
 				{
 					if(engine.map.isDoor(cellX, cellZ+1))
 					{
-						drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+						drawWall(worldX + CELL_SIZE, worldZ + CELL_SIZE, worldX, worldZ + CELL_SIZE, DOOR_FRAME_TEXTURE);  // north wall
 					}
 					else if(!engine.map.isSolid(cellX, cellZ+1))
 					{
-						drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+						drawWall(worldX + CELL_SIZE, worldZ + CELL_SIZE, worldX, worldZ + CELL_SIZE, textureId);  // north wall
 					}
 				}
-				if (view.x > (cellX+1) * CELL_SIZE)
+				if (view.x > worldX + CELL_SIZE)
 				{
 					if(engine.map.isDoor(cellX+1, cellZ))
 					{
-						drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+						drawWall(worldX + CELL_SIZE, worldZ, worldX + CELL_SIZE, worldZ + CELL_SIZE, DOOR_FRAME_TEXTURE);  // east wall
 					}
 					else if(!engine.map.isSolid(cellX+1, cellZ))
 					{
-						drawCellWall(textureId, cellX+1, cellZ, cellX+1, cellZ+1);  // east wall
+						drawWall(worldX + CELL_SIZE, worldZ, worldX + CELL_SIZE, worldZ + CELL_SIZE, textureId);  // east wall
 					}
 				}
 			}
 			else
 			{
 				// south east quadrant
-				if (view.z > (cellZ+1) * CELL_SIZE)
+				if (view.z > worldZ + CELL_SIZE)
 				{
 					if(engine.map.isDoor(cellX, cellZ+1))
 					{
-						drawCellWall(DOOR_FRAME_TEXTURE, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+						drawWall(worldX + CELL_SIZE, worldZ + CELL_SIZE, worldX, worldZ + CELL_SIZE, DOOR_FRAME_TEXTURE);  // north wall
 					}
 					else if(!engine.map.isSolid(cellX, cellZ+1))
 					{
-						drawCellWall(textureId, cellX+1, cellZ+1, cellX, cellZ+1);  // north wall
+						drawWall(worldX + CELL_SIZE, worldZ + CELL_SIZE, worldX, worldZ + CELL_SIZE, textureId);  // north wall
 					}
 				}
-				if (view.x< cellX * CELL_SIZE)
+				if (view.x < worldX)
 				{
 					if(engine.map.isDoor(cellX-1, cellZ))
 					{
-						drawCellWall(DOOR_FRAME_TEXTURE, cellX, cellZ+1, cellX, cellZ);  // west wall
+						drawWall(worldX, worldZ + CELL_SIZE, worldX, worldZ, DOOR_FRAME_TEXTURE);  // west wall
 					}
 					else if(!engine.map.isSolid(cellX-1, cellZ))
 					{
-						drawCellWall(textureId, cellX, cellZ+1, cellX, cellZ);  // west wall
+						drawWall(worldX, worldZ + CELL_SIZE, worldX, worldZ, textureId);  // west wall
 					}
 				}
 			}
@@ -822,8 +805,8 @@ void Renderer::drawDoors()
 		
 		if(door.type == DoorType_SecretPushWall)
 		{
-			int16_t doorX = door.x * CELL_SIZE;
-			int16_t doorZ = door.z * CELL_SIZE;
+			int16_t doorX = CELL_TO_WORLD(door.x);
+			int16_t doorZ = CELL_TO_WORLD(door.z);
 
 			switch(door.state)
 			{
@@ -866,30 +849,35 @@ void Renderer::drawDoors()
 				continue;
 			}
 
+			int16_t worldX = CELL_TO_WORLD(door.x);
+			int16_t worldZ = CELL_TO_WORLD(door.z);
+
 			if((door.type & 0x1) == 0)
 			{
-				if(view.x < door.x * CELL_SIZE + CELL_SIZE / 2)
+				worldX += CELL_SIZE / 2;
+				if(view.x < worldX)
 				{
-					drawWall(door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + CELL_SIZE, 
-						door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + offset * 2, textureId, 0, 15 - offset);
+					drawWall(worldX, worldZ + CELL_SIZE, 
+						worldX, worldZ + offset * 2, textureId, 0, 15 - offset);
 				}
 				else
 				{
-					drawWall(door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + offset * 2, 
-						door.x * CELL_SIZE + CELL_SIZE / 2, door.z * CELL_SIZE + CELL_SIZE, textureId, 15 - offset, 0);
+					drawWall(worldX, worldZ + offset * 2, 
+						worldX, worldZ + CELL_SIZE, textureId, 15 - offset, 0);
 				}
 			}
 			else
 			{
-				if(view.z > door.z * CELL_SIZE + CELL_SIZE / 2)
+				worldZ += CELL_SIZE / 2;
+				if(view.z > worldZ)
 				{
-					drawWall(door.x * CELL_SIZE + CELL_SIZE, door.z * CELL_SIZE + CELL_SIZE / 2, 
-						door.x * CELL_SIZE + offset * 2, door.z * CELL_SIZE + CELL_SIZE / 2, textureId, 0, 15 - offset);
+					drawWall(worldX + CELL_SIZE, worldZ, 
+						worldX + offset * 2, worldZ, textureId, 0, 15 - offset);
 				}
 				else
 				{
-					drawWall(door.x * CELL_SIZE + offset * 2, door.z * CELL_SIZE + CELL_SIZE / 2, 
-						door.x * CELL_SIZE + CELL_SIZE, door.z * CELL_SIZE + CELL_SIZE / 2, textureId, 15 - offset, 0);
+					drawWall(worldX + offset * 2, worldZ, 
+						worldX + CELL_SIZE, worldZ, textureId, 15 - offset, 0);
 				}
 			}
 		}
@@ -899,8 +887,8 @@ void Renderer::drawDoors()
 void Renderer::queueSprite(SpriteFrame* frame, uint8_t* spriteData, int16_t _x, int16_t _z)
 {
 #if 1
-	int cellX = _x / CELL_SIZE;
-	int cellZ = _z / CELL_SIZE;
+	int cellX = WORLD_TO_CELL(_x);
+	int cellZ = WORLD_TO_CELL(_z);
 
 	if(isFrustrumClipped(cellX, cellZ))
 		return;
