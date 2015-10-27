@@ -283,8 +283,11 @@ public:
 	int outChunkOffsets[NUM_MAP_CHUNKS];
 	int outDataLength;
 
+	int numSecrets;
+
 	void ConvertTiles()
 	{
+		numSecrets = 0;
 		for(int y = 0; y < MAP_SIZE; y++)
 		{
 			for(int x = 0; x < MAP_SIZE; x++)
@@ -414,22 +417,26 @@ public:
 					outTile = Tile_BlockingDecoration_Barrel;
 					break;
 				case 25:
-					outTile = Tile_BlockingDecoration_TableChairs;
+//					outTile = Tile_BlockingDecoration_TableChairs;
+					outTile = Tile_BlockingDecoration_Table;
 					break;
 				case 26:
-					outTile = Tile_BlockingDecoration_FloorLamp;
+//					outTile = Tile_BlockingDecoration_FloorLamp;
+					outTile = Tile_BlockingDecoration_Barrel;
 					break;
 				case 27:
 					outTile = Tile_Decoration_Chandelier;
 					break;
 				case 28:
-					outTile = Tile_BlockingDecoration_HangingSkeleton;
+//					outTile = Tile_BlockingDecoration_HangingSkeleton;
+					outTile = Tile_BlockingDecoration_Barrel;
 					break;
 				case 29:
 					outTile = Tile_Item_BadFood;
 					break;
 				case 30:
-					outTile = Tile_BlockingDecoration_Pillar;
+//					outTile = Tile_BlockingDecoration_Pillar;
+					outTile = Tile_BlockingDecoration_Barrel;
 					break;
 				case 31:
 					outTile = Tile_BlockingDecoration_Tree;
@@ -438,7 +445,8 @@ public:
 					outTile = Tile_Decoration_Skeleton;
 					break;
 				case 33:
-					outTile = Tile_BlockingDecoration_Sink;
+					//outTile = Tile_BlockingDecoration_Sink;
+					outTile = Tile_BlockingDecoration_Barrel;
 					break;
 				case 34:
 					outTile = Tile_BlockingDecoration_Plant;
@@ -513,10 +521,12 @@ public:
 					outTile = Tile_BlockingDecoration_Barrel;
 					break;
 				case 58:
-					outTile = Tile_BlockingDecoration_Well;
+					//outTile = Tile_BlockingDecoration_Well;
+					outTile = Tile_BlockingDecoration_Barrel;
 					break;
 				case 59:
-					outTile = Tile_BlockingDecoration_Well;
+					//outTile = Tile_BlockingDecoration_Well;
+					outTile = Tile_BlockingDecoration_Barrel;
 					break;
 				case 60:
 					// gibs?
@@ -527,11 +537,14 @@ public:
 				case 98: // secret push wall
 					idData[y * MAP_SIZE + x] = outTile;
 					outTile = Tile_SecretPushWall;
+					numSecrets++;
 					break;
 				}
 				outlayer[y * MAP_SIZE + x] = outTile;
 			}
 		}
+
+		printf("Num secrets: %d\n", numSecrets);
 	}
 
 	void GenerateIds()

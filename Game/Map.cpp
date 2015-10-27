@@ -41,6 +41,27 @@ bool Map::isValid(int8_t x, int8_t z)
 
 void Map::init()
 {
+	while(!m_mapLoaded)
+#ifdef STANDARD_FILE_STREAMING
+	{
+		fopen_s(&m_mapStream, "wolf3d.dat", "rb");
+		m_mapLoaded = true;
+	}
+#endif
+#ifdef PETIT_FATFS_FILE_STREAMING
+	{
+		if(pf_mount(&m_fileSystem) == FR_OK)
+		{
+			if(pf_open("WOLF3D.DAT") == FR_OK)
+			{
+				m_mapLoaded = true;
+			}
+			else ERROR(PSTR("NO WOLF3D.DAT FOUND!"));
+		}
+		else ERROR(PSTR("SD CARD MOUNT ERROR"));
+	}
+#endif
+
 	for(int n = 0; n < 256 / 8; n++)
 	{
 		m_itemState[n] = 0;
@@ -60,28 +81,7 @@ void Map::init()
 
 void Map::initStreaming()
 {
-#ifdef STANDARD_FILE_STREAMING
-	fopen_s(&m_mapStream, "wolf3d.dat", "rb");
-#endif
-#ifdef PETIT_FATFS_FILE_STREAMING
 	m_mapLoaded = false;
-	while(!m_mapLoaded)
-	{
-		if(pf_mount(&m_fileSystem) == FR_OK)
-		{
-			if(pf_open("WOLF3D.DAT") == FR_OK)
-			{
-				m_mapLoaded = true;
-			}
-			else ERROR(PSTR("NO WOLF3D.DAT FOUND!"));
-		}
-		else ERROR(PSTR("SD CARD MOUNT ERROR"));
-		if(!m_mapLoaded)
-		{
-			//Delay(500);
-		}
-	}
-#endif
 	bufferX = 0;
 	bufferZ = 0;
 }
@@ -312,17 +312,18 @@ void Map::updateBufferPosition(int8_t newX, int8_t newZ)
 	if(newZ > MAP_SIZE - MAP_BUFFER_SIZE)
 		newZ = MAP_SIZE - MAP_BUFFER_SIZE;
 	
-	if(bufferX == newX && bufferZ == newZ)
-		return;
-		
-	if(newX <= bufferX - MAP_BUFFER_SIZE || newX >= bufferX + MAP_BUFFER_SIZE
+	if(engine.gameState == GameState_Loading || newX <= bufferX - MAP_BUFFER_SIZE || newX >= bufferX + MAP_BUFFER_SIZE
 	|| newZ <= bufferZ - MAP_BUFFER_SIZE || newZ >= bufferZ + MAP_BUFFER_SIZE)
 	{
 		bufferX = newX;
 		bufferZ = newZ;
+		WARNING("Updating entire buffer at %d %d\n", bufferX, bufferZ);
 		updateEntireBuffer();
 		return;
 	}
+
+	if(bufferX == newX && bufferZ == newZ)
+		return;
 
 	while(bufferX < newX)
 	{
@@ -360,6 +361,9 @@ void Map::updateDoors()
 void Map::streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z)
 {
 	int8_t freeIndex = -1;
+
+	if(type == DoorType_SecretPushWall)
+		WARNING("Creating secret push wall at %d %d!\n", x, z);
 
 	for(int8_t n = 0; n < MAX_DOORS; n++)
 	{
@@ -403,9 +407,6 @@ void Map::streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z)
 		WARNING("No room to spawn door!\n");
 		return;
 	}
-
-	if(type == DoorType_SecretPushWall)
-		WARNING("Creating secret push wall at %d %d!\n", x, z);
 
 	doors[freeIndex].x = x;
 	doors[freeIndex].z = z;
@@ -481,8 +482,6 @@ void Door::update()
 		}
 		break;
 	case DoorState_Opening:
-		open++;
-		break;
 		if(open < DOOR_MAX_OPEN)
 		{
 			open ++;

@@ -29,7 +29,8 @@ enum
 	GameState_Loading,
 	GameState_Playing,
 	GameState_Dead,
-	GameState_FinishedLevel
+	GameState_FinishedLevel,
+	GameState_StartingLevel
 };
 
 enum Difficulty
@@ -47,6 +48,7 @@ public:
 	void update();
 	void draw();
 	void startLevel(bool resetPlayer = true);
+	void startingLevel();
 	Actor* spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8_t cellZ);
 	
 	Renderer renderer;

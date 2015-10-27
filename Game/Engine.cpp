@@ -10,10 +10,11 @@ void Engine::init()
 	gameState = GameState_Menu;
 	map.currentLevel = 0;
 	// hacks
-	difficulty = Difficulty_Baby;
-	startLevel();
-	player.x = 650;
-	player.z = 1514;
+	//map.currentLevel = 2;
+	//difficulty = Difficulty_Baby;
+	//startLevel();
+	//player.x = 650;
+	//player.z = 1514;
 	/*player.x = 1121;
 	player.z = 730;
 	player.x = 1106;
@@ -27,6 +28,14 @@ void Engine::startLevel(bool resetPlayer)
 	{
 		player.hp = 0;
 	}
+	gameState = GameState_StartingLevel;
+}
+
+void Engine::startingLevel()
+{
+#ifdef _WIN32
+	SDL_Delay(1000);
+#endif
 	gameState = GameState_Loading;
 	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
@@ -37,6 +46,7 @@ void Engine::startLevel(bool resetPlayer)
 	map.init();
 	renderer.init();
 	player.init();
+	player.update(); // To update streaming position for first frame
 
 	frameCount = 0;
 	gameState = GameState_Playing;
@@ -76,6 +86,15 @@ void Engine::update()
 		map.currentLevel++;
 		startLevel(false);
 		break;
+	case GameState_StartingLevel:
+		startingLevel();
+		break;
+	case GameState_Dead:
+		if(frameCount >= 30)
+		{
+			startLevel();
+		}
+		break;
 	}
 
 	frameCount ++;
@@ -96,6 +115,7 @@ void Engine::draw()
 			renderer.drawFrame();
 		}
 		break;
+	case GameState_StartingLevel:
 	case GameState_Loading:
 		{
 			clearDisplay(1);
@@ -117,7 +137,6 @@ void Engine::draw()
 			else
 			{
 				clearDisplay(0);
-				startLevel();
 			}
 		}
 		break;

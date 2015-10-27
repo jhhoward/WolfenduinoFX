@@ -28,7 +28,7 @@ void setup(void)
 #endif
 
 	engine.init();
-	gb.sound.setVolume(0, 0);
+	//gb.sound.setVolume(0, 0);
 	lastMillis = millis();
 }
 
@@ -44,6 +44,7 @@ void ERROR(const char* msg)
 void loop()
 {
 	gb.update();
+	//return;
 	Platform.update();
 
 	long newMillis = millis();
@@ -58,6 +59,8 @@ void loop()
 	{
 		engine.update();
 		millisBehind -= FRAME_MS;
+		if(engine.gameState != GameState_Playing)
+			break;
 	}
 	lastMillis = newMillis;
 

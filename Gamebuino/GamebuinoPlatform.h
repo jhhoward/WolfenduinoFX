@@ -30,12 +30,21 @@ inline void drawPixel(uint8_t x, uint8_t y, uint8_t colour)
 	}
 }
 
+inline void clearDisplay(uint8_t colour)
+{
+	uint8_t data = colour ? 0 : 0xff;
+	memset(_displayBuffer, data, LCDWIDTH * LCDHEIGHT / 8);
+}
+
 class GamebuinoPlatform : public PlatformBase
 {
 public:
 	void playSound(uint8_t id);
 
 	void update();
+	
+	bool isMuted();
+	void setMuted(bool muted);
 };
 
 void ERROR(const char* msg);

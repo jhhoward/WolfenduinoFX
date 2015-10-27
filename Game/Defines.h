@@ -115,7 +115,7 @@
 #define MOVEMENT 7
 #define TURN 3
 #define MIN_WALL_DISTANCE 8
-#define MAX_DOORS 10
+#define MAX_DOORS 12
 
 #define DOOR_FRAME_TEXTURE 19
 

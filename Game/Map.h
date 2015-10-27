@@ -156,8 +156,8 @@ private:
 #endif
 #ifdef PETIT_FATFS_FILE_STREAMING
 	FATFS m_fileSystem;
-	bool m_mapLoaded;
 #endif
+	bool m_mapLoaded;
 
 };
 
