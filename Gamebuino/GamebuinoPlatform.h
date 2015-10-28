@@ -42,9 +42,6 @@ public:
 	void playSound(uint8_t id);
 
 	void update();
-	
-	bool isMuted();
-	void setMuted(bool muted);
 };
 
 void ERROR(const char* msg);

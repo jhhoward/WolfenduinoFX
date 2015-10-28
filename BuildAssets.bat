@@ -13,5 +13,5 @@ set IMAGE_ENCODER=Debug\ImageEncoder.exe
 set AUDIO_ENCODER=Debug\AudioEncoder.exe
 set AUD=Assets\RawAudio\audio
 
-%AUDIO_ENCODER% DataHeaders\Data_Audio.h %AUD%18.raw %AUD%19.raw %AUD%24.raw %AUD%58.raw %AUD%31.raw 
+%AUDIO_ENCODER% DataHeaders\Data_Audio.h %AUD%18.raw %AUD%19.raw %AUD%24.raw %AUD%58.raw %AUD%31.raw
 rem %AUDIO_ENCODER% DataHeaders\Data_Audio.h %AUD%

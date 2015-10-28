@@ -43,15 +43,7 @@ void GamebuinoPlatform::update()
 
 void GamebuinoPlatform::playSound(uint8_t id)
 {
-	gb.sound.playPattern((const uint16_t*)pgm_read_word(&Data_AudioPatterns[id]), 0);
+	if(!m_isMuted)
+		gb.sound.playPattern((const uint16_t*)pgm_read_word(&Data_AudioPatterns[id]), 0);
 }
 
-bool GamebuinoPlatform::isMuted()
-{
-	return gb.sound.getVolume(0) == 0;
-}
-
-void GamebuinoPlatform::setMuted(bool muted)
-{
-	gb.sound.setVolume(muted ? 0 : 1);
-}

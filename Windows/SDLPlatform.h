@@ -11,8 +11,6 @@ public:
 	void run();
 	void drawPixel(uint8_t x, uint8_t y, uint8_t colour);
 	void playSound(uint8_t id) {}
-	bool isMuted() { return m_isMuted; }
-	void setMuted(bool muted) { m_isMuted = muted; }
 	
 private:
 	void drawPixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
@@ -24,7 +22,6 @@ private:
 	SDL_Surface* m_screenSurface;
 	SDL_Texture* m_screenTexture;
 	bool m_isRunning;
-	bool m_isMuted;
 };
 
 extern SDLPlatform Platform;

@@ -27,14 +27,26 @@ public:
 
 	uint8_t ticksSinceStrafePressed;
 
+	union
+	{
+		struct
+		{
+			uint8_t hasMachineGun : 1;
+			uint8_t hasChainGun : 1;
+			uint8_t hasKey1 : 1;
+			uint8_t hasKey2 : 1;
+		} inventory;
+		uint8_t inventoryFlags;
+	};
+
 	struct
 	{
 		uint8_t type;
 		uint8_t ammo;
 		uint8_t frame;
 		uint8_t time;
-		bool debounce : 1;
-		bool shooting : 1;
+		uint8_t debounce : 1;
+		uint8_t shooting : 1;
 	} weapon;
 
 private:
@@ -46,5 +58,6 @@ private:
 	bool isPointColliding(int16_t x, int16_t z);
 #endif
 };
+
 
 #endif

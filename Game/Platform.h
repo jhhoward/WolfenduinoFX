@@ -22,8 +22,11 @@ class PlatformBase
 {
 public:
 	uint8_t readInput() { return inputState; }
+	bool isMuted() { return m_isMuted; }
+	void setMuted(bool muted) { m_isMuted = muted; }
 
 	uint8_t inputState;
+	bool m_isMuted : 1;
 };
 
 #endif

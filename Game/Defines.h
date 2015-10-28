@@ -119,7 +119,7 @@
 
 #define DOOR_FRAME_TEXTURE 19
 
-#define MAX_ACTIVE_ACTORS 5
+#define MAX_ACTIVE_ACTORS 2 // 5
 #define MAX_ACTIVE_ITEMS 10
 
 #define EMPTY_ITEM_SLOT 0xff

@@ -28,7 +28,27 @@ void Player::update()
 				ticksSinceStrafePressed = 0;
 				if(weapon.type == WeaponType_Pistol)
 				{
-					weapon.type = WeaponType_Knife;
+					if(inventory.hasMachineGun)
+					{
+						weapon.type = WeaponType_MachineGun;
+					}
+					else if(inventory.hasChainGun)
+					{
+						weapon.type = WeaponType_ChainGun;
+					}
+					else weapon.type = WeaponType_Knife;
+				}
+				else if(weapon.type == WeaponType_MachineGun)
+				{
+					if(inventory.hasChainGun)
+					{
+						weapon.type = WeaponType_ChainGun;
+					}
+					else weapon.type = WeaponType_Knife;
+				}
+				else if(weapon.type == WeaponType_ChainGun)
+				{
+					weapon.type = WeaponType_ChainGun;
 				}
 				else if(weapon.ammo > 0)
 				{
@@ -41,7 +61,7 @@ void Player::update()
 			if(ticksSinceStrafePressed > 0)
 			{
 				ticksSinceStrafePressed ++;
-				if(ticksSinceStrafePressed > 15)
+				if(ticksSinceStrafePressed > 5)
 				{
 					ticksSinceStrafePressed = 0;
 				}
@@ -130,26 +150,45 @@ void Player::update()
 		{
 			if(engine.map.items[n].type != 0 && engine.map.items[n].x == cellX && engine.map.items[n].z == cellZ)
 			{
+				bool collected = true;
+
 				// Collect this item
 				switch(engine.map.items[n].type)
 				{
-				case Tile_Item_Clip:
-					if(weapon.ammo == 0 && weapon.type == WeaponType_Knife)
-					{
-						weapon.type = WeaponType_Pistol;
-					}
+				case Tile_Item_MachineGun:
 					weapon.ammo = min(weapon.ammo + 8, 99);
 					Platform.playSound(Sound_CollectAmmo);
+					weapon.type = WeaponType_MachineGun;
+					inventory.hasMachineGun = true;
+					break;
+				case Tile_Item_Clip:
+					if(weapon.ammo < 99)
+					{
+						if(weapon.ammo == 0 && weapon.type == WeaponType_Knife)
+						{
+							weapon.type = WeaponType_Pistol;
+						}
+						weapon.ammo = min(weapon.ammo + 8, 99);
+					}
+					else collected = false;
 					break;
 				case Tile_Item_FirstAid:
-					hp = min(100, hp + 25);
+					if(hp < 100)
+						hp = min(100, hp + 25);
+					else collected = false;
 					break;
 				case Tile_Item_Food:
-					hp = min(100, hp + 10);
+					if(hp < 100)
+						hp = min(100, hp + 10);
+					else collected = false;
 					break;
 				}
-				engine.map.items[n].type = 0;
-				engine.map.markItemCollected(engine.map.items[n].spawnId);
+				if(collected)
+				{
+					Platform.playSound(Sound_CollectAmmo);
+					engine.map.items[n].type = 0;
+					engine.map.markItemCollected(engine.map.items[n].spawnId);
+				}
 			}
 		}
 	}
@@ -370,10 +409,26 @@ void Player::updateWeapon()
 			shootWeapon();
 			break;
 		case 6:
-			weapon.frame = 3;
+			if(weapon.type == WeaponType_MachineGun)
+			{
+				weapon.frame = 1;
+			}
+			else weapon.frame = 3;
 			break;
 		case 8:
-			weapon.frame = 1;
+			if(weapon.type == WeaponType_MachineGun)
+			{
+				if(Platform.readInput() & Input_Btn_B)
+				{
+					weapon.time = 2;
+				}
+				else
+				{
+					weapon.frame = 0;
+					weapon.shooting = false;
+				}
+			}
+			else weapon.frame = 1;
 			break;
 		case 10:
 			weapon.frame = 0;
@@ -390,6 +445,7 @@ void Player::init()
 		weapon.type = WeaponType_Pistol;
 		weapon.ammo = 8;
 		hp = 100;
+		inventoryFlags = 0;
 	}
 
 	weapon.frame = 0;
