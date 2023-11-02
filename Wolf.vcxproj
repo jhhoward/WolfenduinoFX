@@ -11,30 +11,30 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Game\Actor.h" />
-    <ClInclude Include="Game\Defines.h" />
-    <ClInclude Include="Game\Engine.h" />
-    <ClInclude Include="Game\FixedMath.h" />
-    <ClInclude Include="Game\Map.h" />
-    <ClInclude Include="Game\Menu.h" />
-    <ClInclude Include="Game\Platform.h" />
-    <ClInclude Include="Game\Player.h" />
-    <ClInclude Include="Game\Renderer.h" />
-    <ClInclude Include="Game\Sounds.h" />
-    <ClInclude Include="Game\SpriteFrame.h" />
-    <ClInclude Include="Game\TileTypes.h" />
-    <ClInclude Include="Game\TrigLUT.h" />
-    <ClInclude Include="Game\Vector2.h" />
+    <ClInclude Include="Wolf\Actor.h" />
+    <ClInclude Include="Wolf\Defines.h" />
+    <ClInclude Include="Wolf\Engine.h" />
+    <ClInclude Include="Wolf\FixedMath.h" />
+    <ClInclude Include="Wolf\Map.h" />
+    <ClInclude Include="Wolf\Menu.h" />
+    <ClInclude Include="Wolf\Platform.h" />
+    <ClInclude Include="Wolf\Player.h" />
+    <ClInclude Include="Wolf\Renderer.h" />
+    <ClInclude Include="Wolf\Sounds.h" />
+    <ClInclude Include="Wolf\SpriteFrame.h" />
+    <ClInclude Include="Wolf\TileTypes.h" />
+    <ClInclude Include="Wolf\TrigLUT.h" />
+    <ClInclude Include="Wolf\Vector2.h" />
     <ClInclude Include="Windows\SDLPlatform.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Game\Actor.cpp" />
-    <ClCompile Include="Game\Engine.cpp" />
-    <ClCompile Include="Game\FixedMath.cpp" />
-    <ClCompile Include="Game\Map.cpp" />
-    <ClCompile Include="Game\Menu.cpp" />
-    <ClCompile Include="Game\Player.cpp" />
-    <ClCompile Include="Game\Renderer.cpp" />
+    <ClCompile Include="Wolf\Actor.cpp" />
+    <ClCompile Include="Wolf\Engine.cpp" />
+    <ClCompile Include="Wolf\FixedMath.cpp" />
+    <ClCompile Include="Wolf\Map.cpp" />
+    <ClCompile Include="Wolf\Menu.cpp" />
+    <ClCompile Include="Wolf\Player.cpp" />
+    <ClCompile Include="Wolf\Renderer.cpp" />
     <ClCompile Include="Windows\SDLPlatform.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -46,11 +46,12 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -70,16 +71,16 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)DataHeaders;$(ProjectDir)\Game;$(ProjectDir)\Windows\SDL2-2.0.3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)DataHeaders;$(ProjectDir)\Wolf;$(ProjectDir)\Windows\SDL2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)\Windows\SDL2-2.0.3\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)\Windows\SDL2\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y "$(ProjectDir)Windows\SDL2-2.0.3\lib\x86\SDL2.dll" "$(OutDir)"</Command>
+      <Command>xcopy /y "$(ProjectDir)Windows\SDL2\lib\x86\SDL2.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

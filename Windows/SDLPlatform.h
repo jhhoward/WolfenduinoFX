@@ -15,7 +15,7 @@ public:
 private:
 	void drawPixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
 
-	void updateInputState(int eventType, bool pressed);
+	void updateInputState();
 
 	SDL_Window* m_appWindow;
 	SDL_Renderer* m_appRenderer;
@@ -39,5 +39,10 @@ inline void clearPixel(uint8_t x, uint8_t y)
 	Platform.drawPixel(x, y, 1);
 }
 void clearDisplay(uint8_t colour);
+
+void diskSeek(uint32_t address);
+uint8_t diskReadByte();
+void diskRead(uint8_t* buffer, int length);
+inline void diskFinishRead() {}
 
 #endif

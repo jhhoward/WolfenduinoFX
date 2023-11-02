@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include "lodepng.h"
 
+constexpr bool useBitPacking = false;
+
 using namespace std;
 
 struct SpriteFrame
@@ -176,69 +178,84 @@ void EncodeSpriteFrames(vector<uint8_t>& data, int width, int height, vector<Spr
 
 void OutputSpriteFile(char* filename, char* varName, vector<SpriteFrame> data)
 {
-	uint8_t buffer = 0;
-	int bufferPos = 0;
 	vector<uint8_t> output;
 
-	for(int n = 0; n < data.size(); n++)
+	if (useBitPacking)
 	{
-		for(int i = 0; i < data[n].data.size(); i++)
-		{
-			int index = data[n].data[i];
-			buffer |= ((index & 0x3) << bufferPos);
-			bufferPos += 2;
-			if(bufferPos >= 8)
-			{
-				output.push_back(buffer);
-				buffer = 0;
-				bufferPos = 0;
-			}
+		uint8_t buffer = 0;
+		int bufferPos = 0;
 
+		for (int n = 0; n < data.size(); n++)
+		{
+			for (int i = 0; i < data[n].data.size(); i++)
+			{
+				int index = data[n].data[i];
+				buffer |= ((index & 0x3) << bufferPos);
+				bufferPos += 2;
+				if (bufferPos >= 8)
+				{
+					output.push_back(buffer);
+					buffer = 0;
+					bufferPos = 0;
+				}
+
+			}
+		}
+
+		if (bufferPos > 0)
+		{
+			output.push_back(buffer);
 		}
 	}
-	
-	if(bufferPos > 0)
+	else
 	{
-		output.push_back(buffer);
+		for (int n = 0; n < data.size(); n++)
+		{
+			for (int i = 0; i < data[n].data.size(); i++)
+			{
+				output.push_back(data[n].data[i]);
+			}
+		}
 	}
+
 	
 	FILE* fs = NULL;
+
+	char headerFilename[_MAX_PATH];
+	char binFilename[_MAX_PATH];
+	snprintf(headerFilename, _MAX_PATH, "%s.h", filename);
+	snprintf(binFilename, _MAX_PATH, "%s.bin", filename);
 	
-	fopen_s(&fs, filename, "w");
+	fopen_s(&fs, headerFilename, "w");
 	
-	if(fs)
+	if (fs)
 	{
-		fprintf(fs, "#include \"SpriteFrame.h\"\n\n");
+		fprintf(fs, "#include \"../SpriteFrame.h\"\n\n");
 		fprintf(fs, "const SpriteFrame %s_frames[] PROGMEM = {\n", varName);
-		for(int n = 0; n < data.size(); n++)
+		for (int n = 0; n < data.size(); n++)
 		{
 			fprintf(fs, "\t{ %d, %d, %d, %d },\n", data[n].offset, data[n].width, data[n].height, data[n].xoffset);
 		}
 		fprintf(fs, "};\n\n");
 
-		fprintf(fs, "const uint8_t %s[] PROGMEM = {\n\t", varName);
-		for(int n = 0; n < output.size(); n++)
-		{
-			fprintf(fs, "0x%02x", output[n]);
-			
-			if(n != output.size() - 1)
-			{
-				fprintf(fs, ",");
-				
-				if(n > 0 && (n % 20) == 0)
-				{
-					fprintf(fs, "\n\t");
-				}
-			}
-		}
-		fprintf(fs, "\n};\n");
 		fclose(fs);
-
-		printf("Overall size: %d bytes\n", 4 * data.size() + output.size());
 	}
 	else
 	{
-		printf("Unable to open %s for write\n", filename);
+		printf("Unable to open %s for write\n", headerFilename);
+	}
+
+	fopen_s(&fs, binFilename, "wb");
+
+	if (fs)
+	{
+		fwrite(output.data(), 1, output.size(), fs);
+		fclose(fs);
+		//printf("Overall size: %d bytes\n", 4 * data.size() + output.size());
+	}
+	else
+	{
+		printf("Unable to open %s for write\n", binFilename);
 	}
 }
 
@@ -288,8 +305,6 @@ vector<uint8_t> EncodeFont(vector<uint8_t> data, int width, int height)
 
 vector<uint8_t> EncodeImage(vector<uint8_t> data, int width, int height)
 {
-	uint8_t buffer = 0;
-	int bufferPos = 0;
 	vector<uint8_t> output;
 	
 	for(int x = 0; x < width; x++)
@@ -299,9 +314,30 @@ vector<uint8_t> EncodeImage(vector<uint8_t> data, int width, int height)
 			int position = (y * width + x) * 4;
 			uint8_t* palette = encodeMode == Encode_Texture ? texturePalette : texturePaletteSprite;
 			int index = GetPaletteIndexFromColour(palette, data[position], data[position + 1], data[position + 2]);
+			output.push_back((uint8_t)index);
+		}
+	}
+	
+	
+	return output;
+}
+
+vector<uint8_t> EncodeImagePacked(vector<uint8_t> data, int width, int height)
+{
+	uint8_t buffer = 0;
+	int bufferPos = 0;
+	vector<uint8_t> output;
+
+	for (int x = 0; x < width; x++)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			int position = (y * width + x) * 4;
+			uint8_t* palette = encodeMode == Encode_Texture ? texturePalette : texturePaletteSprite;
+			int index = GetPaletteIndexFromColour(palette, data[position], data[position + 1], data[position + 2]);
 			buffer |= ((index & 0x3) << bufferPos);
 			bufferPos += 2;
-			if(bufferPos >= 8)
+			if (bufferPos >= 8)
 			{
 				output.push_back(buffer);
 				buffer = 0;
@@ -309,20 +345,22 @@ vector<uint8_t> EncodeImage(vector<uint8_t> data, int width, int height)
 			}
 		}
 	}
-	
-	if(bufferPos > 0)
+
+	if (bufferPos > 0)
 	{
 		output.push_back(buffer);
 	}
-	
+
 	return output;
 }
 
-void OutputFile(char* filename, char* varName, vector<uint8_t> data, int width, int height, bool outputDimensions)
+void OutputHeaderFile(char* filename, char* varName, vector<uint8_t> data, int width, int height, bool outputDimensions)
 {
 	FILE* fs = NULL;
+	char headerFilename[_MAX_PATH];
+	snprintf(headerFilename, _MAX_PATH, "%s.h", filename);
 	
-	fopen_s(&fs, filename, "w");
+	fopen_s(&fs, headerFilename, "w");
 	
 	if(fs)
 	{
@@ -348,7 +386,25 @@ void OutputFile(char* filename, char* varName, vector<uint8_t> data, int width, 
 	}
 	else
 	{
-		printf("Unable to open %s for write\n", filename);
+		printf("Unable to open %s for write\n", headerFilename);
+	}
+}
+
+void OutputBinaryFile(char* filename, char* varName, vector<uint8_t> data)
+{
+	FILE* fs = NULL;
+	char binFilename[_MAX_PATH];
+	snprintf(binFilename, _MAX_PATH, "%s.bin", filename);
+
+	fopen_s(&fs, binFilename, "wb");
+
+	if (fs)
+	{
+		fwrite(data.data(), 1, data.size(), fs);
+	}
+	else
+	{
+		printf("Unable to open %s for write\n", binFilename);
 	}
 }
 
@@ -410,12 +466,20 @@ int main(int argc, char* argv[])
 		else if(encodeMode == Encode_Font)
 		{
 			vector<uint8_t> encoded = EncodeFont(image, width, height);
-			OutputFile(outputFilename, varName, encoded, width, height, false);
+			OutputHeaderFile(outputFilename, varName, encoded, width, height, false);
 		}
 		else
 		{
-			vector<uint8_t> encoded = EncodeImage(image, width, height);
-			OutputFile(outputFilename, varName, encoded, width, height, false);
+			vector<uint8_t> encoded;
+			if (useBitPacking)
+			{
+				encoded = EncodeImagePacked(image, width, height);
+			}
+			else
+			{
+				encoded = EncodeImage(image, width, height);
+			}
+			OutputBinaryFile(outputFilename, varName, encoded);
 		}
 	}
 	else

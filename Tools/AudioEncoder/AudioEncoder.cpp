@@ -353,7 +353,7 @@ int main(int argc, char* argv[])
 		while(reading)
 		{
 			char filename[100];
-			sprintf(filename, "%s%02d.raw", argv[2], counter);
+			sprintf_s(filename, "%s%02d.raw", argv[2], counter);
 			counter++;
 			AudioPattern pattern = loadData(filename);
 			if(pattern.data.size() > 0)

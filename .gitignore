@@ -4,3 +4,5 @@ WolfSketch/
 *.sdf
 *.o
 Uzebox/dep/
+.vs/
+*.user

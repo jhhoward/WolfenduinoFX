@@ -409,6 +409,38 @@ public:
 					outTile = Tile_Actor_SS_Easy;
 					break;
 
+					// Dog:
+				case 206:
+				case 207:
+				case 208:
+				case 209:
+				case 210:
+				case 211:
+				case 212:
+				case 213:
+					outTile = Tile_Actor_Dog_Hard;
+					break;
+				case 170:
+				case 171:
+				case 172:
+				case 173:
+				case 174:
+				case 175:
+				case 176:
+				case 177:
+					outTile = Tile_Actor_Dog_Medium;
+					break;
+				case 134:
+				case 135:
+				case 136:
+				case 137:
+				case 138:
+				case 139:
+				case 140:
+				case 141:
+					outTile = Tile_Actor_Dog_Easy;
+					break;
+
 					// static items:
 				case 23:
 					// puddle
@@ -623,26 +655,41 @@ int main(int argc, char* argv[])
 		Map map;
 		char filename[50];
 		sprintf_s(filename, "Assets/RawMaps/rawmap%d.dat", n);
-		FILE* fs = fopen(filename, "rb");
+		FILE* fs;
+		
+		if (!fopen_s(&fs, filename, "rb"))
+		{
+			fread(map.layer1, 1, MAP_SIZE * MAP_SIZE, fs);
+			fread(map.layer2, 1, MAP_SIZE * MAP_SIZE, fs);
 
-		fread(map.layer1, 1, MAP_SIZE * MAP_SIZE, fs);
-		fread(map.layer2, 1, MAP_SIZE * MAP_SIZE, fs);
+			fclose(fs);
+
+			map.ConvertTiles();
+			map.GenerateIds();
+			maps.push_back(map);
+		}
+		else
+		{
+			printf("Could not open %s!\n", filename);
+		}
+	}
+
+	FILE* fs;
+	char* outputPath = "Wolf/Generated/maps.bin";
+	
+	if (!fopen_s(&fs, outputPath, "wb"))
+	{
+		for (int n = 0; n < 10; n++)
+		{
+			maps[n].Write(fs);
+		}
 
 		fclose(fs);
-
-		map.ConvertTiles();
-		map.GenerateIds();
-		maps.push_back(map);
 	}
-
-	FILE* fs = fopen("wolf3d.dat", "wb");
-
-	for(int n = 0; n < 10; n++)
+	else
 	{
-		maps[n].Write(fs);
+		printf("Could not open %s\n", outputPath);
 	}
-
-	fclose(fs);
 
 #if 0
 	fs = fopen(argv[2], "w");

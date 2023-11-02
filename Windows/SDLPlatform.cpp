@@ -4,6 +4,9 @@
 #include "Engine.h"
 
 SDLPlatform Platform;
+uint8_t* diskContents = 0;
+long diskContentsLength = 0;
+long diskContentsPtr = 0;
 
 void SDLPlatform::init()
 {
@@ -21,33 +24,38 @@ void SDLPlatform::init()
 	m_isRunning = true;
 }
 
-int SDL_KeyboardButtonMappings[] = 
+typedef struct
 {
-	SDLK_x, Input_Btn_A, 
-	SDLK_z, Input_Btn_B, 
-	SDLK_LEFT, Input_Dpad_Left,
-	SDLK_RIGHT, Input_Dpad_Right,
-	SDLK_UP, Input_Dpad_Up,
-	SDLK_DOWN, Input_Dpad_Down,
-	SDLK_RETURN, Input_Btn_C,
+	SDL_Scancode key;
+	uint8_t mask;
+} KeyMap;
+
+#define NUM_KEY_MAPPINGS sizeof(KeyMappings) / sizeof(KeyMap)
+
+KeyMap KeyMappings[] =
+{
+	{ SDL_SCANCODE_LEFT, Input_Dpad_Left },
+	{ SDL_SCANCODE_RIGHT, Input_Dpad_Right },
+	{ SDL_SCANCODE_UP, Input_Dpad_Up },
+	{ SDL_SCANCODE_DOWN, Input_Dpad_Down },
+	{ SDL_SCANCODE_X, Input_Btn_B },
+	{ SDL_SCANCODE_Z, Input_Btn_A },
+
+	{ SDL_SCANCODE_LSHIFT, Input_Btn_A },
+	{ SDL_SCANCODE_LCTRL, Input_Btn_B },
 };
 
-void SDLPlatform::updateInputState(int eventType, bool pressed)
+void SDLPlatform::updateInputState()
 {
-	int numMappings = sizeof(SDL_KeyboardButtonMappings) / 2;
-	
-	for(int n = 0; n < numMappings; n++)
+	inputState = 0;
+
+	const uint8_t* keyStates = SDL_GetKeyboardState(NULL);
+
+	for (unsigned int n = 0; n < NUM_KEY_MAPPINGS; n++)
 	{
-		if(SDL_KeyboardButtonMappings[n * 2] == eventType)
+		if (keyStates[KeyMappings[n].key])
 		{
-			if(pressed)
-			{
-				inputState |= SDL_KeyboardButtonMappings[n * 2 + 1];
-			}
-			else
-			{
-				inputState &= ~(SDL_KeyboardButtonMappings[n * 2 + 1]);
-			}
+			inputState |= KeyMappings[n].mask;
 		}
 	}
 }
@@ -68,15 +76,11 @@ void SDLPlatform::run()
 				case SDL_QUIT:
 				m_isRunning = false;
 				break;
-				case SDL_KEYDOWN:
-				updateInputState(event.key.keysym.sym, true);
-				break;
-				case SDL_KEYUP:
-				updateInputState(event.key.keysym.sym, false);
-				break;
 			}
 
 		}
+
+		updateInputState();
 
 		SDL_SetRenderDrawColor ( m_appRenderer, 206, 221, 231, 255 );
 		SDL_RenderClear ( m_appRenderer );
@@ -94,11 +98,39 @@ void SDLPlatform::run()
 	SDL_Quit();
 }
 
+bool LoadDiskContents()
+{
+	FILE* fs;
+
+	if (!fopen_s(&fs, "fxdata.bin", "rb"))
+	{
+		fseek(fs, 0, SEEK_END);
+		diskContentsLength = ftell(fs);
+		fseek(fs, 0, SEEK_SET);
+
+		diskContents = new uint8_t[diskContentsLength];
+		fread(diskContents, 1, diskContentsLength, fs);
+
+		fclose(fs);
+		return true;
+	}
+	else
+	{
+		printf("Error opening fxdata.bin\n");
+		return false;
+	}
+}
+
 int main(int, char**)
 {
 	for(int n = 0; n < 256; n++)
 	{
 		WARNING("%d %d\n", n, FixedMath::Sin(n));
+	}
+
+	if (!LoadDiskContents())
+	{
+		return 1;
 	}
 
 	Platform.init();
@@ -157,5 +189,27 @@ void clearDisplay(uint8_t colour)
 		{
 			drawPixel(x, y, colour);
 		}
+	}
+}
+
+void diskSeek(uint32_t address)
+{
+	diskContentsPtr = address;
+}
+
+uint8_t diskReadByte()
+{
+	if (diskContentsPtr >= diskContentsLength)
+	{
+		return 0;
+	}
+	return diskContents[diskContentsPtr++];
+}
+
+void diskRead(uint8_t* buffer, int length)
+{
+	for (int n = 0; n < length; n++)
+	{
+		buffer[n] = diskReadByte();
 	}
 }
