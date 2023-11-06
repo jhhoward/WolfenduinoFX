@@ -48,7 +48,7 @@ void Player::update()
 				}
 				else if(weapon.type == WeaponType_ChainGun)
 				{
-					weapon.type = WeaponType_ChainGun;
+					weapon.type = WeaponType_Knife;
 				}
 				else if(weapon.ammo > 0)
 				{
@@ -157,9 +157,15 @@ void Player::update()
 				{
 				case Tile_Item_MachineGun:
 					weapon.ammo = min(weapon.ammo + 8, 99);
-					Platform.playSound(Sound_CollectAmmo);
+					Platform.playSound(GETMACHINESND);
 					weapon.type = WeaponType_MachineGun;
 					inventory.hasMachineGun = true;
+					break;
+				case Tile_Item_ChainGun:
+					weapon.ammo = min(weapon.ammo + 8, 99);
+					Platform.playSound(GETGATLINGSND);
+					weapon.type = WeaponType_ChainGun;
+					inventory.hasChainGun = true;
 					break;
 				case Tile_Item_Clip:
 					if(weapon.ammo < 99)
@@ -169,23 +175,29 @@ void Player::update()
 							weapon.type = WeaponType_Pistol;
 						}
 						weapon.ammo = min(weapon.ammo + 8, 99);
+						Platform.playSound(GETAMMOSND);
 					}
 					else collected = false;
 					break;
 				case Tile_Item_FirstAid:
-					if(hp < 100)
+					if (hp < 100)
+					{
 						hp = min(100, hp + 25);
+						Platform.playSound(HEALTH2SND);
+					}
 					else collected = false;
 					break;
 				case Tile_Item_Food:
-					if(hp < 100)
+					if (hp < 100)
+					{
 						hp = min(100, hp + 10);
+						Platform.playSound(HEALTH1SND);
+					}
 					else collected = false;
 					break;
 				}
 				if(collected)
 				{
-					Platform.playSound(Sound_CollectAmmo);
 					engine.map.items[n].type = 0;
 					engine.map.markItemCollected(engine.map.items[n].spawnId);
 				}
@@ -415,6 +427,20 @@ void Player::updateWeapon()
 			}
 			else weapon.frame = 3;
 			break;
+		case 7:
+			if (weapon.type == WeaponType_ChainGun)
+			{
+				if (Platform.readInput() & Input_Btn_B)
+				{
+					weapon.time = 3;
+				}
+				else
+				{
+					weapon.frame = 0;
+					weapon.shooting = false;
+				}
+			}
+			break;
 		case 8:
 			if(weapon.type == WeaponType_MachineGun)
 			{
@@ -451,7 +477,7 @@ void Player::init()
 	weapon.frame = 0;
 	weapon.debounce = false;
 
-	inventory.hasMachineGun = true;
+	inventory.hasChainGun = true;
 
 
 	// Find player start tile
@@ -481,7 +507,21 @@ void Player::init()
 
 void Player::shootWeapon()
 {
-	Platform.playSound(Sound_AttackPistol);
+	switch (weapon.type)
+	{
+	case WeaponType_Knife:
+		Platform.playSound(ATKKNIFESND);
+		break;
+	case WeaponType_Pistol:
+		Platform.playSound(ATKPISTOLSND);
+		break;
+	case WeaponType_MachineGun:
+		Platform.playSound(ATKMACHINEGUNSND);
+		break;
+	case WeaponType_ChainGun:
+		Platform.playSound(ATKGATLINGSND);
+		break;
+	}
 
 	if(weapon.type != WeaponType_Knife)
 	{
@@ -567,9 +607,11 @@ void Player::damage(uint8_t amount)
 	{
 		hp = 0;
 		// Dead
+		Platform.playSound(PLAYERDEATHSND);
 	}
 	else
 	{
-		//hp -= amount;
+		hp -= amount;
+		Platform.playSound(TAKEDAMAGESND);
 	}
 }

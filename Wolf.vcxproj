@@ -28,6 +28,7 @@
     <ClInclude Include="Windows\SDLPlatform.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Windows\lodepng.cpp" />
     <ClCompile Include="Wolf\Actor.cpp" />
     <ClCompile Include="Wolf\Engine.cpp" />
     <ClCompile Include="Wolf\FixedMath.cpp" />

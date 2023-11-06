@@ -8,6 +8,7 @@
 #include "Generated/Data_Pistol.h"
 #include "Generated/Data_Knife.h"
 #include "Generated/Data_Machinegun.h"
+#include "Generated/Data_Chaingun.h"
 #include "Generated/Data_Decorations.h"
 #include "Generated/Data_BlockingDecorations.h"
 #include "Generated/Data_Items.h"
@@ -57,29 +58,42 @@ void Renderer::drawWeapon()
 		frame = (SpriteFrame*) &Data_machinegunSprite_frames[engine.player.weapon.frame];
 		address = Data_machinegunSprite;
 		break;
+	case WeaponType_ChainGun:
+		frame = (SpriteFrame*)&Data_chaingunSprite_frames[engine.player.weapon.frame];
+		address = Data_chaingunSprite;
+		break;
 	default:
 		return;
 	}
 	
-	diskSeek(address + frame->offset);
-	//BitPairReader reader((uint8_t*)data, pgm_read_word(&frame->offset));
+	uint8_t* buffer = engine.streamBuffer;
+	address += pgm_read_word(&frame->offset);
+
 	uint8_t frameWidth = pgm_read_byte(&frame->width);
 	uint8_t frameHeight = pgm_read_byte(&frame->height);
 	uint8_t x = HALF_DISPLAYWIDTH - 32 + pgm_read_byte(&frame->xOffset);
 
 	for(int8_t i = 0; i < frameWidth; i++)
 	{
+		diskRead(address, buffer, frameHeight);
+		uint8_t v = 0;
+
 		for(int8_t j = frameHeight - 1; j >= 0; j--)
 		{
-			uint8_t pixel = diskReadByte(); // reader.read();
-			if(pixel)
+			uint8_t pixel = buffer[v++];
+			switch(pixel)
 			{
-				drawPixel(i + x, DISPLAYHEIGHT - frameHeight + j, (pixel - 1) ? 0 : 1);
+			case 1:
+				drawPixel(i + x, DISPLAYHEIGHT - frameHeight + j, 1);
+				break;
+			case 2:
+				drawPixel(i + x, DISPLAYHEIGHT - frameHeight + j, 0);
+				break;
 			}
 		}
-	}
 
-	diskFinishRead();
+		address += frameHeight;
+	}
 }
 
 void Renderer::drawFrame()
@@ -160,23 +174,47 @@ void Renderer::drawFrame()
 		drawQueuedSprite(item);
 	}
 
-	drawWeapon();
+	if (engine.player.hp > 0)
+	{
+		drawWeapon();
+	}
 	drawDamage();
 
-	// Draw HUD
-	uint8_t hudHeight = DISPLAYHEIGHT - FONT_HEIGHT;
-	drawGlyph('+' - FIRST_FONT_GLYPH, 0, hudHeight);
-	drawInt(engine.player.hp, (FONT_WIDTH + 1) * 3, hudHeight);
-	drawGlyph('*' - FIRST_FONT_GLYPH, DISPLAYWIDTH - (FONT_WIDTH + 1) * 4, hudHeight);
-	drawInt(engine.player.weapon.ammo, DISPLAYWIDTH - (FONT_WIDTH + 1), hudHeight);
-	//drawString(PSTR("*99"), DISPLAYWIDTH - (FONT_WIDTH + 1) * 3, DISPLAYHEIGHT - FONT_HEIGHT);
-	/*int y = 4;
-	drawString(PSTR("* CAN I PLAY, DADDY?"), 0, y); y += FONT_HEIGHT + 1;
-	drawString(PSTR("  DON'T HURT ME!"), 0, y); y += FONT_HEIGHT + 1;
-	drawString(PSTR("  BRING 'EM ON!"), 0, y); y += FONT_HEIGHT + 1;
-	drawString(PSTR("  I AM DEATH"), 0, y); y += FONT_HEIGHT + 1;
-	drawString(PSTR("       INCARNATE!"), 0, y); y += FONT_HEIGHT + 1;*/
+	drawHUD();
 #endif
+}
+
+void Renderer::drawBox(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t colour)
+{
+	while(h > 0)
+	{
+		for (int i = 0; i < w; i++)
+		{
+			drawPixel(x + i, y, colour);
+		}
+		y++;
+		h--;
+	}
+}
+
+void Renderer::drawHUD()
+{
+	constexpr int statusBarHeight = 12;
+	drawBox(0, DISPLAYHEIGHT - statusBarHeight, 48, statusBarHeight, 0);
+	drawBox(DISPLAYWIDTH - 48, DISPLAYHEIGHT - statusBarHeight, 48, statusBarHeight, 0);
+	drawBox(DISPLAYWIDTH - 48 + 1, DISPLAYHEIGHT - statusBarHeight + 1, 8, statusBarHeight - 2, 1);
+	drawBox(DISPLAYWIDTH - 48 + 10, DISPLAYHEIGHT - statusBarHeight + 1, 8, statusBarHeight - 2, 1);
+	drawBox(26, DISPLAYHEIGHT - statusBarHeight + 1, 1, statusBarHeight - 1, 1);
+
+	drawString(PSTR("HEALTH"), 1, DISPLAYHEIGHT - FONT_HEIGHT, 1);
+	drawGlyph('%' - FIRST_FONT_GLYPH, 18, DISPLAYHEIGHT - FONT_HEIGHT * 2 - 1, 1);
+	drawInt(engine.player.hp, 14, DISPLAYHEIGHT - FONT_HEIGHT * 2 - 1, 1);
+	drawString(PSTR("AMMO"), 30, DISPLAYHEIGHT - FONT_HEIGHT, 1);
+	drawInt(engine.player.weapon.ammo, 38, DISPLAYHEIGHT - FONT_HEIGHT * 2 - 1, 1);
+
+	drawString(PSTR("SCORE"), 104, DISPLAYHEIGHT - FONT_HEIGHT, 1);
+	drawLong(16000, DISPLAYWIDTH - FONT_WIDTH - 1, DISPLAYHEIGHT - FONT_HEIGHT * 2 - 1, 1);
+	//drawInt(99, 36, DISPLAYHEIGHT - FONT_HEIGHT * 2 - 1, 1);
 }
 
 #ifdef DEFER_RENDER
@@ -277,7 +315,7 @@ void Renderer::drawFloorAndCeiling()
 #else
 void Renderer::drawFloorAndCeiling()
 {
-#if 1
+#ifdef _WIN32
 	for(int x = 0; x < DISPLAYWIDTH; x++)
 	{
 		for(int y = 0; y < DISPLAYHEIGHT; y++)
@@ -293,10 +331,6 @@ void Renderer::drawFloorAndCeiling()
 			}
 #elif 1
 			if (y < HALF_DISPLAYHEIGHT)
-			{
-				clearPixel(x, y);
-			}
-			else
 			{
 				if ((x & 1))
 				{
@@ -314,6 +348,25 @@ void Renderer::drawFloorAndCeiling()
 					clearPixel(x, y);
 				}
 			}
+			else
+			{
+				if (!(x & 1))
+				{
+					if (((x >> 1) & 1) == (y & 1))
+					{
+						clearPixel(x, y);
+					}
+					else
+					{
+						setPixel(x, y);
+					}
+				}
+				else
+				{
+					clearPixel(x, y);
+				}
+				//clearPixel(x, y);
+			}
 #else
 			if(y < HALF_DISPLAYHEIGHT || ((x ^ y) & 1) == 1)
 			{
@@ -326,10 +379,11 @@ void Renderer::drawFloorAndCeiling()
 #endif
 		}
 	}
-#elif 0
+#elif 1
 	uint8_t* ptr = GetScreenBuffer();
-	uint8_t counter = 128;
 
+	uint8_t counter = 128;
+	
 	while (counter--)
 	{
 		*ptr++ = 0x55; *ptr++ = 0x00; *ptr++ = 0xaa; *ptr++ = 0x00;
@@ -344,16 +398,8 @@ void Renderer::drawFloorAndCeiling()
 }
 #endif
 
-#if defined(PLATFORM_GAMEBUINO)
-extern Gamebuino gb;
-#endif
-
 void Renderer::drawCell(int8_t cellX, int8_t cellZ)
 {
-#if defined(PLATFORM_GAMEBUINO)
-	// HACK: Keep calling update so that sound doesn't slow down. Ugh..
-	gb.update();
-#endif
 	// clip cells out of frustum view
 	if(isFrustrumClipped(cellX, cellZ))
 		return;
@@ -503,10 +549,9 @@ bool renderingVerticalWall = false;
 	int y1 = (HALF_DISPLAYHEIGHT) - halfW;
 	int y2 = (HALF_DISPLAYHEIGHT) + halfW;
 	int verror = halfW;
-
-	diskSeek(Data_wallTextures + u * TEXTURE_STRIDE + textureId * (TEXTURE_STRIDE * TEXTURE_SIZE));
-	//BitPairReader textureReader((uint8_t*) Data_wallTextures + u * TEXTURE_STRIDE + textureId * (TEXTURE_STRIDE * TEXTURE_SIZE));
-	uint8_t texData = diskReadByte(); // textureReader.read();
+	uint8_t* buffer = engine.streamBuffer;
+	uint8_t texData;
+	uint8_t v = 0;
 
 	texData = 2;
 
@@ -597,7 +642,7 @@ bool renderingVerticalWall = false;
 		while(verror < 0)
 		{
 			//texData = textureReader.read();
-			texData = diskReadByte();
+			texData = buffer[v++];
 			verror += w;
 		}
 	}
@@ -606,9 +651,6 @@ bool renderingVerticalWall = false;
 	if(y2 < DISPLAYHEIGHT)
 		setPixel(x, y2);
 #endif
-
-	diskFinishRead();
-
 }
 
 #ifdef PERSPECTIVE_CORRECT_TEXTURE_MAPPING
@@ -826,6 +868,8 @@ void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint
 		ustep = -1;
 	}
 
+	uint8_t lastU = 0xff;
+
 //	for (int x=firstx; x<=lastx; x++)
 	for (int x=sx1; x<=sx2; x++)
 	{
@@ -844,6 +888,12 @@ void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint
 			ubuffer[x] = u;
 			texbuffer[x] = textureId;
 #else
+			if (u != lastU)
+			{
+				diskRead(Data_wallTextures + u * TEXTURE_STRIDE + textureId * (TEXTURE_STRIDE * TEXTURE_SIZE), engine.streamBuffer, TEXTURE_SIZE);
+				lastU = u;
+			}
+
 			drawStrip(x, w, u, textureId);
 #endif
 		}
@@ -1074,6 +1124,14 @@ void Renderer::drawQueuedSprite(uint8_t id)
 	int8_t du = frameWidth, ustep = 1;
 	int8_t v;
 	bool outline = false;
+	uint8_t* buffer = engine.streamBuffer;
+	uint8_t* leftBuffer = engine.streamBuffer + 32;
+	uint8_t outlineColour = 0;
+
+	for (int x = 0; x < frameHeight; x++)
+	{
+		leftBuffer[x] = 0;
+	}
 
 	for (int x = sx1; x <= sx2; x++)
 	{
@@ -1081,20 +1139,13 @@ void Renderer::drawQueuedSprite(uint8_t id)
 		{        
 			int verror = halfW;
 
-			uint24_t texAddress = renderQueue[id].spriteAddress + pgm_read_word(&renderQueue[id].frame->offset) + frameHeight * u;
-			uint24_t texAddressLeft = renderQueue[id].spriteAddress + pgm_read_word(&renderQueue[id].frame->offset) + frameHeight * lastU;
-			//BitPairReader textureReader((uint8_t*) renderQueue[id].data, pgm_read_word(&renderQueue[id].frame->offset) + frameHeight * u);
-			//BitPairReader textureReaderLeft((uint8_t*)renderQueue[id].data, pgm_read_word(&renderQueue[id].frame->offset) + frameHeight * lastU);
-
-			diskSeek(texAddress);
-			uint8_t texData = diskReadByte();
-			diskFinishRead();
-
-			diskSeek(texAddressLeft);
-			uint8_t texDataLeft = diskReadByte();
-			diskFinishRead();
+			diskRead(renderQueue[id].spriteAddress + pgm_read_word(&renderQueue[id].frame->offset) + frameHeight * u, buffer, frameHeight);
 
 			v = 0;
+
+			uint8_t texData = buffer[v];
+			uint8_t texDataLeft = leftBuffer[v];
+
 			outline = texData != 0;
 
 			for(int y = y2; y >= y1 && y >= 0 && v < frameHeight; y--)
@@ -1112,7 +1163,7 @@ void Renderer::drawQueuedSprite(uint8_t id)
 
 					if (outline)
 					{
-						setPixel(x, y);
+						drawPixel(x, y, outlineColour);
 						outline = false;
 					}
 					else
@@ -1150,23 +1201,16 @@ void Renderer::drawQueuedSprite(uint8_t id)
 
 				if (verror < 0)
 				{
+					leftBuffer[v] = buffer[v];
+
 					while (verror < 0)
 					{
-						texAddress++;
-						texAddressLeft++;
-						//texData = textureReader.read();
-						//texDataLeft = textureReaderLeft.read();
 						verror += w;
 						v++;
 					}
 
-					diskSeek(texAddress);
-					texData = diskReadByte();
-					diskFinishRead();
-
-					diskSeek(texAddressLeft);
-					texDataLeft = diskReadByte();
-					diskFinishRead();
+					texData = buffer[v];
+					texDataLeft = leftBuffer[v];
 				}
 
 				if (lastTexDataValue && !texData)
@@ -1191,7 +1235,7 @@ void Renderer::drawQueuedSprite(uint8_t id)
 	}
 }
 
-void Renderer::drawGlyph(char glyph, uint8_t x, uint8_t y)
+void Renderer::drawGlyph(char glyph, uint8_t x, uint8_t y, uint8_t colour)
 {
 	uint8_t* ptr = (uint8_t*) (Data_font + glyph * FONT_GLYPH_BYTE_SIZE);
 	uint8_t readMask = 1;
@@ -1201,8 +1245,8 @@ void Renderer::drawGlyph(char glyph, uint8_t x, uint8_t y)
 	{
 		for(int j = 0; j < FONT_HEIGHT; j++)
 		{
-			uint8_t colour = (read & readMask) ? 0 : 1;
-			drawPixel(x + i, y + j, colour);
+			uint8_t col = (read & readMask) ? 0 : 1;
+			drawPixel(x + i, y + j, colour ^ col);
 			readMask <<= 1;
 			if(readMask == 0)
 			{
@@ -1213,13 +1257,13 @@ void Renderer::drawGlyph(char glyph, uint8_t x, uint8_t y)
 //		clearPixel(x + i, y);
 	//	clearPixel(x + i, y + FONT_HEIGHT + 1);
 	}
-	for(int j = 0; j < FONT_HEIGHT; j++)
-	{
-		clearPixel(x + FONT_WIDTH, y + j);
-	}
+	//for(int j = 0; j < FONT_HEIGHT; j++)
+	//{
+	//	clearPixel(x + FONT_WIDTH, y + j);
+	//}
 }
 
-void Renderer::drawString(const char* str, uint8_t x, uint8_t y)
+void Renderer::drawString(const char* str, uint8_t x, uint8_t y, uint8_t colour)
 {
 	char* ptr = (char*) str;
 	char current = 0;
@@ -1232,7 +1276,7 @@ void Renderer::drawString(const char* str, uint8_t x, uint8_t y)
 
 		if(current >= FIRST_FONT_GLYPH && current <= LAST_FONT_GLYPH)
 		{
-			drawGlyph(current - FIRST_FONT_GLYPH, x, y);
+			drawGlyph(current - FIRST_FONT_GLYPH, x, y, colour);
 		}
 
 		x += FONT_WIDTH + 1;
@@ -1245,7 +1289,7 @@ void Renderer::drawString(const char* str, uint8_t x, uint8_t y)
 	} while(current);
 }
 
-void Renderer::drawInt(int8_t val, uint8_t x, uint8_t y)
+void Renderer::drawInt(int8_t val, uint8_t x, uint8_t y, uint8_t colour)
 {
 	unsigned char c, i;
 
@@ -1254,13 +1298,36 @@ void Renderer::drawInt(int8_t val, uint8_t x, uint8_t y)
 		c = val % 10;
 		if(val > 0 || i == 0) 
 		{
-			drawGlyph(c + '0' - FIRST_FONT_GLYPH, x, y);
+			drawGlyph(c + '0' - FIRST_FONT_GLYPH, x, y, colour);
 		}
 		else
 		{
-			drawGlyph(' ' - FIRST_FONT_GLYPH, x, y);
+			drawGlyph(' ' - FIRST_FONT_GLYPH, x, y, colour);
 		}
 		x -= FONT_WIDTH + 1;
 		val = val / 10;
+	}
+}
+
+void Renderer::drawLong(int32_t val, uint8_t x, uint8_t y, uint8_t colour)
+{
+	unsigned char c, i;
+
+	for (i = 0; ; i++)
+	{
+		c = val % 10;
+		if (val > 0 || i == 0)
+		{
+			drawGlyph(c + '0' - FIRST_FONT_GLYPH, x, y, colour);
+		}
+		else
+		{
+			drawGlyph(' ' - FIRST_FONT_GLYPH, x, y, colour);
+		}
+		x -= FONT_WIDTH + 1;
+		val = val / 10;
+
+		if (!val)
+			break;
 	}
 }

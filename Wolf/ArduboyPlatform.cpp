@@ -31,11 +31,18 @@ void ArduboyPlatform::update()
 	{
 		inputState |= Input_Dpad_Right;  
 	}
+	
+	if(arduboy.audio.enabled() != !m_isMuted)
+	{
+		if(m_isMuted)
+		{
+			arduboy.audio.off();
+		}
+		else
+		{
+			arduboy.audio.on();
+		}
+	}
 }
 
-void ArduboyPlatform::playSound(uint8_t id)
-{
-//	if(!m_isMuted)
-//		gb.sound.playPattern((const uint16_t*)pgm_read_word(&Data_AudioPatterns[id]), 0);
-}
 

@@ -2,6 +2,7 @@ raw_t MapData = "Wolf/Generated/maps.bin"
 
 raw_t Data_pistolSprite = "Wolf/Generated/Data_Pistol.bin"
 raw_t Data_machinegunSprite = "Wolf/Generated/Data_Machinegun.bin"
+raw_t Data_chaingunSprite = "Wolf/Generated/Data_Chaingun.bin"
 raw_t Data_knifeSprite = "Wolf/Generated/Data_Knife.bin"
 raw_t Data_itemSprites = "Wolf/Generated/Data_Items.bin"
 raw_t Data_guardSprite = "Wolf/Generated/Data_Guard.bin"

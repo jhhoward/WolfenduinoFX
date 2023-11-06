@@ -102,6 +102,20 @@ bool Map::isDoor(int8_t cellX, int8_t cellZ)
 	return tile >= Tile_FirstDoor && tile <= Tile_LastDoor;
 }
 
+Door* Map::getDoor(int8_t cellX, int8_t cellZ)
+{
+	for (int n = 0; n < MAX_DOORS; n++)
+	{
+		if (doors[n].type != DoorType_None && doors[n].x == cellX && doors[n].z == cellZ)
+		{
+			return &doors[n];
+		}
+	}
+
+	return nullptr;
+}
+
+
 bool Map::isBlocked(int8_t cellX, int8_t cellZ)
 {
 	uint8_t tile = getTile(cellX, cellZ);
@@ -155,9 +169,7 @@ void Map::streamData(uint8_t* buffer, uint8_t orientation, int8_t x, int8_t z, i
 #ifdef FXDATA_STREAMING
 	int32_t offset = orientation == MapRead_Horizontal ? (z * MAP_SIZE + x) * 2 : (MAP_SIZE * MAP_SIZE * 2) + (x * MAP_SIZE + z) * 2;
 	offset += currentLevel * MAP_SIZE * MAP_SIZE * 4;
-	diskSeek(offset);
-	diskRead(buffer, length * 2);
-	diskFinishRead();
+	diskRead(offset, buffer, length * 2);
 	return;
 #endif
 
@@ -289,14 +301,14 @@ uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z)
 
 void Map::updateHorizontalSlice(int8_t offsetZ)
 {
-	streamData(m_streamBuffer, MapRead_Horizontal, bufferX, bufferZ + offsetZ, MAP_BUFFER_SIZE);
+	streamData(engine.streamBuffer, MapRead_Horizontal, bufferX, bufferZ + offsetZ, MAP_BUFFER_SIZE);
 
 	int8_t targetZ	= (bufferZ + offsetZ) & 0xf;
 
 	for(int8_t x = 0; x < MAP_BUFFER_SIZE; x++)
 	{
 		int8_t targetX = (bufferX + x) & 0xf;
-		uint8_t read = streamIn(m_streamBuffer[x * 2], m_streamBuffer[x * 2 + 1], bufferX + x, bufferZ + offsetZ);
+		uint8_t read = streamIn(engine.streamBuffer[x * 2], engine.streamBuffer[x * 2 + 1], bufferX + x, bufferZ + offsetZ);
 
 		m_mapBuffer[targetZ * MAP_BUFFER_SIZE + targetX] = read;
 	}
@@ -304,14 +316,14 @@ void Map::updateHorizontalSlice(int8_t offsetZ)
 
 void Map::updateVerticalSlice(int8_t offsetX)
 {
-	streamData(m_streamBuffer, MapRead_Vertical, bufferX + offsetX, bufferZ, MAP_BUFFER_SIZE);
+	streamData(engine.streamBuffer, MapRead_Vertical, bufferX + offsetX, bufferZ, MAP_BUFFER_SIZE);
 
 	int8_t targetX = (bufferX + offsetX) & 0xf;
 
 	for(int8_t z = 0; z < MAP_BUFFER_SIZE; z++)
 	{
 		int8_t targetZ = (bufferZ + z) & 0xf;
-		uint8_t read = streamIn(m_streamBuffer[z * 2], m_streamBuffer[z * 2 + 1], bufferX + offsetX, bufferZ + z);
+		uint8_t read = streamIn(engine.streamBuffer[z * 2], engine.streamBuffer[z * 2 + 1], bufferX + offsetX, bufferZ + z);
 
 		m_mapBuffer[targetZ * MAP_BUFFER_SIZE + targetX] = read;
 	}
@@ -466,7 +478,7 @@ void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction)
 		{
 			if(doors[n].type == DoorType_SecretPushWall)
 			{
-				if(direction != Direction_None)
+				if(direction != Direction_None && doors[n].state == DoorState_Idle)
 				{
 					int8_t offX = pgm_read_byte(&PushWallDirections[(direction) * 2]);
 					int8_t offZ = pgm_read_byte(&PushWallDirections[(direction) * 2 + 1]);
@@ -474,6 +486,7 @@ void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction)
 					if(engine.map.isValid(x + offX, z + offZ) && !engine.map.isSolid(x + offX, z + offZ))
 					{
 						doors[n].state = DoorState_FirstPushWallState + direction;
+						Platform.playSound(PUSHWALLSND);
 					}
 				}
 			}
@@ -481,7 +494,7 @@ void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction)
 			{
 				if(doors[n].state != DoorState_Opening && doors[n].open == 0)
 				{
-					Platform.playSound(Sound_OpenDoor);
+					Platform.playSound(OPENDOORSND);
 				}
 				doors[n].state = DoorState_Opening;
 			}
@@ -526,7 +539,7 @@ void Door::update()
 			open --;
 			if(open == 16)
 			{
-				Platform.playSound(Sound_CloseDoor);
+				Platform.playSound(CLOSEDOORSND	);
 			}
 		}
 		else state = DoorState_Idle;
@@ -631,7 +644,9 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
             zfrac += zstep;
 
             uint8_t tile = getTile(x, z);
-            x += xstep;
+			Door* door = getDoor(x, z);
+			
+			x += xstep;
 
             if (!tile)
                 continue;
@@ -639,6 +654,8 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
             if (tile >= Tile_FirstWall && tile <= Tile_LastWall)
                 return false;
 
+			if (door && !door->open)
+				return false;
             //
             // see if the door is open enough
             //
@@ -685,7 +702,9 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
             xfrac += xstep;
 
             uint8_t tile = getTile(x, z);
-            z += zstep;
+			Door* door = getDoor(x, z);
+			
+			z += zstep;
 
             if (!tile)
                 continue;
@@ -693,7 +712,9 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
             if (tile >= Tile_FirstWall && tile <= Tile_LastWall)
                 return false;
 
-            //
+			if (door && !door->open)
+				return false;
+			//
             // see if the door is open enough
             //
             /*value &= ~0x80;

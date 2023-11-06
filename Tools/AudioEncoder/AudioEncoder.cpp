@@ -4,6 +4,8 @@
 
 using namespace std;
 
+#define TONES_END 0x8000
+
 #define NUM_NOTES 59
 #define MUTE_NOTE 63
 
@@ -252,6 +254,42 @@ AudioPattern processData(uint8_t* data, long length)
 	return pattern;
 }
 
+AudioPattern processDataTones(uint8_t* data, long length)
+{
+	AudioPattern pattern;
+
+	for (int n = 0; n < length; n++)
+	{
+		float frequency = 1193181.0f / (data[n] * 60.0f);
+		if (data[n] == 0)
+		{
+			frequency = 0.0f;
+		}
+
+		uint16_t freq = (uint16_t)frequency;
+
+		if (pattern.data.size() == 0 || pattern.data[pattern.data.size() - 2] != freq)
+		{
+			pattern.data.push_back(freq);
+			pattern.data.push_back(1);
+		}
+		else
+		{
+			pattern.data[pattern.data.size() - 1]++;
+		}
+	}
+
+	for (int n = 1; n < pattern.data.size(); n += 2)
+	{
+		pattern.data[n] = (pattern.data[n] * 1024) / 140;
+	}
+
+	pattern.data.push_back(TONES_END);
+
+	return pattern;
+}
+
+
 AudioPattern loadData(char* filename)
 {
 	FILE* fs = NULL;
@@ -274,7 +312,7 @@ AudioPattern loadData(char* filename)
 	uint8_t* buffer = new uint8_t[fileSize];
 	fread(buffer, 1, fileSize, fs);
 
-	pattern = processData(buffer, fileSize);
+	pattern = processDataTones(buffer, fileSize);
 
 	delete[] buffer;
 
@@ -312,7 +350,7 @@ void writeData(char* filename, vector<AudioPattern>& patterns)
 		}
 
 		fprintf(fs, "#define NUM_AUDIO_PATTERNS %d\n", patterns.size());
-		fprintf(fs, "const uintptr_t* Data_AudioPatterns[NUM_AUDIO_PATTERNS] PROGMEM = {\n");
+		fprintf(fs, "const uint16_t* const Data_AudioPatterns[NUM_AUDIO_PATTERNS] PROGMEM = {\n");
 		for(int p = 0; p < patterns.size(); p++)
 		{
 			fprintf(fs, "\tData_Audio%02d,\n", p);
@@ -326,6 +364,8 @@ void writeData(char* filename, vector<AudioPattern>& patterns)
 		printf("Unable to open %s for write\n", filename);
 	}
 }
+
+
 	
 int main(int argc, char* argv[])
 {

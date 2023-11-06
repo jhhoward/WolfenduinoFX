@@ -96,6 +96,8 @@ public:
 		return m_mapBuffer[cellZ * MAP_BUFFER_SIZE + cellX];
 	}
 
+	Door* getDoor(int8_t cellX, int8_t cellZ);
+
 	int8_t bufferX;
 	int8_t bufferZ;
 	Door doors[MAX_DOORS];
@@ -150,7 +152,6 @@ private:
 	uint8_t m_itemState[256 / 8];
 	uint8_t m_actorState[256 / 8];
 
-	uint8_t m_streamBuffer[MAP_BUFFER_SIZE * 2];
 #ifdef STANDARD_FILE_STREAMING
 	FILE* m_mapStream;
 #endif

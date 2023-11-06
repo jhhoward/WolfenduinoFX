@@ -14,14 +14,12 @@ const char Str_NewGame[] PROGMEM = "NEW GAME";
 const char Str_Sound[] PROGMEM = "SOUND:";
 const char Str_On[] PROGMEM = "ON";
 const char Str_Off[] PROGMEM = "OFF";
-const char Str_Quit[] PROGMEM = "QUIT";
 
 const void* const Menu_Main[] PROGMEM = 
 {
 	Str_Wolfenduino3D,
 	Str_NewGame,		MENU_CALLBACK(&Menu::newGame),
 	Str_Sound,			MENU_CALLBACK(&Menu::toggleSound),
-	Str_Quit,			MENU_CALLBACK(&Menu::quit),
 	MENU_ENTRY_END
 };
 
@@ -31,7 +29,6 @@ const void* const Menu_Paused[] PROGMEM =
 	Str_Continue,		MENU_CALLBACK(&Menu::continueGame),
 	Str_NewGame,		MENU_CALLBACK(&Menu::newGame),
 	Str_Sound,			MENU_CALLBACK(&Menu::toggleSound),
-	Str_Quit,			MENU_CALLBACK(&Menu::quit),
 	MENU_ENTRY_END
 };
 
@@ -110,9 +107,9 @@ void Menu::init()
 
 void Menu::draw()
 {
-	clearDisplay(1);
+	clearDisplay(0);
 
-	engine.renderer.drawString((const char*)pgm_read_ptr(&currentMenu[0]), 5, 1);
+	engine.renderer.drawString((const char*)pgm_read_ptr(&currentMenu[0]), 5, 1, 1);
 	int index = 1;
 	int y = 12;
 
@@ -120,20 +117,20 @@ void Menu::draw()
 	{
 		if(pgm_read_ptr(&currentMenu[index]) == 0)
 			break;
-		engine.renderer.drawString((const char*)pgm_read_ptr(&currentMenu[index]), 8, y);
+		engine.renderer.drawString((const char*)pgm_read_ptr(&currentMenu[index]), 8, y, 1);
 
 		if((const char*)pgm_read_ptr(&currentMenu[index]) == Str_Sound)
 		{
 			if(Platform.isMuted())
-				engine.renderer.drawString(Str_Off, 40, y);
+				engine.renderer.drawString(Str_Off, 40, y, 1);
 			else
-				engine.renderer.drawString(Str_On, 40, y);
+				engine.renderer.drawString(Str_On, 40, y, 1);
 		}
 		index += 2;
 		y += 6;
 	}
 
-	engine.renderer.drawGlyph('*' - FIRST_FONT_GLYPH, 2, 12 + currentSelection * 6);
+	engine.renderer.drawGlyph('*' - FIRST_FONT_GLYPH, 2, 12 + currentSelection * 6, 1);
 }
 
 void Menu::update()

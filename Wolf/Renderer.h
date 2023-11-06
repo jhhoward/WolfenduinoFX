@@ -25,10 +25,11 @@ public:
 	void drawFrame();
 	void queueSprite(SpriteFrame* frame, uint24_t spriteAddress, int16_t x, int16_t z);
 
-	void drawGlyph(char glyph, uint8_t x, uint8_t y);
-	void drawString(const char* str, uint8_t x, uint8_t y);
-	void drawInt(int8_t val, uint8_t x, uint8_t y);
-
+	void drawGlyph(char glyph, uint8_t x, uint8_t y, uint8_t colour = 0);
+	void drawString(const char* str, uint8_t x, uint8_t y, uint8_t colour = 0);
+	void drawInt(int8_t val, uint8_t x, uint8_t y, uint8_t colour = 0);
+	void drawLong(int32_t val, uint8_t x, uint8_t y, uint8_t colour = 0);
+	void drawBox(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t colour);
 
 #ifdef DEFER_RENDER
 	void drawDeferredFrame();
@@ -59,7 +60,7 @@ private:
 	void drawQueuedSprite(uint8_t id);
 	void drawWeapon();
 	void drawDamage();
-
+	void drawHUD();
 
 	struct 
 	{

@@ -10,8 +10,8 @@ void Engine::init()
 	gameState = GameState_Menu;
 	map.currentLevel = 0;
 
-	map.currentLevel = 1;
-	gameState = GameState_StartingLevel;
+	//map.currentLevel = 1;
+	//gameState = GameState_StartingLevel;
 	// hacks
 	//map.currentLevel = 2;
 	//difficulty = Difficulty_Baby;

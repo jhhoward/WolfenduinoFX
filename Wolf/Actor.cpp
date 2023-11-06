@@ -50,6 +50,19 @@ void Actor::update()
 		if(engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
 		{
 			switchState(ActorState_Active);
+
+			switch (type)
+			{
+			case ActorType_Dog:
+				Platform.playSound(DOGBARKSND);
+				break;
+			case ActorType_Guard:
+				Platform.playSound(HALTSND);
+				break;
+			case ActorType_SS:
+				Platform.playSound(SCHUTZADSND);
+				break;
+			}
 		}
 		break;
 	case ActorState_Active:
@@ -167,9 +180,21 @@ void Actor::damage(int amount)
 		{
 		case ActorType_Guard:
 			dropItem(Tile_Item_Clip);
+			if (!(getRandomNumber() & 1))
+			{
+				Platform.playSound(DEATHSCREAM2SND);
+			}
+			else
+			{
+				Platform.playSound(DEATHSCREAM3SND);
+			}
 			break;
 		case ActorType_SS:
 			dropItem(Tile_Item_MachineGun);
+			Platform.playSound(LEBENSND);
+			break;
+		case ActorType_Dog:
+			Platform.playSound(DOGDEATHSND);
 			break;
 		}
 	}
@@ -203,7 +228,18 @@ void Actor::switchState(uint8_t newState)
 		break;
 	case ActorState_Shooting:
 		frame = 4;
-		Platform.playSound(Sound_GuardAttack);
+		switch (type)
+		{
+		case ActorType_Dog:
+			Platform.playSound(DOGATTACKSND);
+			break;
+		case ActorType_Guard:
+			Platform.playSound(NAZIFIRESND);
+			break;
+		case ActorType_SS:
+			Platform.playSound(SSFIRESND);
+			break;
+		}
 		break;
 	default:
 		break;

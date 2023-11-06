@@ -2,11 +2,104 @@
 #include <stdio.h>
 #include "SDLPlatform.h"
 #include "Engine.h"
+#include "Generated/Data_Audio.h"
+#include "lodepng.h"
+
+#define TONES_END 0x8000
 
 SDLPlatform Platform;
 uint8_t* diskContents = 0;
 long diskContentsLength = 0;
-long diskContentsPtr = 0;
+
+constexpr int audioSampleRate = 48000;
+
+const uint16_t* currentAudioPattern = nullptr;
+int currentPatternBufferPos = 0;
+bool isAudioEnabled = true;
+
+void Play(const uint16_t* pattern)
+{
+	currentAudioPattern = pattern;
+	currentPatternBufferPos = 0;
+}
+
+void FillAudioBuffer(void* udata, uint8_t* stream, int len)
+{
+	int feedPos = 0;
+
+	static int waveSamplesLeft = 0;
+	static int noteSamplesLeft = 0;
+	static int frequency = 0;
+	static bool high = false;
+
+	if (!isAudioEnabled)
+	{
+		while (feedPos < len)
+		{
+			stream[feedPos++] = 0;
+		}
+		return;
+	}
+
+	while (feedPos < len)
+	{
+		if (!isAudioEnabled)
+		{
+			while (feedPos < len)
+			{
+				stream[feedPos++] = 0;
+			}
+			return;
+		}
+
+		if (currentAudioPattern != nullptr)
+		{
+			if (noteSamplesLeft == 0)
+			{
+				frequency = currentAudioPattern[currentPatternBufferPos];
+				uint16_t duration = currentAudioPattern[currentPatternBufferPos + 1];
+
+				noteSamplesLeft = (audioSampleRate * duration) / 1024;
+
+				waveSamplesLeft = frequency > 0 ? audioSampleRate / frequency : noteSamplesLeft;
+
+				currentPatternBufferPos += 2;
+				if (currentAudioPattern[currentPatternBufferPos] == TONES_END)
+				{
+					currentAudioPattern = nullptr;
+				}
+			}
+		}
+
+		if (frequency == 0)
+		{
+			while (feedPos < len && (!currentAudioPattern || noteSamplesLeft > 0))
+			{
+				stream[feedPos++] = 0;
+
+				if (noteSamplesLeft > 0)
+					noteSamplesLeft--;
+			}
+		}
+		else
+		{
+			while (feedPos < len && waveSamplesLeft > 0 && noteSamplesLeft > 0)
+			{
+				int volume = 32;
+				stream[feedPos++] = high ? 128 + volume : 128 - volume;
+				waveSamplesLeft--;
+				noteSamplesLeft--;
+			}
+
+			if (waveSamplesLeft == 0)
+			{
+				high = !high;
+				waveSamplesLeft = audioSampleRate / frequency;
+			}
+		}
+
+	}
+}
 
 void SDLPlatform::init()
 {
@@ -21,6 +114,19 @@ void SDLPlatform::init()
 											0xff000000
 											);
 	m_screenTexture = SDL_CreateTexture(m_appRenderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, m_screenSurface->w, m_screenSurface->h);
+
+	SDL_AudioSpec wanted;
+	wanted.freq = audioSampleRate;
+	wanted.format = AUDIO_U8;
+	wanted.channels = 1;
+	wanted.samples = 4096;
+	wanted.callback = FillAudioBuffer;
+
+	if (SDL_OpenAudio(&wanted, NULL) < 0) {
+		printf("Error: %s\n", SDL_GetError());
+	}
+	SDL_PauseAudio(0);
+
 	m_isRunning = true;
 }
 
@@ -76,11 +182,22 @@ void SDLPlatform::run()
 				case SDL_QUIT:
 				m_isRunning = false;
 				break;
+				case SDL_KEYDOWN:
+					switch (event.key.keysym.sym)
+					{
+						case SDLK_F5:
+						{
+							lodepng_encode32_file("screenshot.png", (unsigned char*)(m_screenSurface->pixels), m_screenSurface->w, m_screenSurface->h);
+							break;
+						}
+					}
+				break;
 			}
 
 		}
 
 		updateInputState();
+		isAudioEnabled = !m_isMuted;
 
 		SDL_SetRenderDrawColor ( m_appRenderer, 206, 221, 231, 255 );
 		SDL_RenderClear ( m_appRenderer );
@@ -92,7 +209,7 @@ void SDLPlatform::run()
 		SDL_RenderCopy(m_appRenderer, m_screenTexture, NULL, NULL);
 		SDL_RenderPresent(m_appRenderer);
 
-		SDL_Delay(1000 / 20);
+		SDL_Delay(1000 / TARGET_FRAMERATE);
 	}
 
 	SDL_Quit();
@@ -166,6 +283,11 @@ uint8_t paletteColours[] =
 
 void SDLPlatform::drawPixel(uint8_t x, uint8_t y, uint8_t colour)
 {
+	if (x >= DISPLAYWIDTH || y >= DISPLAYHEIGHT)
+	{
+		return;
+	}
+
 	Uint32 col = SDL_MapRGBA(m_screenSurface->format, paletteColours[colour * 3], paletteColours[colour * 3 + 1], paletteColours[colour * 3 + 2], 255);
 	drawPixel(m_screenSurface, x, y, col);
 
@@ -192,24 +314,18 @@ void clearDisplay(uint8_t colour)
 	}
 }
 
-void diskSeek(uint32_t address)
-{
-	diskContentsPtr = address;
-}
-
-uint8_t diskReadByte()
-{
-	if (diskContentsPtr >= diskContentsLength)
-	{
-		return 0;
-	}
-	return diskContents[diskContentsPtr++];
-}
-
-void diskRead(uint8_t* buffer, int length)
+void diskRead(uint24_t address, uint8_t* buffer, int length)
 {
 	for (int n = 0; n < length; n++)
 	{
-		buffer[n] = diskReadByte();
+		if (address + n < diskContentsLength)
+		{
+			buffer[n] = diskContents[address + n];
+		}
 	}
+}
+
+void SDLPlatform::playSound(uint8_t id)
+{
+	Play(Data_AudioPatterns[id]);
 }

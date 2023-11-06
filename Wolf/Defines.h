@@ -119,4 +119,7 @@ using uint24_t = __uint24;
 #define FONT_HEIGHT 5
 #define FONT_GLYPH_BYTE_SIZE 2
 
+#define STREAM_BUFFER_SIZE 64
+#define TARGET_FRAMERATE 20
+
 #endif
