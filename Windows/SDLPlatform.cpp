@@ -4,6 +4,7 @@
 #include "Engine.h"
 #include "Generated/Data_Audio.h"
 #include "lodepng.h"
+#include "Generated/fxdata.h"
 
 #define TONES_END 0x8000
 
@@ -16,6 +17,9 @@ constexpr int audioSampleRate = 48000;
 const uint16_t* currentAudioPattern = nullptr;
 int currentPatternBufferPos = 0;
 bool isAudioEnabled = true;
+
+bool isRecording = false;
+int currentRecordingFrame = 0;
 
 void Play(const uint16_t* pattern)
 {
@@ -190,6 +194,9 @@ void SDLPlatform::run()
 							lodepng_encode32_file("screenshot.png", (unsigned char*)(m_screenSurface->pixels), m_screenSurface->w, m_screenSurface->h);
 							break;
 						}
+						case SDLK_F11:
+							isRecording = !isRecording;
+							break;
 					}
 				break;
 			}
@@ -208,6 +215,14 @@ void SDLPlatform::run()
 		SDL_UpdateTexture(m_screenTexture, NULL, m_screenSurface->pixels, m_screenSurface->pitch);
 		SDL_RenderCopy(m_appRenderer, m_screenTexture, NULL, NULL);
 		SDL_RenderPresent(m_appRenderer);
+
+		if (isRecording)
+		{
+			char filename[50];
+			snprintf(filename, 50, "capture/frame%03d.png", currentRecordingFrame);
+			lodepng_encode32_file(filename, (unsigned char*)(m_screenSurface->pixels), m_screenSurface->w, m_screenSurface->h);
+			currentRecordingFrame++;
+		}
 
 		SDL_Delay(1000 / TARGET_FRAMERATE);
 	}
@@ -327,5 +342,6 @@ void diskRead(uint24_t address, uint8_t* buffer, int length)
 
 void SDLPlatform::playSound(uint8_t id)
 {
-	Play(Data_AudioPatterns[id]);
+//	memcpy(audioPatternBuffer, diskContents + Data_audio + Data_AudioPatterns[id], Data_AudioPatterns[id + 1] - Data_AudioPatterns[id]);
+	Play((const uint16_t*) (diskContents + Data_audio + Data_AudioPatterns[id]));
 }

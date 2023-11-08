@@ -8,7 +8,8 @@ enum ActorType
 	ActorType_Empty,
 	ActorType_Guard,
 	ActorType_Dog,
-	ActorType_SS
+	ActorType_SS,
+	ActorType_Boss
 };
 
 enum ActorState

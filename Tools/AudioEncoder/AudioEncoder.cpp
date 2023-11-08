@@ -321,14 +321,15 @@ AudioPattern loadData(char* filename)
 	return pattern;
 }
 
-FILE* fs = NULL;
-
 void writeData(char* filename, vector<AudioPattern>& patterns)
 {
-	fopen_s(&fs, filename, "w");
-	
-	if(fs)
+	FILE* fs = NULL;
+	char path[100];
+	snprintf(path, 100, "%s.h", filename);
+
+	if(!fopen_s(&fs, path, "w"))
 	{
+		/*
 		for(int p = 0; p < patterns.size(); p++)
 		{
 			fprintf(fs, "const uint16_t Data_Audio%02d[] PROGMEM = {\n\t", p);
@@ -348,20 +349,42 @@ void writeData(char* filename, vector<AudioPattern>& patterns)
 			}
 			fprintf(fs, "\n};\n\n");
 		}
+		*/
 
 		fprintf(fs, "#define NUM_AUDIO_PATTERNS %d\n", patterns.size());
-		fprintf(fs, "const uint16_t* const Data_AudioPatterns[NUM_AUDIO_PATTERNS] PROGMEM = {\n");
+		fprintf(fs, "const uint16_t Data_AudioPatterns[] PROGMEM = {\n");
+		long offset = 0;
 		for(int p = 0; p < patterns.size(); p++)
 		{
-			fprintf(fs, "\tData_Audio%02d,\n", p);
+			//fprintf(fs, "\tData_Audio%02d,\n", p);
+			fprintf(fs, "\t%d,\n", offset);
+			offset += patterns[p].data.size() * 2;
 		}
+		fprintf(fs, "\t%d,\n", offset);
+
 		fprintf(fs, "};\n\n");
 
 		fclose(fs);
 	}
 	else
 	{
-		printf("Unable to open %s for write\n", filename);
+		printf("Unable to open %s for write\n", path);
+	}
+
+	snprintf(path, 100, "%s.bin", filename);
+
+	if (!fopen_s(&fs, path, "wb"))
+	{
+		for (int p = 0; p < patterns.size(); p++)
+		{
+			fwrite(patterns[p].data.data(), 2, patterns[p].data.size(), fs);
+		}
+
+		fclose(fs);
+	}
+	else
+	{
+		printf("Unable to open %s for write\n", path);
 	}
 }
 
@@ -405,6 +428,17 @@ int main(int argc, char* argv[])
 	}
 	
 	writeData(argv[1], patterns);
+
+	int longest = 0;
+	for (int n = 0; n < patterns.size(); n++)
+	{
+		if (patterns[n].data.size() > longest)
+		{
+			longest = patterns[n].data.size();
+		}
+	}
+
+	printf("Longest audio clip: %d bytes\n", longest);
 
 	return 0;
 }

@@ -70,7 +70,7 @@ void Player::update()
 		else ticksSinceStrafePressed = 0;
 
 		int16_t movement = MOVEMENT;
-		int16_t turn = TURN;
+		int16_t turn = 0;
 		int16_t oldX = x;
 		int16_t oldZ = z;
 		int16_t deltaX = 0, deltaZ = 0;
@@ -97,7 +97,7 @@ void Player::update()
 				deltaZ -= (movement * cos_dir) >> (FIXED_SHIFT);
 			}
 			else
-				direction -= turn;
+				turn--;
 		}	
     
 		if (Platform.readInput() & Input_Dpad_Right)
@@ -108,8 +108,29 @@ void Player::update()
 				deltaZ += (movement * cos_dir) >> (FIXED_SHIFT);
 			}
 			else
-				direction += turn;
+				turn++;
 		}
+
+		if (turn == 0)
+		{
+			turnVelocity = 0;
+		}
+		else if (turn < 0)
+		{
+			if (turnVelocity >= 0)
+				turnVelocity = -1;
+			if (turnVelocity > -TURN)
+				turnVelocity--;
+		}
+		else if (turn > 0)
+		{
+			if (turnVelocity <= 0)
+				turnVelocity = 1;
+			if(turnVelocity < TURN)
+				turnVelocity++;
+		}		
+
+		direction += turnVelocity / 2;
   
 		move(deltaX, deltaZ);
 
@@ -146,63 +167,7 @@ void Player::update()
 		}
 
 		// Collect any items
-		for(int8_t n = 0; n < MAX_ACTIVE_ITEMS; n++)
-		{
-			if(engine.map.items[n].type != 0 && engine.map.items[n].x == cellX && engine.map.items[n].z == cellZ)
-			{
-				bool collected = true;
-
-				// Collect this item
-				switch(engine.map.items[n].type)
-				{
-				case Tile_Item_MachineGun:
-					weapon.ammo = min(weapon.ammo + 8, 99);
-					Platform.playSound(GETMACHINESND);
-					weapon.type = WeaponType_MachineGun;
-					inventory.hasMachineGun = true;
-					break;
-				case Tile_Item_ChainGun:
-					weapon.ammo = min(weapon.ammo + 8, 99);
-					Platform.playSound(GETGATLINGSND);
-					weapon.type = WeaponType_ChainGun;
-					inventory.hasChainGun = true;
-					break;
-				case Tile_Item_Clip:
-					if(weapon.ammo < 99)
-					{
-						if(weapon.ammo == 0 && weapon.type == WeaponType_Knife)
-						{
-							weapon.type = WeaponType_Pistol;
-						}
-						weapon.ammo = min(weapon.ammo + 8, 99);
-						Platform.playSound(GETAMMOSND);
-					}
-					else collected = false;
-					break;
-				case Tile_Item_FirstAid:
-					if (hp < 100)
-					{
-						hp = min(100, hp + 25);
-						Platform.playSound(HEALTH2SND);
-					}
-					else collected = false;
-					break;
-				case Tile_Item_Food:
-					if (hp < 100)
-					{
-						hp = min(100, hp + 10);
-						Platform.playSound(HEALTH1SND);
-					}
-					else collected = false;
-					break;
-				}
-				if(collected)
-				{
-					engine.map.items[n].type = 0;
-					engine.map.markItemCollected(engine.map.items[n].spawnId);
-				}
-			}
-		}
+		collectItems(cellX, cellZ);
 	}
 	else
 	{
@@ -601,6 +566,15 @@ missed:
 void Player::damage(uint8_t amount)
 {
 	WARNING("Player damage: %d\n", (int)amount);
+
+	if (engine.difficulty == Difficulty_Baby)
+		amount >>= 2;
+
+	if (amount == 0)
+	{
+		return;
+	}
+
 	engine.renderer.damageIndicator = 5;
 
 	if(amount > hp)
@@ -613,5 +587,134 @@ void Player::damage(uint8_t amount)
 	{
 		hp -= amount;
 		Platform.playSound(TAKEDAMAGESND);
+	}
+}
+
+void Player::giveAmmo(uint8_t amount)
+{
+	weapon.ammo = min(weapon.ammo + amount, 99);
+}
+
+void Player::heal(uint8_t amount)
+{
+	hp = min(100, hp + amount);
+}
+
+void Player::givePoints(int16_t amount)
+{
+	score += amount;
+}
+
+bool Player::collectItem(uint8_t itemType)
+{
+	switch (itemType)
+	{
+	case Tile_Item_MachineGun:
+		giveAmmo(6);
+		Platform.playSound(GETMACHINESND);
+		inventory.hasMachineGun = true;
+		if (weapon.type < WeaponType_MachineGun)
+		{
+			weapon.type = WeaponType_MachineGun;
+		}
+		return true;
+	case Tile_Item_ChainGun:
+		giveAmmo(6);
+		Platform.playSound(GETGATLINGSND);
+		inventory.hasChainGun = true;
+		if (weapon.type < WeaponType_ChainGun)
+		{
+			weapon.type = WeaponType_ChainGun;
+		}
+		return true;
+	case Tile_Item_Key1:
+		Platform.playSound(GETKEYSND);
+		inventory.hasKey1 = true;
+		return true;
+	case Tile_Item_Key2:
+		Platform.playSound(GETKEYSND);
+		inventory.hasKey2 = true;
+		return true;
+	case Tile_Item_Clip:
+		if (weapon.ammo < 99)
+		{
+			if (weapon.ammo == 0 && weapon.type == WeaponType_Knife)
+			{
+				weapon.type = WeaponType_Pistol;
+			}
+			giveAmmo(8);
+			Platform.playSound(GETAMMOSND);
+			return true;
+		}
+		return false;
+	case Tile_Item_FirstAid:
+		if (hp < 100)
+		{
+			heal(25);
+			Platform.playSound(HEALTH2SND);
+			return true;
+		}
+		return false;
+	case Tile_Item_Food:
+		if (hp < 100)
+		{
+			heal(10);
+			Platform.playSound(HEALTH1SND);
+			return true;
+		}
+		return false;
+	case Tile_Item_BadFood:
+		if (hp < 100)
+		{
+			heal(4);
+			Platform.playSound(HEALTH1SND);
+			return true;
+		}
+		return false;
+	case Tile_Item_Cross:
+		Platform.playSound(BONUS1SND);
+		givePoints(100);
+		return true;
+	case Tile_Item_Chalice:
+		Platform.playSound(BONUS2SND);
+		givePoints(500);
+		return true;
+	case Tile_Item_Bible:
+		Platform.playSound(BONUS3SND);
+		givePoints(1000);
+		return true;
+	case Tile_Item_Crown:
+		Platform.playSound(BONUS4SND);
+		givePoints(5000);
+		return true;
+
+	}
+
+	return false;
+}
+
+void Player::collectItems(int8_t cellX, int8_t cellZ)
+{
+	for (int8_t n = 0; n < MAX_ACTIVE_ITEMS; n++)
+	{
+		if (engine.map.items[n].type != 0 && engine.map.items[n].x == cellX && engine.map.items[n].z == cellZ)
+		{
+			bool collected = collectItem(engine.map.items[n].type);
+
+			// Collect this item
+			if (collected)
+			{
+				engine.map.items[n].type = 0;
+			}
+		}
+	}
+
+	uint8_t tileType = engine.map.getTile(cellX, cellZ);
+	if (tileType >= Tile_FirstItem && tileType <= Tile_LastItem)
+	{
+		if (collectItem(tileType))
+		{
+			engine.map.markItemCollectedAt(cellX, cellZ);
+		}
 	}
 }

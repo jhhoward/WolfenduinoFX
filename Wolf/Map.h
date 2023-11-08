@@ -13,6 +13,9 @@
 
 #define MAP_OUT_OF_BOUNDS 0xff
 
+//#define WRAP_TILE_BUFFER_SIZE(x) ((x) & 0x1f)
+#define WRAP_TILE_BUFFER_SIZE(x) ((x) % MAP_BUFFER_SIZE)
+
 enum MapRead_Orientation
 {
 	MapRead_Horizontal,
@@ -59,8 +62,6 @@ enum Direction
 class Door
 {
 public:
-	Door() : type(DoorType_None) {}
-
 	void update();
 
 	uint8_t type;
@@ -75,7 +76,6 @@ class Item
 public:
 	uint8_t type;
 	int8_t x, z;
-	uint8_t spawnId;
 };
 
 class Map
@@ -91,8 +91,8 @@ public:
 	uint8_t getTile(int8_t cellX, int8_t cellZ);
 	uint8_t getTileFast(int8_t cellX, int8_t cellZ)
 	{
-		cellX &= 0xf;
-		cellZ &= 0xf;
+		cellX = WRAP_TILE_BUFFER_SIZE(cellX);
+		cellZ = WRAP_TILE_BUFFER_SIZE(cellZ);
 		return m_mapBuffer[cellZ * MAP_BUFFER_SIZE + cellX];
 	}
 
@@ -111,7 +111,8 @@ public:
 
 	void update();
 	void openDoorsAt(int8_t x, int8_t z, int8_t direction);
-	bool placeItem(uint8_t type, int8_t x, int8_t z, uint8_t spawnId);
+	bool dropItem(uint8_t type, int8_t x, int8_t z);
+	void markItemCollectedAt(int8_t x, int8_t z);
 
 	bool isItemCollected(uint8_t spawnId)
 	{
@@ -139,6 +140,7 @@ public:
 	}
 
 	bool isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2);
+	uint8_t getDoorTexture(uint8_t tile);
 
 private:
 	void streamData(uint8_t* buffer, uint8_t orientation, int8_t x, int8_t z, int8_t length);
@@ -147,7 +149,7 @@ private:
 	void updateEntireBuffer();
 	void updateDoors();
 	uint8_t streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z);
-	void streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z);
+	Door* streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z);
 	
 	uint8_t m_itemState[256 / 8];
 	uint8_t m_actorState[256 / 8];

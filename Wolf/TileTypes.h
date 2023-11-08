@@ -54,7 +54,8 @@ enum TileType
 	Tile_Actor_Dog_Easy,
 	Tile_Actor_Dog_Medium,
 	Tile_Actor_Dog_Hard,
-	Tile_LastActor = Tile_Actor_Dog_Hard,
+	Tile_Actor_Boss,
+	Tile_LastActor = Tile_Actor_Boss,
 
 	// Player starts
 	Tile_PlayerStart_North,

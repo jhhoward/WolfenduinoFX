@@ -5,6 +5,7 @@
 #include "Generated/Data_Guard.h"
 #include "Generated/Data_SS.h"
 #include "Generated/Data_Dog.h"
+#include "Generated/Data_Boss.h"
 #include "Generated/fxdata.h"
 #include "TileTypes.h"
 
@@ -28,6 +29,23 @@ void Actor::init(uint8_t id, uint8_t actorType, uint8_t cellX, uint8_t cellZ)
 		break;
 	case ActorType_SS:
 		hp = 100;
+		break;
+	case ActorType_Boss:
+		switch (engine.difficulty)
+		{
+		case Difficulty_Baby:
+			hp = 850;
+			break;
+		case Difficulty_Easy:
+			hp = 950;
+			break;
+		case Difficulty_Medium:
+			hp = 1050;
+			break;
+		case Difficulty_Hard:
+			hp = 1200;
+			break;
+		}
 		break;
 	}
 }
@@ -61,6 +79,9 @@ void Actor::update()
 				break;
 			case ActorType_SS:
 				Platform.playSound(SCHUTZADSND);
+				break;
+			case ActorType_Boss:
+				Platform.playSound(BOSSACTIVESND);
 				break;
 			}
 		}
@@ -100,7 +121,7 @@ void Actor::update()
 	case ActorState_Recoiling:
 		if(updateFrame)
 		{
-			if (type == ActorType_SS && engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
+			if ((type == ActorType_SS || type == ActorType_Boss) && engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
 			{
 				switchState(ActorState_Shooting);
 			}
@@ -130,6 +151,8 @@ void Actor::update()
 		frame = 0;
 		break;
 	}
+
+	engine.map.openDoorsAt(x / CELL_SIZE, z / CELL_SIZE, Direction_None);
 //	if((engine.frameCount & 0x3) == 0)
 	//	frame = (frame + 1) % 4;
 }
@@ -148,6 +171,9 @@ void Actor::draw()
 		break;
 	case ActorType_SS:
 		engine.renderer.queueSprite((SpriteFrame*)&Data_ssSprite_frames[frame], Data_ssSprite, x, z);
+		break;
+	case ActorType_Boss:
+		engine.renderer.queueSprite((SpriteFrame*)&Data_bossSprite_frames[frame], Data_bossSprite, x, z);
 		break;
 	}
 }
@@ -188,19 +214,27 @@ void Actor::damage(int amount)
 			{
 				Platform.playSound(DEATHSCREAM3SND);
 			}
+			engine.player.givePoints(100);
 			break;
 		case ActorType_SS:
 			dropItem(Tile_Item_MachineGun);
 			Platform.playSound(LEBENSND);
+			engine.player.givePoints(500);
+			break;
+		case ActorType_Boss:
+			dropItem(Tile_Item_Key1);
+			Platform.playSound(MUTTISND);
+			engine.player.givePoints(5000);
 			break;
 		case ActorType_Dog:
 			Platform.playSound(DOGDEATHSND);
+			engine.player.givePoints(200);
 			break;
 		}
 	}
 	else
 	{
-		if (type != ActorType_Dog)
+		if (type != ActorType_Dog && type != ActorType_Boss)
 		{
 			switchState(ActorState_Injured);
 		}
@@ -239,6 +273,9 @@ void Actor::switchState(uint8_t newState)
 		case ActorType_SS:
 			Platform.playSound(SSFIRESND);
 			break;
+		case ActorType_Boss:
+			Platform.playSound(BOSSFIRESND);
+			break;
 		}
 		break;
 	default:
@@ -269,7 +306,7 @@ bool Actor::tryDropItem(uint8_t itemType, int cellX, int cellZ)
 	uint8_t tile = engine.map.getTile(cellX, cellZ);
 	if(tile == 0)
 	{
-		engine.map.placeItem(itemType, cellX, cellZ, DYNAMIC_ITEM_ID);
+		engine.map.dropItem(itemType, cellX, cellZ);
 		return true;
 	}
 	return false;

@@ -13,7 +13,7 @@
 #include "Generated/Data_BlockingDecorations.h"
 #include "Generated/Data_Items.h"
 #include "Generated/Data_Font.h"
-
+#include "Generated/Data_UI.h"
 
 #include <stdio.h>
 
@@ -36,6 +36,40 @@ void Renderer::drawDamage()
 			setPixel(0, y);
 			setPixel(DISPLAYWIDTH - 1, y);
 		}
+	}
+}
+
+void Renderer::drawSprite2D(SpriteFrame* frame, uint24_t spriteAddress, int16_t x, int16_t y)
+{
+	uint8_t* buffer = engine.streamBuffer;
+	spriteAddress += pgm_read_word(&frame->offset);
+
+	uint8_t frameWidth = pgm_read_byte(&frame->width);
+	uint8_t frameHeight = pgm_read_byte(&frame->height);
+	uint8_t xOffset = pgm_read_byte(&frame->xOffset);
+
+	x += xOffset;
+
+	for (int8_t i = 0; i < frameWidth; i++)
+	{
+		diskRead(spriteAddress, buffer, frameHeight);
+		uint8_t v = 0;
+
+		for (int8_t j = frameHeight - 1; j >= 0; j--)
+		{
+			uint8_t pixel = buffer[v++];
+			switch (pixel)
+			{
+			case 1:
+				drawPixel(i + x, y + j, 1);
+				break;
+			case 2:
+				drawPixel(i + x, y + j, 0);
+				break;
+			}
+		}
+
+		spriteAddress += frameHeight;
 	}
 }
 
@@ -99,6 +133,7 @@ void Renderer::drawWeapon()
 void Renderer::drawFrame()
 {
 	renderQueueHead = NULL_QUEUE_ITEM;
+	numBufferSlicesFilled = 0;
 	for(int8_t n = 0; n < RENDER_QUEUE_CAPACITY; n++)
 	{
 		renderQueue[n].spriteAddress = 0;
@@ -202,19 +237,34 @@ void Renderer::drawHUD()
 	constexpr int statusBarHeight = 12;
 	drawBox(0, DISPLAYHEIGHT - statusBarHeight, 48, statusBarHeight, 0);
 	drawBox(DISPLAYWIDTH - 48, DISPLAYHEIGHT - statusBarHeight, 48, statusBarHeight, 0);
-	drawBox(DISPLAYWIDTH - 48 + 1, DISPLAYHEIGHT - statusBarHeight + 1, 8, statusBarHeight - 2, 1);
-	drawBox(DISPLAYWIDTH - 48 + 10, DISPLAYHEIGHT - statusBarHeight + 1, 8, statusBarHeight - 2, 1);
+
+	drawBox(DISPLAYWIDTH - 48 + 1, DISPLAYHEIGHT - statusBarHeight + 1, 7, statusBarHeight - 1, 1);
+	drawBox(DISPLAYWIDTH - 48 + 9, DISPLAYHEIGHT - statusBarHeight + 1, 7, statusBarHeight - 1, 1);
+
+	if (engine.player.inventory.hasKey1)
+	{
+		drawSprite2D((SpriteFrame*)&Data_uiSprite_frames[0], Data_uiSprite, DISPLAYWIDTH - 48 + 1, DISPLAYHEIGHT - statusBarHeight + 1);
+	}
+	if (engine.player.inventory.hasKey2)
+	{
+		drawSprite2D((SpriteFrame*)&Data_uiSprite_frames[1], Data_uiSprite, DISPLAYWIDTH - 48 + 9, DISPLAYHEIGHT - statusBarHeight + 1);
+	}
+
 	drawBox(26, DISPLAYHEIGHT - statusBarHeight + 1, 1, statusBarHeight - 1, 1);
 
-	drawString(PSTR("HEALTH"), 1, DISPLAYHEIGHT - FONT_HEIGHT, 1);
-	drawGlyph('%' - FIRST_FONT_GLYPH, 18, DISPLAYHEIGHT - FONT_HEIGHT * 2 - 1, 1);
-	drawInt(engine.player.hp, 14, DISPLAYHEIGHT - FONT_HEIGHT * 2 - 1, 1);
-	drawString(PSTR("AMMO"), 30, DISPLAYHEIGHT - FONT_HEIGHT, 1);
-	drawInt(engine.player.weapon.ammo, 38, DISPLAYHEIGHT - FONT_HEIGHT * 2 - 1, 1);
+	int textLine = DISPLAYHEIGHT - FONT_HEIGHT * 2 - 1;
+	int numberLine = DISPLAYHEIGHT - FONT_HEIGHT;
 
-	drawString(PSTR("SCORE"), 104, DISPLAYHEIGHT - FONT_HEIGHT, 1);
-	drawLong(16000, DISPLAYWIDTH - FONT_WIDTH - 1, DISPLAYHEIGHT - FONT_HEIGHT * 2 - 1, 1);
+	drawString(PSTR("HEALTH"), 1, textLine, 1);
+	drawGlyph('%' - FIRST_FONT_GLYPH, 18, numberLine, 1);
+	drawInt(engine.player.hp, 14, numberLine, 1);
+	drawString(PSTR("AMMO"), 30, textLine, 1);
+	drawInt(engine.player.weapon.ammo, 38, numberLine, 1);
+
+	drawString(PSTR("SCORE"), 104, textLine, 1);
+	drawLong(engine.player.score, DISPLAYWIDTH - FONT_WIDTH - 1, numberLine, 1);
 	//drawInt(99, 36, DISPLAYHEIGHT - FONT_HEIGHT * 2 - 1, 1);
+
 }
 
 #ifdef DEFER_RENDER
@@ -400,6 +450,11 @@ void Renderer::drawFloorAndCeiling()
 
 void Renderer::drawCell(int8_t cellX, int8_t cellZ)
 {
+	if (numBufferSlicesFilled >= DISPLAYWIDTH)
+	{
+		return;
+	}
+
 	// clip cells out of frustum view
 	if(isFrustrumClipped(cellX, cellZ))
 		return;
@@ -419,6 +474,52 @@ void Renderer::drawCell(int8_t cellX, int8_t cellZ)
 	if(tile >= Tile_FirstBlockingDecoration && tile <= Tile_LastBlockingDecoration)
 	{
 		queueSprite((SpriteFrame*) &Data_blockingDecorations_frames[tile - Tile_FirstBlockingDecoration], Data_blockingDecorations, worldX + CELL_SIZE / 2, worldZ + CELL_SIZE / 2);
+		return;
+	}
+	if (tile >= Tile_FirstItem && tile <= Tile_LastItem)
+	{
+		queueSprite((SpriteFrame*)&Data_itemSprites_frames[(tile - Tile_FirstItem)], Data_itemSprites, worldX + CELL_SIZE / 2, worldZ + CELL_SIZE / 2);
+	}
+
+	if (tile >= Tile_FirstDoor && tile <= Tile_LastDoor)
+	{
+		// Draw inactive doors that are not yet streamed in
+		Door* door = engine.map.getDoor(cellX, cellZ);
+
+		if (!door)
+		{
+			uint8_t textureId = engine.map.getDoorTexture(tile);
+
+			if ((tile & 0x1) == 0)
+			{
+				worldX += CELL_SIZE / 2;
+				if (view.x < worldX)
+				{
+					drawWall(worldX, worldZ + CELL_SIZE,
+						worldX, worldZ, textureId, 0, (TEXTURE_SIZE - 1));
+				}
+				else
+				{
+					drawWall(worldX, worldZ,
+						worldX, worldZ + CELL_SIZE, textureId, (TEXTURE_SIZE - 1), 0);
+				}
+			}
+			else
+			{
+				worldZ += CELL_SIZE / 2;
+				if (view.z > worldZ)
+				{
+					drawWall(worldX + CELL_SIZE, worldZ,
+						worldX, worldZ, textureId, 0, (TEXTURE_SIZE - 1));
+				}
+				else
+				{
+					drawWall(worldX, worldZ,
+						worldX + CELL_SIZE, worldZ, textureId, (TEXTURE_SIZE - 1), 0);
+				}
+			}
+		}
+
 		return;
 	}
 
@@ -555,6 +656,20 @@ bool renderingVerticalWall = false;
 
 	texData = 2;
 
+	if (y2 >= DISPLAYHEIGHT)
+	{
+		y2 = DISPLAYHEIGHT - 1;
+	}
+	if (y1 < 0)
+	{
+		int iterations = -y1;
+		verror -= (TEXTURE_SIZE - 1) * iterations;
+		v += (-verror / w) + 1;
+		verror += v * w;
+		y1 = 0;
+		texData = buffer[v++];
+	}
+
 #if FORCE_WALL_STRIP_EDGES
 	for(int y = y1; y < y2; y++)
 #else
@@ -648,7 +763,7 @@ bool renderingVerticalWall = false;
 	}
 
 #if FORCE_WALL_STRIP_EDGES
-	if(y2 < DISPLAYHEIGHT)
+	if(y2 < DISPLAYHEIGHT - 1)
 		setPixel(x, y2);
 #endif
 }
@@ -875,6 +990,10 @@ void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint
 	{
 		if (x >= 0 && x < DISPLAYWIDTH && w > wbuffer[x])
 		{        
+			if (wbuffer[x] == 0)
+			{
+				numBufferSlicesFilled++;
+			}
 			if(w <= 255)
 			{
 				wbuffer[x] = (uint8_t) w;
@@ -1024,7 +1143,7 @@ void Renderer::queueSprite(SpriteFrame* frame, uint24_t spriteAddress, int16_t _
 	int16_t xt = (int16_t)(FIXED_TO_INT(view.rotSin * (int32_t)(_x-view.x)) + FIXED_TO_INT(view.rotCos * (int32_t)(_z-view.z)));
 
 	// clip to the front plane
-	if (zt < CLIP_PLANE)
+	if (zt < SPRITE_CLIP_PLANE)
 		return;
 
 	// apply perspective projection
@@ -1039,7 +1158,16 @@ void Renderer::queueSprite(SpriteFrame* frame, uint24_t spriteAddress, int16_t _
 	if(w > 255)
 		w = 255;
 
-	// TODO: cull if off screen (x)
+	// Check if this will be off screen (x)
+	uint8_t frameWidth = pgm_read_byte(&frame->width);
+	int16_t dx = (w * frameWidth) / (CELL_SIZE);
+	int16_t sx1 = x - (w >> 1) + (w * pgm_read_byte(&frame->xOffset)) / (CELL_SIZE);
+	int16_t sx2 = sx1 + dx;
+	if (sx1 >= DISPLAYWIDTH || sx2 < 0)
+	{
+		return;
+	}
+
 	uint8_t newItem = NULL_QUEUE_ITEM;
 	for(int n = 0; n < RENDER_QUEUE_CAPACITY; n++)
 	{
@@ -1127,6 +1255,17 @@ void Renderer::drawQueuedSprite(uint8_t id)
 	uint8_t* buffer = engine.streamBuffer;
 	uint8_t* leftBuffer = engine.streamBuffer + 32;
 	uint8_t outlineColour = 0;
+	int8_t firstV = 0;
+	int firstVerror = halfW;
+
+	if (y2 >= DISPLAYHEIGHT)
+	{
+		int iterations = y2 - (DISPLAYHEIGHT - 1);
+		firstVerror -= (TEXTURE_SIZE - 1) * iterations;
+		firstV += (-firstVerror / w) + 1;
+		firstVerror += firstV * w;
+		y2 = DISPLAYHEIGHT - 1;
+	}
 
 	for (int x = 0; x < frameHeight; x++)
 	{
@@ -1137,11 +1276,11 @@ void Renderer::drawQueuedSprite(uint8_t id)
 	{
 		if (x >= 0 && x < DISPLAYWIDTH && w > wbuffer[x])
 		{        
-			int verror = halfW;
+			int verror = firstVerror;
 
 			diskRead(renderQueue[id].spriteAddress + pgm_read_word(&renderQueue[id].frame->offset) + frameHeight * u, buffer, frameHeight);
 
-			v = 0;
+			v = firstV;
 
 			uint8_t texData = buffer[v];
 			uint8_t texDataLeft = leftBuffer[v];

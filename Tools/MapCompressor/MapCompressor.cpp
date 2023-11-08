@@ -303,7 +303,11 @@ public:
 						outTile = Tile_Door_Generic_Vertical;
 						break;
 					case 92:
+						outTile = Tile_Door_Locked1_Vertical;
+						break;
 					case 94:
+						outTile = Tile_Door_Locked2_Vertical;
+						break;
 					case 96:
 					case 98:
 					case 100:
@@ -313,7 +317,11 @@ public:
 						outTile = Tile_Door_Generic_Horizontal;
 						break;
 					case 93:
+						outTile = Tile_Door_Locked1_Horizontal;
+						break;
 					case 95:
+						outTile = Tile_Door_Locked2_Horizontal;
+						break;
 					case 97:
 					case 99:
 					case 101:
@@ -439,6 +447,11 @@ public:
 				case 140:
 				case 141:
 					outTile = Tile_Actor_Dog_Easy;
+					break;
+
+					// boss
+				case 214:
+					outTile = Tile_Actor_Boss;
 					break;
 
 					// static items:
@@ -572,6 +585,7 @@ public:
 					numSecrets++;
 					break;
 				}
+
 				outlayer[y * MAP_SIZE + x] = outTile;
 			}
 		}

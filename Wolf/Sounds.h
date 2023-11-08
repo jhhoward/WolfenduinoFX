@@ -3,6 +3,7 @@
 
 enum
 {
+	NOWAYSND,                // 6
 	PLAYERDEATHSND,          // 9
 	DOGDEATHSND,             // 10
 	ATKGATLINGSND,           // 11
@@ -20,12 +21,19 @@ enum
 	GETAMMOSND,              // 31
 	HEALTH1SND,              // 33
 	HEALTH2SND,              // 34
+	BONUS1SND,               // 35
+	BONUS2SND,               // 36
+	BONUS3SND,               // 37
 	GETGATLINGSND,           // 38
 	DOGBARKSND,              // 41
+	BONUS4SND,               // 45
 	PUSHWALLSND,             // 46
+	BOSSACTIVESND,           // 49
+	MUTTISND,                // 50
 	SCHUTZADSND,             // 51
 	LEBENSND,                // 56
 	NAZIFIRESND,             // 58
+	BOSSFIRESND,             // 59
 	SSFIRESND,               // 60
 	DOGATTACKSND             // 68
 };

@@ -128,13 +128,19 @@ bool Map::isBlocked(int8_t cellX, int8_t cellZ)
 	if((tile >= Tile_FirstBlockingDecoration && tile <= Tile_LastBlockingDecoration))
 		return true;
 
-	// Check if the door is closed
-	for(int8_t n = 0; n < MAX_DOORS; n++)
+
+	// Check if this is a door
+	Door* door = getDoor(cellX, cellZ);
+	if (door)
 	{
-		if(doors[n].type != DoorType_None && doors[n].x == cellX && doors[n].z == cellZ && (doors[n].type == DoorType_SecretPushWall || doors[n].open < 16))
-		{
-			return true;
-		}
+		// Check if the door is closed
+		return (door->type == DoorType_SecretPushWall || door->open < 16);
+	}
+
+	if ((tile >= Tile_FirstDoor && tile <= Tile_LastDoor))
+	{
+		// This door hasn't been streamed in yet
+		return true;
 	}
 
 	return false;
@@ -168,7 +174,7 @@ void Map::streamData(uint8_t* buffer, uint8_t orientation, int8_t x, int8_t z, i
 {
 #ifdef FXDATA_STREAMING
 	int32_t offset = orientation == MapRead_Horizontal ? (z * MAP_SIZE + x) * 2 : (MAP_SIZE * MAP_SIZE * 2) + (x * MAP_SIZE + z) * 2;
-	offset += currentLevel * MAP_SIZE * MAP_SIZE * 4;
+	offset += (int32_t)(currentLevel) * MAP_SIZE * MAP_SIZE * 4;
 	diskRead(offset, buffer, length * 2);
 	return;
 #endif
@@ -235,20 +241,26 @@ void Map::streamData(uint8_t* buffer, uint8_t orientation, int8_t x, int8_t z, i
 
 uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z)
 {
-	if(tile >= Tile_FirstDoor && tile <= Tile_LastDoor)
+	/*if (tile >= Tile_FirstDoor && tile <= Tile_LastDoor)
 	{
 		uint8_t textureId = 18;
 		if(tile == Tile_Door_Elevator_Horizontal || tile == Tile_Door_Elevator_Vertical)
 			textureId = 12;
 		streamInDoor(tile - Tile_FirstDoor + 1, textureId, x, z);
 	}
-	else if(tile >= Tile_FirstItem && tile <= Tile_LastItem)
+	else*/ 
+
+	if (tile >= Tile_FirstItem && tile <= Tile_LastItem)
 	{
-		if(!isItemCollected(metadata))
+		//if(!isItemCollected(metadata))
+		//{
+		//	placeItem(tile, x, z, metadata);
+		//}
+		//
+		if (isItemCollected(metadata))
 		{
-			placeItem(tile, x, z, metadata);
+			return Tile_Empty;
 		}
-		return Tile_Empty;
 	}
 	else if(tile >= Tile_FirstActor && tile <= Tile_LastActor)
 	{
@@ -257,31 +269,34 @@ uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z)
 			switch(tile)
 			{
 			case Tile_Actor_Guard_Hard:
-				if(engine.difficulty < Difficulty_Medium)
+				if(engine.difficulty < Difficulty_Hard)
 					return Tile_Empty;
 			case Tile_Actor_Guard_Medium:
-				if(engine.difficulty < Difficulty_Easy)
+				if(engine.difficulty < Difficulty_Medium)
 					return Tile_Empty;
 			case Tile_Actor_Guard_Easy:
 				engine.spawnActor(metadata, ActorType_Guard, x, z);
 				break;
 			case Tile_Actor_SS_Hard:
-				if (engine.difficulty < Difficulty_Medium)
+				if (engine.difficulty < Difficulty_Hard)
 					return Tile_Empty;
 			case Tile_Actor_SS_Medium:
-				if (engine.difficulty < Difficulty_Easy)
+				if (engine.difficulty < Difficulty_Medium)
 					return Tile_Empty;
 			case Tile_Actor_SS_Easy:
 				engine.spawnActor(metadata, ActorType_SS, x, z);
 				break;
 			case Tile_Actor_Dog_Hard:
-				if (engine.difficulty < Difficulty_Medium)
+				if (engine.difficulty < Difficulty_Hard)
 					return Tile_Empty;
 			case Tile_Actor_Dog_Medium:
-				if (engine.difficulty < Difficulty_Easy)
+				if (engine.difficulty < Difficulty_Medium)
 					return Tile_Empty;
 			case Tile_Actor_Dog_Easy:
 				engine.spawnActor(metadata, ActorType_Dog, x, z);
+				break;
+			case Tile_Actor_Boss:
+				engine.spawnActor(metadata, ActorType_Boss, x, z);
 				break;
 			}
 		}
@@ -291,7 +306,7 @@ uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z)
 	{
 		if(engine.gameState == GameState_Loading)
 		{
-			streamInDoor(DoorType_SecretPushWall, metadata, x, z);
+			streamInDoor(DoorType_SecretPushWall, metadata - Tile_FirstWall, x, z);
 		}
 		return Tile_Empty;
 	}
@@ -303,11 +318,11 @@ void Map::updateHorizontalSlice(int8_t offsetZ)
 {
 	streamData(engine.streamBuffer, MapRead_Horizontal, bufferX, bufferZ + offsetZ, MAP_BUFFER_SIZE);
 
-	int8_t targetZ	= (bufferZ + offsetZ) & 0xf;
+	int8_t targetZ	= WRAP_TILE_BUFFER_SIZE(bufferZ + offsetZ);
 
 	for(int8_t x = 0; x < MAP_BUFFER_SIZE; x++)
 	{
-		int8_t targetX = (bufferX + x) & 0xf;
+		int8_t targetX = WRAP_TILE_BUFFER_SIZE(bufferX + x);
 		uint8_t read = streamIn(engine.streamBuffer[x * 2], engine.streamBuffer[x * 2 + 1], bufferX + x, bufferZ + offsetZ);
 
 		m_mapBuffer[targetZ * MAP_BUFFER_SIZE + targetX] = read;
@@ -318,11 +333,11 @@ void Map::updateVerticalSlice(int8_t offsetX)
 {
 	streamData(engine.streamBuffer, MapRead_Vertical, bufferX + offsetX, bufferZ, MAP_BUFFER_SIZE);
 
-	int8_t targetX = (bufferX + offsetX) & 0xf;
+	int8_t targetX = WRAP_TILE_BUFFER_SIZE(bufferX + offsetX);
 
 	for(int8_t z = 0; z < MAP_BUFFER_SIZE; z++)
 	{
-		int8_t targetZ = (bufferZ + z) & 0xf;
+		int8_t targetZ = WRAP_TILE_BUFFER_SIZE(bufferZ + z);
 		uint8_t read = streamIn(engine.streamBuffer[z * 2], engine.streamBuffer[z * 2 + 1], bufferX + offsetX, bufferZ + z);
 
 		m_mapBuffer[targetZ * MAP_BUFFER_SIZE + targetX] = read;
@@ -389,6 +404,8 @@ void Map::updateBufferPosition(int8_t newX, int8_t newZ)
 		bufferZ --;
 		updateHorizontalSlice(0);
 	}
+
+	WARNING("Updating buffer at %d %d\nPlayer position is at: %d %d\n", bufferX, bufferZ, engine.player.x / CELL_SIZE, engine.player.z / CELL_SIZE);
 }
 
 void Map::updateDoors()
@@ -402,7 +419,7 @@ void Map::updateDoors()
 	}
 }
 
-void Map::streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z)
+Door* Map::streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z)
 {
 	int8_t freeIndex = -1;
 
@@ -418,7 +435,7 @@ void Map::streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z)
 		if(doors[n].type != DoorType_None && doors[n].x == x && doors[n].z == z)
 		{
 			// Already streamed in
-			return;
+			return &doors[n];
 		}
 	}
 
@@ -426,7 +443,7 @@ void Map::streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z)
 	{
 		for(int8_t n = 0; n < MAX_DOORS; n++)
 		{
-			if(doors[n].type != DoorType_SecretPushWall && !isValid(doors[n].x, doors[n].z))
+			if(doors[n].type != DoorType_SecretPushWall && (!isValid(doors[n].x, doors[n].z) || !doors[n].open))
 			{
 				freeIndex = n;
 				break;
@@ -434,11 +451,11 @@ void Map::streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z)
 		}
 	}
 
-	if(freeIndex == -1)
+	if (freeIndex == -1)
 	{
-		for(int8_t n = 0; n < MAX_DOORS; n++)
+		for (int8_t n = 0; n < MAX_DOORS; n++)
 		{
-			if(doors[n].type != DoorType_SecretPushWall && engine.renderer.isFrustrumClipped(doors[n].x, doors[n].z))
+			if (doors[n].type != DoorType_SecretPushWall && engine.renderer.isFrustrumClipped(doors[n].x, doors[n].z))
 			{
 				freeIndex = n;
 				break;
@@ -449,7 +466,7 @@ void Map::streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z)
 	if(freeIndex == -1)
 	{
 		WARNING("No room to spawn door!\n");
-		return;
+		return nullptr;
 	}
 
 	doors[freeIndex].x = x;
@@ -458,47 +475,63 @@ void Map::streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z)
 	doors[freeIndex].state = DoorState_Idle;
 	doors[freeIndex].type = type;
 	doors[freeIndex].texture = metadata;
+
+	return &doors[freeIndex];
 }
 
 void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction)
 {
-//	if(!isDoor(x, z))
-		//return;
-	if(direction != Direction_None)
+	uint8_t tileType = getTile(x, z);
+
+	if (tileType == Tile_ExitSwitchWall)
 	{
-		if(getTile(x, z) == Tile_ExitSwitchWall)
+		if (direction != Direction_None)
 		{
 			engine.gameState = GameState_FinishedLevel;
 		}
+		return;
 	}
 
-	for(int8_t n = 0; n < MAX_DOORS; n++)
-	{
-		if(doors[n].type != DoorType_None && doors[n].x == x && doors[n].z == z)
-		{
-			if(doors[n].type == DoorType_SecretPushWall)
-			{
-				if(direction != Direction_None && doors[n].state == DoorState_Idle)
-				{
-					int8_t offX = pgm_read_byte(&PushWallDirections[(direction) * 2]);
-					int8_t offZ = pgm_read_byte(&PushWallDirections[(direction) * 2 + 1]);
+	Door* door = getDoor(x, z);
 
-					if(engine.map.isValid(x + offX, z + offZ) && !engine.map.isSolid(x + offX, z + offZ))
-					{
-						doors[n].state = DoorState_FirstPushWallState + direction;
-						Platform.playSound(PUSHWALLSND);
-					}
-				}
-			}
-			else
+	if (!door && (tileType >= Tile_FirstDoor && tileType <= Tile_LastDoor))
+	{
+		// Try stream in door
+		door = streamInDoor(tileType, getDoorTexture(tileType), x, z);
+	}
+
+	if(door)
+	{
+		if (door->type == DoorType_SecretPushWall)
+		{
+			if (direction != Direction_None && door->state == DoorState_Idle)
 			{
-				if(doors[n].state != DoorState_Opening && doors[n].open == 0)
+				int8_t offX = pgm_read_byte(&PushWallDirections[(direction) * 2]);
+				int8_t offZ = pgm_read_byte(&PushWallDirections[(direction) * 2 + 1]);
+
+				if (engine.map.isValid(x + offX, z + offZ) && !engine.map.isSolid(x + offX, z + offZ))
 				{
-					Platform.playSound(OPENDOORSND);
+					door->state = DoorState_FirstPushWallState + direction;
+					Platform.playSound(PUSHWALLSND);
 				}
-				doors[n].state = DoorState_Opening;
 			}
-			return;
+		}
+		else
+		{
+			if ((door->type == Tile_Door_Locked1_Horizontal || door->type == Tile_Door_Locked1_Vertical) && !engine.player.inventory.hasKey1)
+			{
+				return;
+			}
+			if ((door->type == Tile_Door_Locked2_Horizontal || door->type == Tile_Door_Locked2_Vertical) && !engine.player.inventory.hasKey2)
+			{
+				return;
+			}
+
+			if (door->state != DoorState_Opening && door->open == 0)
+			{
+				Platform.playSound(OPENDOORSND);
+			}
+			door->state = DoorState_Opening;
 		}
 	}
 }
@@ -644,19 +677,22 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
             zfrac += zstep;
 
             uint8_t tile = getTile(x, z);
-			Door* door = getDoor(x, z);
+			
+			if (tile)
+			{
+				if (tile >= Tile_FirstWall && tile <= Tile_LastWall)
+					return false;
+
+				if (tile >= Tile_FirstDoor && tile <= Tile_LastDoor)
+				{
+					Door* door = getDoor(x, z);
+					if (!door || !door->open)
+						return false;
+				}
+			}
 			
 			x += xstep;
-
-            if (!tile)
-                continue;
-
-            if (tile >= Tile_FirstWall && tile <= Tile_LastWall)
-                return false;
-
-			if (door && !door->open)
-				return false;
-            //
+			//
             // see if the door is open enough
             //
             /*value &= ~0x80;
@@ -702,18 +738,22 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
             xfrac += xstep;
 
             uint8_t tile = getTile(x, z);
-			Door* door = getDoor(x, z);
 			
+			if (tile)
+			{
+				if (tile >= Tile_FirstWall && tile <= Tile_LastWall)
+					return false;
+
+				if (tile >= Tile_FirstDoor && tile <= Tile_LastDoor)
+				{
+					Door* door = getDoor(x, z);
+					if (!door || !door->open)
+						return false;
+				}
+			}
+
 			z += zstep;
 
-            if (!tile)
-                continue;
-
-            if (tile >= Tile_FirstWall && tile <= Tile_LastWall)
-                return false;
-
-			if (door && !door->open)
-				return false;
 			//
             // see if the door is open enough
             //
@@ -728,7 +768,7 @@ bool Map::isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2)
     return true;
 }
 
-bool Map::placeItem(uint8_t type, int8_t x, int8_t z, uint8_t spawnId)
+bool Map::dropItem(uint8_t type, int8_t x, int8_t z)
 {
 	int8_t slot = -1;
 
@@ -738,20 +778,40 @@ bool Map::placeItem(uint8_t type, int8_t x, int8_t z, uint8_t spawnId)
 		{
 			slot = n;
 		}
-		else if(spawnId != DYNAMIC_ITEM_ID && items[n].spawnId == spawnId)
-		{
-			return false;
-		}
 	}
 
 	if(slot == -1)
 	{
 		for(int8_t n = 0; n < MAX_ACTIVE_ITEMS; n++)
 		{
-			if(!isValid(items[n].x, items[n].z))
+			if(!isValid(items[n].x, items[n].z) && items[n].type != Tile_Item_Key1 && items[n].type != Tile_Item_Key2)
 			{
 				slot = n;
 				break;
+			}
+		}
+	}
+
+	if (slot == -1 && type == Tile_Item_Key1 || type == Tile_Item_Key2)
+	{
+		for (int8_t n = 0; n < MAX_ACTIVE_ITEMS; n++)
+		{
+			if (engine.renderer.isFrustrumClipped(items[n].x, items[n].z) && items[n].type != Tile_Item_Key1 && items[n].type != Tile_Item_Key2)
+			{
+				slot = n;
+				break;
+			}
+		}
+
+		if (slot == -1)
+		{
+			for (int8_t n = 0; n < MAX_ACTIVE_ITEMS; n++)
+			{
+				if (items[n].type != Tile_Item_Key1 && items[n].type != Tile_Item_Key2)
+				{
+					slot = n;
+					break;
+				}
 			}
 		}
 	}
@@ -763,9 +823,43 @@ bool Map::placeItem(uint8_t type, int8_t x, int8_t z, uint8_t spawnId)
 	}
 
 	items[slot].type = type;
-	items[slot].spawnId = spawnId;
 	items[slot].x = x;
 	items[slot].z = z;
 
 	return true;
+}
+
+void Map::markItemCollectedAt(int8_t x, int8_t z)
+{
+	if (!isValid(x, z))
+	{
+		return;
+	}
+
+	streamData(engine.streamBuffer, MapRead_Horizontal, x, z, 1);
+	uint8_t spawnId = engine.streamBuffer[1];
+	markItemCollected(spawnId);
+
+	x = WRAP_TILE_BUFFER_SIZE(x);
+	z = WRAP_TILE_BUFFER_SIZE(z);
+	m_mapBuffer[z * MAP_BUFFER_SIZE + x] = Tile_Empty;
+}
+
+uint8_t Map::getDoorTexture(uint8_t tile)
+{
+	switch (tile)
+	{
+	case Tile_Door_Locked1_Horizontal:
+	case Tile_Door_Locked1_Vertical:
+		return DOOR_LOCKED1_TEXTURE;
+	case Tile_Door_Locked2_Horizontal:
+	case Tile_Door_Locked2_Vertical:
+		return DOOR_LOCKED2_TEXTURE;
+	case Tile_Door_Elevator_Horizontal:
+	case Tile_Door_Elevator_Vertical:
+		return DOOR_ELEVATOR_TEXTURE;
+
+	default:
+		return DOOR_GENERIC_TEXTURE;
+	}
 }

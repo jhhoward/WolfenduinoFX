@@ -1,6 +1,6 @@
 #include <Arduboy2.h>       
 #include <ArduboyFX.h>      
-#include <ArduboyTones.h>
+#include "ArduboyTonesFX.h"
 
 #include "Engine.h"
 #include "Generated/fxdata.h"
@@ -8,13 +8,15 @@
 #include "Generated/Data_Audio.h"
 
 Arduboy2Base arduboy;
-ArduboyTones sound(arduboy.audio.enabled);
+
+uint16_t audioBuffer[32];
+ArduboyTonesFX sound(arduboy.audio.enabled, audioBuffer, 32);
 
 unsigned long lastTimingSample;
 
 void ArduboyPlatform::playSound(uint8_t id)
 {
-	sound.tones((const uint16_t*)pgm_read_word(&Data_AudioPatterns[id]));
+	sound.tonesFromFX((uint24_t)((uint32_t) Data_audio + (uint32_t)(pgm_read_word(&Data_AudioPatterns[id]))));
 }
 
 void setup() {
@@ -38,6 +40,7 @@ void loop() {
   
   if (!arduboy.nextFrame()) return; 
  
+  sound.fillBufferFromFX();
   Platform.update();
 
   constexpr int16_t frameDuration = 1000 / TARGET_FRAMERATE;

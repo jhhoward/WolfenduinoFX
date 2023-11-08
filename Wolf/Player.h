@@ -19,13 +19,16 @@ public:
 	void update();
 	void move(int16_t deltaX, int16_t deltaZ);
 	void damage(uint8_t amount);
+	void givePoints(int16_t amount);
 
 	int16_t x, z;
 	angle_t direction;
 	uint8_t hp;
 	uint8_t killer;
+	int8_t turnVelocity;
 
 	uint8_t ticksSinceStrafePressed;
+	uint32_t score;
 
 	union
 	{
@@ -52,6 +55,10 @@ public:
 private:
 	void updateWeapon();
 	void shootWeapon();
+	void collectItems(int8_t cellX, int8_t cellZ);
+	bool collectItem(uint8_t itemType);
+	void giveAmmo(uint8_t amount);
+	void heal(uint8_t amount);
 
 #ifdef USE_SIMPLE_COLLISIONS
 	bool isPlayerColliding();
