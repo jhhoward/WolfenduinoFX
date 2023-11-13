@@ -340,6 +340,12 @@ public:
 					}
 				}
 
+				if (l1 == 107)
+				{
+					// Secret exit marker tile
+					outTile = Tile_SecretExit;
+				}
+
 				switch(l2)
 				{
 					// Player starts

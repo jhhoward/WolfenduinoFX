@@ -439,11 +439,9 @@ void Player::init()
 		inventoryFlags = 0;
 	}
 
+	engine.renderer.damageIndicator = 0;
 	weapon.frame = 0;
 	weapon.debounce = false;
-
-	inventory.hasChainGun = true;
-
 
 	// Find player start tile
 	for(int8_t j = 0; j < MAP_SIZE; j += MAP_BUFFER_SIZE)
@@ -582,6 +580,7 @@ void Player::damage(uint8_t amount)
 		hp = 0;
 		// Dead
 		Platform.playSound(PLAYERDEATHSND);
+		lives--;
 	}
 	else
 	{
@@ -705,6 +704,7 @@ void Player::collectItems(int8_t cellX, int8_t cellZ)
 			if (collected)
 			{
 				engine.map.items[n].type = 0;
+				engine.renderer.damageIndicator = -5;
 			}
 		}
 	}
@@ -715,6 +715,7 @@ void Player::collectItems(int8_t cellX, int8_t cellZ)
 		if (collectItem(tileType))
 		{
 			engine.map.markItemCollectedAt(cellX, cellZ);
+			engine.renderer.damageIndicator = -5;
 		}
 	}
 }

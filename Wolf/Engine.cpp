@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include "TileTypes.h"
 
 Engine engine;
 
@@ -25,20 +26,27 @@ void Engine::init()
 	player.direction = DEGREES_180;*/
 }
 
+void Engine::startNewGame()
+{
+	map.currentLevel = 0;
+	player.lives = 3;
+	startLevel(false);
+}
+
 void Engine::startLevel(bool resetPlayer)
 {
 	if(resetPlayer)
 	{
 		player.hp = 0;
 	}
+	player.inventory.hasKey1 = false;
+	player.inventory.hasKey2 = false;
 	gameState = GameState_StartingLevel;
+	engine.frameCount = 0;
 }
 
 void Engine::startingLevel()
 {
-#ifdef _WIN32
-	SDL_Delay(1000);
-#endif
 	gameState = GameState_Loading;
 	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
@@ -53,6 +61,7 @@ void Engine::startingLevel()
 
 	frameCount = 0;
 	gameState = GameState_Playing;
+	map.updateEntireBuffer();	// Do this to spawn enemies immediately around the player
 }
 
 void Engine::update()
@@ -86,16 +95,40 @@ void Engine::update()
 		}
 		break;
 	case GameState_FinishedLevel:
-		map.currentLevel++;
-		startLevel(false);
+		{
+			if (map.getTile(WORLD_TO_CELL(engine.player.x), WORLD_TO_CELL(engine.player.z)) == Tile_SecretExit)
+			{
+				map.currentLevel = 9;
+			}
+			else if (map.currentLevel < 8)
+			{
+				map.currentLevel++;
+			}
+			else if (map.currentLevel == 9)
+			{
+				map.currentLevel = 1;
+			}
+			startLevel(false);
+		}
 		break;
 	case GameState_StartingLevel:
-		startingLevel();
+		if (frameCount > TARGET_FRAMERATE * 2)
+		{
+			startingLevel();
+		}
 		break;
 	case GameState_Dead:
 		if(frameCount >= 30)
 		{
-			startLevel();
+			if (engine.player.lives == 0)
+			{
+				gameState = GameState_Menu;
+				engine.menu.init();
+			}
+			else
+			{
+				startLevel();
+			}
 		}
 		break;
 	}
@@ -121,8 +154,7 @@ void Engine::draw()
 	case GameState_StartingLevel:
 	case GameState_Loading:
 		{
-			clearDisplay(1);
-			renderer.drawString(PSTR("GET PSYCHED!"), 20, 21);
+			renderer.drawLevelLoadScreen();
 		}
 		break;
 	case GameState_Dead:
@@ -148,37 +180,81 @@ void Engine::draw()
 
 Actor* Engine::spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8_t cellZ)
 {
-#if 1
 	// Check for existing actor
 	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
 		if(actors[n].spawnId == spawnId)
 		{
-			return nullptr;
+			return &actors[n];;
 		}
 	}
 
-	// Find an empty slot
+	static uint8_t firstIndex = 0;
+	int8_t freeIndex = -1;
+
+	// First try to find an empty slot
 	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
 	{
-		if(actors[n].type == ActorType_Empty)
+		uint8_t index = (firstIndex + n) % MAX_ACTIVE_ACTORS;
+		if(actors[index].type == ActorType_Empty)
 		{
-			actors[n].init(spawnId, actorType, cellX, cellZ);
-			return &actors[n];
+			freeIndex = index;
+			break;
 		}
 	}
 
-	// Take over an existing slot that is currently frozen
-	for(int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+	if (freeIndex == -1)
 	{
-		if(actors[n].flags.frozen && !actors[n].flags.persistent)
+		// Take over an existing slot that is currently frozen and dead
+		for (int n = 0; n < MAX_ACTIVE_ACTORS; n++)
 		{
-			actors[n].init(spawnId, actorType, cellX, cellZ);
-			return &actors[n];
+			uint8_t index = (firstIndex + n) % MAX_ACTIVE_ACTORS;
+			if (actors[index].flags.frozen && actors[index].hp == 0)
+			{
+				freeIndex = index;
+				break;
+			}
 		}
+	}
+
+	if (freeIndex == -1)
+	{
+		// Take over an existing slot that is currently frozen
+		for (int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+		{
+			uint8_t index = (firstIndex + n) % MAX_ACTIVE_ACTORS;
+			if (actors[index].flags.frozen)
+			{
+				freeIndex = index;
+				break;
+			}
+		}
+	}
+
+	if (freeIndex == -1)
+	{
+		// Take over an existing slot that is currently dead
+		for (int n = 0; n < MAX_ACTIVE_ACTORS; n++)
+		{
+			uint8_t index = (firstIndex + n) % MAX_ACTIVE_ACTORS;
+			if (actors[index].hp == 0)
+			{
+				freeIndex = index;
+				break;
+			}
+		}
+	}
+
+	if (freeIndex != -1)
+	{
+		actors[freeIndex].init(spawnId, actorType, cellX, cellZ);
+		
+		// By changing the first index for next time, we can keep corpses around for longer, otherwise the same slot keeps getting reused
+		firstIndex = (freeIndex + 1) % MAX_ACTIVE_ACTORS;
+
+		return &actors[freeIndex];
 	}
 
 	WARNING("Could not find a slot for new actor\n");
-#endif
 	return nullptr;
 }

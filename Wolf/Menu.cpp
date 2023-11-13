@@ -79,25 +79,25 @@ void Menu::quit()
 void Menu::skillBaby()
 {
 	engine.difficulty = Difficulty_Baby;
-	engine.startLevel();
+	engine.startNewGame();
 }
 
 void Menu::skillEasy()
 {
 	engine.difficulty = Difficulty_Easy;
-	engine.startLevel();
+	engine.startNewGame();
 }
 
 void Menu::skillMedium()
 {
 	engine.difficulty = Difficulty_Medium;
-	engine.startLevel();
+	engine.startNewGame();
 }
 
 void Menu::skillHard()
 {
 	engine.difficulty = Difficulty_Hard;
-	engine.startLevel();
+	engine.startNewGame();
 }
 
 void Menu::init()

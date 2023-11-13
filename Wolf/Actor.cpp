@@ -18,6 +18,8 @@ void Actor::init(uint8_t id, uint8_t actorType, uint8_t cellX, uint8_t cellZ)
 	z = CELL_TO_WORLD(cellZ) + CELL_SIZE / 2;
 	targetCellX = cellX;
 	targetCellZ = cellZ;
+	flags.frozen = false;
+	frame = 1;
 
 	switch (actorType)
 	{
@@ -89,16 +91,6 @@ void Actor::update()
 	case ActorState_Active:
 	{
 		bool movementSucceeded = tryMove();
-		if(movementSucceeded)
-		{
-			frame = (engine.frameCount >> 2) & 0x3;
-			if(frame == 3)
-				frame = 1;
-		}
-		else
-		{
-			frame = 1;
-		}
 		if(shouldShootPlayer(movementSucceeded))
 		{
 			switchState(ActorState_Aiming);
@@ -326,6 +318,8 @@ bool Actor::tryMove()
 {
 	int movement = type == ActorType_Dog ? 2 : 1;
 
+	frame = 1;
+
 	if(engine.map.isBlocked(targetCellX, targetCellZ))
 	{
 		if (type != ActorType_Dog)
@@ -349,6 +343,26 @@ bool Actor::tryMove()
 		x -= deltaX;
 		z -= deltaZ;
 		return false;
+	}
+
+	// Select animation frame
+	frame = (engine.frameCount >> 2) & 0x3;
+	if (frame == 3)
+		frame = 1;
+
+	if (type != ActorType_Boss)
+	{
+		// Do we need to make this a side angle view?
+		int16_t cameraRelativeDirection = engine.renderer.view.rotSin * deltaX + engine.renderer.view.rotCos * deltaZ;
+
+		if (cameraRelativeDirection < -48 * movement)
+		{
+			frame += 10;
+		}
+		else if (cameraRelativeDirection > 48 * movement)
+		{
+			frame += 13;
+		}
 	}
 
 	if(x == targetX && z == targetZ)

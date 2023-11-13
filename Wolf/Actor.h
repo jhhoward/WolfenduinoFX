@@ -60,9 +60,7 @@ public:
 
 	struct
 	{
-		bool persistent : 1;
 		bool frozen : 1;
-		bool alive : 1;
 	} flags;
 };
 

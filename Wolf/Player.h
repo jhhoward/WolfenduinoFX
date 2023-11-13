@@ -29,6 +29,7 @@ public:
 
 	uint8_t ticksSinceStrafePressed;
 	uint32_t score;
+	uint8_t lives;
 
 	union
 	{

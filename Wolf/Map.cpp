@@ -264,7 +264,7 @@ uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z)
 	}
 	else if(tile >= Tile_FirstActor && tile <= Tile_LastActor)
 	{
-		if(!isActorKilled(metadata))
+		if(engine.gameState != GameState_Loading && !isActorKilled(metadata))
 		{
 			switch(tile)
 			{
@@ -497,7 +497,7 @@ void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction)
 	if (!door && (tileType >= Tile_FirstDoor && tileType <= Tile_LastDoor))
 	{
 		// Try stream in door
-		door = streamInDoor(tileType, getDoorTexture(tileType), x, z);
+		door = streamInDoor(tileType - Tile_FirstDoor + 1, getDoorTexture(tileType), x, z);
 	}
 
 	if(door)
@@ -518,11 +518,11 @@ void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction)
 		}
 		else
 		{
-			if ((door->type == Tile_Door_Locked1_Horizontal || door->type == Tile_Door_Locked1_Vertical) && !engine.player.inventory.hasKey1)
+			if ((door->type == DoorType_Locked1Horizontal || door->type == DoorType_Locked1Vertical) && !engine.player.inventory.hasKey1)
 			{
 				return;
 			}
-			if ((door->type == Tile_Door_Locked2_Horizontal || door->type == Tile_Door_Locked2_Vertical) && !engine.player.inventory.hasKey2)
+			if ((door->type == DoorType_Locked2Horizontal || door->type == DoorType_Locked2Horizontal) && !engine.player.inventory.hasKey2)
 			{
 				return;
 			}

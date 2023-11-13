@@ -141,12 +141,12 @@ public:
 
 	bool isClearLine(int16_t x1, int16_t z1, int16_t x2, int16_t z2);
 	uint8_t getDoorTexture(uint8_t tile);
+	void updateEntireBuffer();
 
 private:
 	void streamData(uint8_t* buffer, uint8_t orientation, int8_t x, int8_t z, int8_t length);
 	void updateHorizontalSlice(int8_t offsetZ);
 	void updateVerticalSlice(int8_t offsetX);
-	void updateEntireBuffer();
 	void updateDoors();
 	uint8_t streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z);
 	Door* streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z);

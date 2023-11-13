@@ -10,6 +10,13 @@
 #define NULL_QUEUE_ITEM 0xff
 #define RENDER_QUEUE_CAPACITY 16
 
+enum
+{
+	UI_Key1,
+	UI_Key2,
+	UI_BJFace
+};
+
 struct RenderQueueItem
 {
 	SpriteFrame* frame;
@@ -30,7 +37,9 @@ public:
 	void drawInt(int8_t val, uint8_t x, uint8_t y, uint8_t colour = 0);
 	void drawLong(int32_t val, uint8_t x, uint8_t y, uint8_t colour = 0);
 	void drawBox(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t colour);
-	void drawSprite2D(SpriteFrame* frame, uint24_t spriteAddress, int16_t x, int16_t y);
+	void drawSprite2D(uint8_t spriteId, int16_t x, int16_t y);
+	void drawLevelLoadScreen();
+
 
 #ifdef DEFER_RENDER
 	void drawDeferredFrame();
@@ -48,6 +57,14 @@ public:
 		return false;
 	}
 
+	struct
+	{
+		int16_t x, z;
+		int16_t cellX, cellZ;
+		int16_t rotCos, rotSin;
+		int16_t clipCos, clipSin;
+	} view;
+
 private:
 	void initWBuffer();
 	void drawFloorAndCeiling();  
@@ -62,14 +79,6 @@ private:
 	void drawWeapon();
 	void drawDamage();
 	void drawHUD();
-
-	struct 
-	{
-		int16_t x, z;
-		int16_t cellX, cellZ;
-		int16_t rotCos, rotSin;
-		int16_t clipCos, clipSin;
-	} view;
 
 /*	int16_t xpos, zpos;
 	int16_t cos_dir;

@@ -37,11 +37,28 @@ void Renderer::drawDamage()
 			setPixel(DISPLAYWIDTH - 1, y);
 		}
 	}
+	else if (damageIndicator < 0)
+	{
+		damageIndicator++;
+		for (int x = 0; x < DISPLAYWIDTH; x++)
+		{
+			clearPixel(x, 0);
+			clearPixel(x, DISPLAYHEIGHT - 1);
+		}
+		for (int y = 0; y < DISPLAYHEIGHT; y++)
+		{
+			clearPixel(0, y);
+			clearPixel(DISPLAYWIDTH - 1, y);
+		}
+	}
 }
 
-void Renderer::drawSprite2D(SpriteFrame* frame, uint24_t spriteAddress, int16_t x, int16_t y)
+void Renderer::drawSprite2D(uint8_t id, int16_t x, int16_t y)
 {
 	uint8_t* buffer = engine.streamBuffer;
+	const SpriteFrame* frame = &Data_uiSprite_frames[id];
+	uint24_t spriteAddress = Data_uiSprite;
+
 	spriteAddress += pgm_read_word(&frame->offset);
 
 	uint8_t frameWidth = pgm_read_byte(&frame->width);
@@ -239,16 +256,17 @@ void Renderer::drawHUD()
 	drawBox(DISPLAYWIDTH - 48, DISPLAYHEIGHT - statusBarHeight, 48, statusBarHeight, 0);
 
 	drawBox(DISPLAYWIDTH - 48 + 1, DISPLAYHEIGHT - statusBarHeight + 1, 7, statusBarHeight - 1, 1);
-	drawBox(DISPLAYWIDTH - 48 + 9, DISPLAYHEIGHT - statusBarHeight + 1, 7, statusBarHeight - 1, 1);
-
 	if (engine.player.inventory.hasKey1)
 	{
-		drawSprite2D((SpriteFrame*)&Data_uiSprite_frames[0], Data_uiSprite, DISPLAYWIDTH - 48 + 1, DISPLAYHEIGHT - statusBarHeight + 1);
+		drawSprite2D(UI_Key1, DISPLAYWIDTH - 48 + 1, DISPLAYHEIGHT - statusBarHeight + 1);
 	}
-	if (engine.player.inventory.hasKey2)
-	{
-		drawSprite2D((SpriteFrame*)&Data_uiSprite_frames[1], Data_uiSprite, DISPLAYWIDTH - 48 + 9, DISPLAYHEIGHT - statusBarHeight + 1);
-	}
+
+	// No need for key 2 in shareware
+	//drawBox(DISPLAYWIDTH - 48 + 9, DISPLAYHEIGHT - statusBarHeight + 1, 7, statusBarHeight - 1, 1);
+	//if (engine.player.inventory.hasKey2)
+	//{
+	//	drawSprite2D(UI_Key2, DISPLAYWIDTH - 48 + 9, DISPLAYHEIGHT - statusBarHeight + 1);
+	//}
 
 	drawBox(26, DISPLAYHEIGHT - statusBarHeight + 1, 1, statusBarHeight - 1, 1);
 
@@ -261,7 +279,7 @@ void Renderer::drawHUD()
 	drawString(PSTR("AMMO"), 30, textLine, 1);
 	drawInt(engine.player.weapon.ammo, 38, numberLine, 1);
 
-	drawString(PSTR("SCORE"), 104, textLine, 1);
+	drawString(PSTR("SCORE"), 98, textLine, 1);
 	drawLong(engine.player.score, DISPLAYWIDTH - FONT_WIDTH - 1, numberLine, 1);
 	//drawInt(99, 36, DISPLAYHEIGHT - FONT_HEIGHT * 2 - 1, 1);
 
@@ -656,9 +674,9 @@ bool renderingVerticalWall = false;
 
 	texData = 2;
 
-	if (y2 >= DISPLAYHEIGHT)
+	if (y2 > DISPLAYHEIGHT)
 	{
-		y2 = DISPLAYHEIGHT - 1;
+		y2 = DISPLAYHEIGHT;
 	}
 	if (y1 < 0)
 	{
@@ -938,8 +956,8 @@ void Renderer::drawWall(int16_t _x1, int16_t _z1, int16_t _x2, int16_t _z2, uint
 	}
 
 	// apply perspective projection
-	int16_t vx1 = (int16_t)(x1 * NEAR_PLANE * CAMERA_SCALE / z1);  
-	int16_t vx2 = (int16_t)(x2 * NEAR_PLANE * CAMERA_SCALE / z2); 
+	int16_t vx1 = (int16_t)((int32_t)x1 * NEAR_PLANE * CAMERA_SCALE / z1);  
+	int16_t vx2 = (int16_t)((int32_t)x2 * NEAR_PLANE * CAMERA_SCALE / z2); 
 
 	// transform the end points into screen space
 	int16_t sx1 = (int16_t)((DISPLAYWIDTH / 2) + vx1);
@@ -1044,7 +1062,7 @@ void Renderer::drawDoors()
 		Door& door = engine.map.doors[n];
 		uint8_t textureId = door.texture;
 
-		if(!engine.map.isValid(door.x, door.z))
+		if(!engine.map.isValid(door.x, door.z) || door.type == DoorType_None)
 		{
 			continue;
 		}
@@ -1468,5 +1486,23 @@ void Renderer::drawLong(int32_t val, uint8_t x, uint8_t y, uint8_t colour)
 
 		if (!val)
 			break;
+	}
+}
+
+void Renderer::drawLevelLoadScreen()
+{
+	clearDisplay(1);
+	drawString(PSTR("GET PSYCHED!"), 44, 5);
+	drawString(PSTR("FLOOR:"), 51, 53);
+	drawInt(engine.map.currentLevel + 1, 80, 53);
+	drawSprite2D(UI_BJFace, 36, 16);
+	drawGlyph('X' - FIRST_FONT_GLYPH, 70, 32, 0);
+	drawInt(engine.player.lives, 82, 32, 0);
+
+	if (engine.frameCount < 8)
+	{
+		int transition = engine.frameCount * 4;
+		drawBox(0, 0, DISPLAYWIDTH, 32 - transition, 0);
+		drawBox(0, 32 + transition, DISPLAYWIDTH, 32 - transition, 0);
 	}
 }

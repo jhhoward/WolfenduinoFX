@@ -39,6 +39,7 @@ public:
 	void init();
 	void update();
 	void draw();
+	void startNewGame();
 	void startLevel(bool resetPlayer = true);
 	void startingLevel();
 	Actor* spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8_t cellZ);

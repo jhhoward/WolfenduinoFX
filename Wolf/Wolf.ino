@@ -51,6 +51,21 @@ void loop() {
   }
 	
   engine.draw();
+
+  if(engine.gameState == GameState_Playing && engine.renderer.damageIndicator < 0)
+  {
+    uint8_t brightness = -engine.renderer.damageIndicator * 5;
+    arduboy.setRGBled(brightness, brightness, brightness);
+  }
+  else if(engine.gameState == GameState_Playing && engine.renderer.damageIndicator > 0)
+  {
+    uint8_t brightness = engine.renderer.damageIndicator * 51;
+    arduboy.setRGBled(brightness, 0, 0);
+  }
+  else
+  {
+    arduboy.setRGBled(0, 0, 0);
+  }  
   
   FX::display();
   //FX::display(CLEAR_BUFFER); // Using CLEAR_BUFFER will clear the display buffer after it is displayed
