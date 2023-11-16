@@ -28,7 +28,7 @@ void setup() {
   arduboy.audio.begin();
   arduboy.audio.on();
 
-  FX::begin(FX_DATA_PAGE);    
+  FX::begin(FX_DATA_PAGE, FX_SAVE_PAGE);    
   engine.init();
 }
 

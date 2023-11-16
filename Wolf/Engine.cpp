@@ -28,9 +28,10 @@ void Engine::init()
 
 void Engine::startNewGame()
 {
-	map.currentLevel = 0;
+	map.currentLevel = 1;
 	player.lives = 3;
 	startLevel(false);
+	fadeTransition();
 }
 
 void Engine::startLevel(bool resetPlayer)
@@ -80,16 +81,9 @@ void Engine::update()
 					actors[n].update();
 				}
 			}
-
-			if(Platform.readInput() & Input_Btn_C)
-			{
-				gameState = GameState_PauseMenu;
-				engine.menu.switchMenu((MenuData*) Menu_Paused);
-			}
 		}
 		break;
 	case GameState_Menu:
-	case GameState_PauseMenu:
 		{
 			menu.update();
 		}
@@ -115,6 +109,7 @@ void Engine::update()
 		if (frameCount > TARGET_FRAMERATE * 2)
 		{
 			startingLevel();
+			fadeTransition();
 		}
 		break;
 	case GameState_Dead:
@@ -129,6 +124,7 @@ void Engine::update()
 			{
 				startLevel();
 			}
+			fadeTransition();
 		}
 		break;
 	}
@@ -138,6 +134,18 @@ void Engine::update()
 
 void Engine::draw()
 {
+	if (screenFade < 0)
+	{
+		renderer.fadeScreen(screenFade + 4);
+		screenFade++;
+
+		if (screenFade == 0)
+		{
+			screenFade = 4;
+		}
+		return;
+	}
+
 	switch(gameState)
 	{
 	case GameState_Menu:
@@ -175,6 +183,12 @@ void Engine::draw()
 			}
 		}
 		break;
+	}
+
+	if (screenFade > 0)
+	{
+		renderer.fadeScreen(screenFade);
+		screenFade--;
 	}
 }
 
@@ -257,4 +271,9 @@ Actor* Engine::spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8
 
 	WARNING("Could not find a slot for new actor\n");
 	return nullptr;
+}
+
+void Engine::fadeTransition()
+{
+	screenFade = -4;
 }

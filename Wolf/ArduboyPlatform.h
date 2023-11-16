@@ -100,3 +100,13 @@ inline void diskRead(uint24_t address, uint8_t* buffer, int length)
 { 
 	FX::readDataBytes(address, buffer, length); 
 }
+
+void writeSaveFile(uint8_t* buffer, int length)
+{
+	FX::saveGameState(buffer, length);
+}
+
+bool readSaveFile(uint8_t* buffer, int length)
+{
+	return FX::loadGameState(buffer, length) != 0;
+}

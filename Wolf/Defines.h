@@ -39,7 +39,9 @@
 #define pgm_read_word(x) (*((uint16_t*)x))
 
 #define pgm_read_ptr(x) (*((uintptr_t*)x))
+#define strlen_P(x) strlen(x)
 
+#include <stdint.h>
 typedef uint32_t __uint24;
 using uint24_t = __uint24;
 

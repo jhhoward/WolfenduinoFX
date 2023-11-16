@@ -21,7 +21,8 @@ enum EncodeMode
 	Encode_Invalid = -1,
 	Encode_Texture,
 	Encode_Sprite,
-	Encode_Font
+	Encode_Font,
+	Encode_Background
 };
 
 uint8_t texturePalette[] = 
@@ -390,6 +391,35 @@ void OutputHeaderFile(char* filename, char* varName, vector<uint8_t> data, int w
 	}
 }
 
+vector<uint8_t> EncodeBackground(vector<uint8_t> data, int width, int height)
+{
+	vector<uint8_t> result;
+
+	if (width == 128 && height == 64)
+	{
+		for (int y = 0; y < height; y += 8)
+		{
+			for (int x = 0; x < width; x++)
+			{
+				uint8_t output = 0;
+
+				for (int n = 0; n < 8; n++)
+				{
+					int index = ((y + n) * width + x) * 4;
+					if (data[index] > 128)
+					{
+						output |= (1 << n);
+					}
+				}
+
+				result.push_back(output);
+			}
+		}
+	}
+
+	return result;
+}
+
 void OutputBinaryFile(char* filename, char* varName, vector<uint8_t> data)
 {
 	FILE* fs = NULL;
@@ -434,7 +464,11 @@ int main(int argc, char* argv[])
 	{
 		encodeMode = Encode_Font;
 	}
-	
+	else if (!strcmp(argv[4], "background"))
+	{
+		encodeMode = Encode_Background;
+	}
+
 	if(encodeMode == Encode_Invalid)
 	{
 		PrintUsage(argv[0]);
@@ -467,6 +501,12 @@ int main(int argc, char* argv[])
 		{
 			vector<uint8_t> encoded = EncodeFont(image, width, height);
 			OutputHeaderFile(outputFilename, varName, encoded, width, height, false);
+		}
+		else if (encodeMode == Encode_Background)
+		{
+			vector<uint8_t> encoded;
+			encoded = EncodeBackground(image, width, height);
+			OutputBinaryFile(outputFilename, varName, encoded);
 		}
 		else
 		{

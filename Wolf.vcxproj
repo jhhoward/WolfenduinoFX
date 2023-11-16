@@ -20,6 +20,7 @@
     <ClInclude Include="Wolf\Platform.h" />
     <ClInclude Include="Wolf\Player.h" />
     <ClInclude Include="Wolf\Renderer.h" />
+    <ClInclude Include="Wolf\Save.h" />
     <ClInclude Include="Wolf\Sounds.h" />
     <ClInclude Include="Wolf\SpriteFrame.h" />
     <ClInclude Include="Wolf\TileTypes.h" />
@@ -37,6 +38,7 @@
     <ClCompile Include="Wolf\Player.cpp" />
     <ClCompile Include="Wolf\Renderer.cpp" />
     <ClCompile Include="Windows\SDLPlatform.cpp" />
+    <ClCompile Include="Wolf\Save.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C8815259-2E14-47A3-9727-567FAE19FC48}</ProjectGuid>

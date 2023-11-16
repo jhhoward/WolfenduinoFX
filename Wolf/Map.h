@@ -110,7 +110,7 @@ public:
 	void updateBufferPosition(int8_t newX, int8_t newZ);
 
 	void update();
-	void openDoorsAt(int8_t x, int8_t z, int8_t direction);
+	void openDoorsAt(int8_t x, int8_t z, int8_t direction, bool isPlayer = true);
 	bool dropItem(uint8_t type, int8_t x, int8_t z);
 	void markItemCollectedAt(int8_t x, int8_t z);
 

@@ -13,6 +13,11 @@ void Player::update()
 	int16_t cos_dir = FixedMath::Cos(direction);
 	int16_t sin_dir = FixedMath::Sin(direction);
 
+	if (blinkKeyTimer > 0)
+	{
+		blinkKeyTimer--;
+	}
+
 	if(hp > 0)
 	{
 		bool strafe = Platform.readInput() & Input_Btn_A;
@@ -442,6 +447,8 @@ void Player::init()
 	engine.renderer.damageIndicator = 0;
 	weapon.frame = 0;
 	weapon.debounce = false;
+	weapon.shooting = false;
+	blinkKeyTimer = 0;
 
 	// Find player start tile
 	for(int8_t j = 0; j < MAP_SIZE; j += MAP_BUFFER_SIZE)

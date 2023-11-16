@@ -256,7 +256,7 @@ void Renderer::drawHUD()
 	drawBox(DISPLAYWIDTH - 48, DISPLAYHEIGHT - statusBarHeight, 48, statusBarHeight, 0);
 
 	drawBox(DISPLAYWIDTH - 48 + 1, DISPLAYHEIGHT - statusBarHeight + 1, 7, statusBarHeight - 1, 1);
-	if (engine.player.inventory.hasKey1)
+	if (engine.player.inventory.hasKey1 || (engine.player.blinkKeyTimer && (engine.frameCount & 0x4)))
 	{
 		drawSprite2D(UI_Key1, DISPLAYWIDTH - 48 + 1, DISPLAYHEIGHT - statusBarHeight + 1);
 	}
@@ -279,7 +279,7 @@ void Renderer::drawHUD()
 	drawString(PSTR("AMMO"), 30, textLine, 1);
 	drawInt(engine.player.weapon.ammo, 38, numberLine, 1);
 
-	drawString(PSTR("SCORE"), 98, textLine, 1);
+	drawString(PSTR("SCORE"), DISPLAYWIDTH - 30, textLine, 1);
 	drawLong(engine.player.score, DISPLAYWIDTH - FONT_WIDTH - 1, numberLine, 1);
 	//drawInt(99, 36, DISPLAYHEIGHT - FONT_HEIGHT * 2 - 1, 1);
 
@@ -362,7 +362,7 @@ void Renderer::drawBufferedCells()
 
 void Renderer::initWBuffer()
 {
-	for (uint8_t i = 0; i < DISPLAYWIDTH; i++)
+	for (uint16_t i = 0; i < DISPLAYWIDTH; i++)
 		wbuffer[i] = 0;
 }
 
@@ -1498,11 +1498,89 @@ void Renderer::drawLevelLoadScreen()
 	drawSprite2D(UI_BJFace, 36, 16);
 	drawGlyph('X' - FIRST_FONT_GLYPH, 70, 32, 0);
 	drawInt(engine.player.lives, 82, 32, 0);
+}
 
-	if (engine.frameCount < 8)
+void Renderer::drawBackground(uint24_t address)
+{
+#ifdef _WIN32
+	uint8_t background[1024];
+	diskRead(address, background, 1024);
+	int index = 0;
+	for (int y = 0; y < 64; y += 8)
 	{
-		int transition = engine.frameCount * 4;
-		drawBox(0, 0, DISPLAYWIDTH, 32 - transition, 0);
-		drawBox(0, 32 + transition, DISPLAYWIDTH, 32 - transition, 0);
+		for (int x = 0; x < 128; x++)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+				if (background[index] & (1 << j))
+				{
+					drawPixel(x, y + j, 1);
+				}
+				else
+				{
+					drawPixel(x, y + j, 0);
+				}
+			}
+			index++;
+		}
 	}
+#else
+	diskRead(address, GetScreenBuffer(), 1024);
+#endif 
+}
+
+void Renderer::fadeScreen(int8_t amount)
+{
+	uint8_t fadeMask1 = 0xff, fadeMask2 = 0xff;
+
+	switch (amount)
+	{
+	case 0:
+		break;
+	case 1:
+		fadeMask1 = 0x55;
+		fadeMask2 = 0xff;
+		break;
+	case 2:
+		fadeMask1 = 0x55;
+		fadeMask2 = 0xaa;
+		break;
+	case 3:
+		fadeMask1 = 0x00;
+		fadeMask2 = 0xaa;
+		break;
+	case 4:
+		fadeMask1 = 0x00;
+		fadeMask2 = 0x00;
+		break;
+	}
+
+#ifdef _WIN32
+	for (int y = 0; y < 64; y += 8)
+	{
+		for (int x = 0; x < 128; x += 2)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+				if (!(fadeMask1 & (1 << j)))
+				{
+					drawPixel(x, y + j, 0);
+				}
+				if (!(fadeMask2 & (1 << j)))
+				{
+					drawPixel(x + 1, y + j, 0);
+				}
+			}
+		}
+	}
+#else
+	uint8_t* ptr = GetScreenBuffer();
+	int count = 512;
+
+	while (count--)
+	{
+		*ptr++ &= fadeMask1;
+		*ptr++ &= fadeMask2;
+	}
+#endif
 }

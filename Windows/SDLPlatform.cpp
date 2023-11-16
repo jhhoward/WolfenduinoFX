@@ -47,15 +47,6 @@ void FillAudioBuffer(void* udata, uint8_t* stream, int len)
 
 	while (feedPos < len)
 	{
-		if (!isAudioEnabled)
-		{
-			while (feedPos < len)
-			{
-				stream[feedPos++] = 0;
-			}
-			return;
-		}
-
 		if (currentAudioPattern != nullptr)
 		{
 			if (noteSamplesLeft == 0)
@@ -65,7 +56,7 @@ void FillAudioBuffer(void* udata, uint8_t* stream, int len)
 
 				noteSamplesLeft = (audioSampleRate * duration) / 1024;
 
-				waveSamplesLeft = frequency > 0 ? audioSampleRate / frequency : noteSamplesLeft;
+				waveSamplesLeft = frequency > 0 ? (audioSampleRate / frequency) / 2 : noteSamplesLeft;
 
 				currentPatternBufferPos += 2;
 				if (currentAudioPattern[currentPatternBufferPos] == TONES_END)
@@ -90,7 +81,8 @@ void FillAudioBuffer(void* udata, uint8_t* stream, int len)
 			while (feedPos < len && waveSamplesLeft > 0 && noteSamplesLeft > 0)
 			{
 				int volume = 32;
-				stream[feedPos++] = high ? 128 + volume : 128 - volume;
+				//stream[feedPos++] = high ? 128 + volume : 128 - volume;
+				stream[feedPos++] = high ? volume : 0;
 				waveSamplesLeft--;
 				noteSamplesLeft--;
 			}
@@ -98,7 +90,7 @@ void FillAudioBuffer(void* udata, uint8_t* stream, int len)
 			if (waveSamplesLeft == 0)
 			{
 				high = !high;
-				waveSamplesLeft = audioSampleRate / frequency;
+				waveSamplesLeft = (audioSampleRate / frequency) / 2;
 			}
 		}
 
@@ -344,4 +336,29 @@ void SDLPlatform::playSound(uint8_t id)
 {
 //	memcpy(audioPatternBuffer, diskContents + Data_audio + Data_AudioPatterns[id], Data_AudioPatterns[id + 1] - Data_AudioPatterns[id]);
 	Play((const uint16_t*) (diskContents + Data_audio + Data_AudioPatterns[id]));
+}
+
+void writeSaveFile(uint8_t* buffer, int length)
+{
+	FILE* fs;
+	
+	if (!fopen_s(&fs, "save.sav", "wb"))
+	{
+		fwrite(buffer, 1, length, fs);
+		fclose(fs);
+	}
+}
+
+bool readSaveFile(uint8_t* buffer, int length)
+{
+	FILE* fs;
+
+	if (!fopen_s(&fs, "save.sav", "rb"))
+	{
+		fread(buffer, 1, length, fs);
+		fclose(fs);
+		return true;
+	}
+
+	return false;
 }

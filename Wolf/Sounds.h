@@ -3,6 +3,8 @@
 
 enum
 {
+	MOVEGUN2SND,             // 4
+	MOVEGUN1SND,             // 5
 	NOWAYSND,                // 6
 	PLAYERDEATHSND,          // 9
 	DOGDEATHSND,             // 10
@@ -19,12 +21,14 @@ enum
 	ATKMACHINEGUNSND,        // 26
 	GETMACHINESND,           // 30
 	GETAMMOSND,              // 31
+	SHOOTSND,                // 32
 	HEALTH1SND,              // 33
 	HEALTH2SND,              // 34
 	BONUS1SND,               // 35
 	BONUS2SND,               // 36
 	BONUS3SND,               // 37
 	GETGATLINGSND,           // 38
+	ESCPRESSEDSND,           // 39
 	DOGBARKSND,              // 41
 	BONUS4SND,               // 45
 	PUSHWALLSND,             // 46

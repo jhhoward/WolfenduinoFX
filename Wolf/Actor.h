@@ -15,6 +15,7 @@ enum ActorType
 enum ActorState
 {
 	ActorState_Idle,
+	ActorState_Waking,
 	ActorState_Active,
 	ActorState_Injured,
 	ActorState_Aiming,

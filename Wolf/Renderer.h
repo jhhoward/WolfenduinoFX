@@ -14,7 +14,13 @@ enum
 {
 	UI_Key1,
 	UI_Key2,
-	UI_BJFace
+	UI_BJFace,
+	UI_BJFace_Dead,
+	UI_BJFace_Baby,
+	UI_BJFace_Easy,
+	UI_BJFace_Medium,
+	UI_BJFace_Hard,
+	UI_Gun,
 };
 
 struct RenderQueueItem
@@ -39,7 +45,8 @@ public:
 	void drawBox(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t colour);
 	void drawSprite2D(uint8_t spriteId, int16_t x, int16_t y);
 	void drawLevelLoadScreen();
-
+	void drawBackground(uint24_t address);
+	void fadeScreen(int8_t amount);
 
 #ifdef DEFER_RENDER
 	void drawDeferredFrame();

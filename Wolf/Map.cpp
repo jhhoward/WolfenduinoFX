@@ -479,7 +479,7 @@ Door* Map::streamInDoor(uint8_t type, uint8_t metadata, int8_t x, int8_t z)
 	return &doors[freeIndex];
 }
 
-void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction)
+void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction, bool isPlayer)
 {
 	uint8_t tileType = getTile(x, z);
 
@@ -520,6 +520,14 @@ void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction)
 		{
 			if ((door->type == DoorType_Locked1Horizontal || door->type == DoorType_Locked1Vertical) && !engine.player.inventory.hasKey1)
 			{
+				if (isPlayer)
+				{
+					if (!engine.player.blinkKeyTimer)
+					{
+						Platform.playSound(NOWAYSND);
+					}
+					engine.player.blinkKeyTimer = TARGET_FRAMERATE;
+				}
 				return;
 			}
 			if ((door->type == DoorType_Locked2Horizontal || door->type == DoorType_Locked2Horizontal) && !engine.player.inventory.hasKey2)

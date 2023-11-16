@@ -10,24 +10,27 @@ public:
 	void draw();
 	void update();
 
-	MenuData* currentMenu;
+	const MenuData* currentMenu;
 	int8_t currentSelection;
 	int8_t debounceInput;
+	int8_t selectionDelta;
 
 	int8_t numMenuItems();
 
-	void switchMenu(MenuData* newMenu);
+	void switchMenu(const MenuData* newMenu);
 
-	static void newGame();
+	static void chooseNewSlot();
+	static void chooseDifficulty();
+	static void loadGame();
+	static void loadSelectedSave();
 	static void quit();
 	static void skillBaby();
 	static void skillEasy();
 	static void skillMedium();
 	static void skillHard();
+	static void viewScores();
 	static void toggleSound();
 	static void continueGame();
 };
-
-extern const void* const Menu_Paused[];
 
 #endif

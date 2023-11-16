@@ -334,6 +334,9 @@ public:
 						else
 							outTile = 21;
 						break;
+					case 25:	// Bit of a hack : change the purple + blood splat texture to just the purple texture
+						outTile = 19;
+						break;
 					default:
 						outTile = l1;
 						break;
@@ -468,26 +471,22 @@ public:
 					outTile = Tile_BlockingDecoration_Barrel;
 					break;
 				case 25:
-//					outTile = Tile_BlockingDecoration_TableChairs;
-					outTile = Tile_BlockingDecoration_Table;
+					outTile = Tile_BlockingDecoration_TableChairs;
 					break;
 				case 26:
-//					outTile = Tile_BlockingDecoration_FloorLamp;
-					outTile = Tile_BlockingDecoration_Barrel;
+					outTile = Tile_BlockingDecoration_FloorLamp;
 					break;
 				case 27:
 					outTile = Tile_Decoration_Chandelier;
 					break;
 				case 28:
-//					outTile = Tile_BlockingDecoration_HangingSkeleton;
-					outTile = Tile_BlockingDecoration_Barrel;
+					outTile = Tile_BlockingDecoration_HangingSkeleton;
 					break;
 				case 29:
 					outTile = Tile_Item_BadFood;
 					break;
 				case 30:
-//					outTile = Tile_BlockingDecoration_Pillar;
-					outTile = Tile_BlockingDecoration_Barrel;
+					outTile = Tile_BlockingDecoration_Pillar;
 					break;
 				case 31:
 					outTile = Tile_BlockingDecoration_Tree;
@@ -496,8 +495,7 @@ public:
 					outTile = Tile_Decoration_Skeleton;
 					break;
 				case 33:
-					//outTile = Tile_BlockingDecoration_Sink;
-					outTile = Tile_BlockingDecoration_Barrel;
+					outTile = Tile_BlockingDecoration_Sink;
 					break;
 				case 34:
 					outTile = Tile_BlockingDecoration_Plant;

@@ -13,6 +13,7 @@
 #include "Map.h"
 #include "Actor.h"
 #include "Menu.h"
+#include "Save.h"
 
 enum
 {
@@ -43,11 +44,14 @@ public:
 	void startLevel(bool resetPlayer = true);
 	void startingLevel();
 	Actor* spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8_t cellZ);
+	void fadeTransition();
 	
 	Renderer renderer;
 	Player player;
 	Map map;
 	Menu menu;
+	SaveSystem save;
+
 	Actor actors[MAX_ACTIVE_ACTORS];
 
 	int16_t frameCount;
@@ -55,6 +59,8 @@ public:
 	uint8_t difficulty;
 
 	uint8_t streamBuffer[STREAM_BUFFER_SIZE];
+
+	int8_t screenFade;
 };
 
 extern Engine engine;

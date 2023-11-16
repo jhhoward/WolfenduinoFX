@@ -67,9 +67,11 @@ void Actor::update()
 	switch(state)
 	{
 	case ActorState_Idle:
-		if(engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
+	{
+		bool wakeFrame = (engine.frameCount & 15) == 0;
+		if (wakeFrame && engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
 		{
-			switchState(ActorState_Active);
+			switchState(ActorState_Waking);
 
 			switch (type)
 			{
@@ -87,6 +89,15 @@ void Actor::update()
 				break;
 			}
 		}
+	}
+		break;
+	case ActorState_Waking:
+	{
+		if (updateFrame)
+		{
+			switchState(ActorState_Active);
+		}
+	}
 		break;
 	case ActorState_Active:
 	{
@@ -113,13 +124,31 @@ void Actor::update()
 	case ActorState_Recoiling:
 		if(updateFrame)
 		{
-			if ((type == ActorType_SS || type == ActorType_Boss) && engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
+			switch (type)
 			{
-				switchState(ActorState_Shooting);
-			}
-			else
-			{
+			case ActorType_SS:
+				if ((getRandomNumber() & 0x3) && engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
+				{
+					switchState(ActorState_Shooting);
+				}
+				else
+				{
+					switchState(ActorState_Active);
+				}
+				break;
+			case ActorType_Boss:
+				if (engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
+				{
+					switchState(ActorState_Shooting);
+				}
+				else
+				{
+					switchState(ActorState_Active);
+				}
+				break;
+			default:
 				switchState(ActorState_Active);
+				break;
 			}
 		}
 		break;
