@@ -14,7 +14,8 @@ raw_t Data_blockingDecorations = "Wolf/Generated/Data_BlockingDecorations.bin"
 raw_t Data_wallTextures = "Wolf/Generated/Data_Walls.bin"
 raw_t Data_uiSprite = "Wolf/Generated/Data_UI.bin"
 raw_t Data_titleBG = "Wolf/Generated/Data_TitleBG.bin"
+raw_t Data_helpBG = "Wolf/Generated/Data_HelpBG.bin"
 
 savesection
 
-
+uint16_t  0xFFFF //game state end marker / start of unused space

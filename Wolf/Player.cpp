@@ -434,6 +434,26 @@ void Player::updateWeapon()
 	}
 }
 
+void Player::onLoad()
+{
+	if (weapon.ammo == 0)
+	{
+		weapon.type = WeaponType_Knife;
+	}
+	else if(inventory.hasChainGun)
+	{
+		weapon.type = WeaponType_ChainGun;
+	}
+	else if (inventory.hasMachineGun)
+	{
+		weapon.type = WeaponType_MachineGun;
+	}
+	else
+	{
+		weapon.type = WeaponType_Pistol;
+	}
+}
+
 void Player::init()
 {
 	if(hp == 0)

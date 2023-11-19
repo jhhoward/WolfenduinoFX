@@ -2,6 +2,7 @@
 #include "Engine.h"
 #include "Menu.h"
 #include "Sounds.h"
+#include "Save.h"
 #include "Generated/fxdata.h"
 
 #define MENU_ENTRY_END 0
@@ -19,6 +20,7 @@ const char Str_ViewScores[] PROGMEM = "VIEW SCORES";
 const char Str_LoadGame[] PROGMEM = "LOAD GAME";
 const char Str_On[] PROGMEM = "ON";
 const char Str_Off[] PROGMEM = "OFF";
+const char Str_Help[] PROGMEM = "HELP";
 
 const void* const Menu_Main[] PROGMEM = 
 {
@@ -27,6 +29,7 @@ const void* const Menu_Main[] PROGMEM =
 	Str_LoadGame,		MENU_CALLBACK(&Menu::loadGame),
 	Str_ViewScores,		MENU_CALLBACK(&Menu::viewScores),
 	Str_Sound,			MENU_CALLBACK(&Menu::toggleSound),
+	Str_Help,			MENU_CALLBACK(&Menu::showHelp),
 	MENU_ENTRY_END
 };
 
@@ -40,10 +43,10 @@ const char Str_SkillHard[] PROGMEM = "I AM DEATH INCARNATE!";
 const void* const Menu_ChooseDifficulty[] PROGMEM = 
 {
 	Str_ChooseDifficulty,
-	Str_SkillBaby,		MENU_CALLBACK(&Menu::skillBaby),
-	Str_SkillEasy,		MENU_CALLBACK(&Menu::skillEasy),
-	Str_SkillMedium,	MENU_CALLBACK(&Menu::skillMedium),
-	Str_SkillHard,		MENU_CALLBACK(&Menu::skillHard),
+	Str_SkillBaby,		MENU_CALLBACK(&Menu::setDifficulty),
+	Str_SkillEasy,		MENU_CALLBACK(&Menu::setDifficulty),
+	Str_SkillMedium,	MENU_CALLBACK(&Menu::setDifficulty),
+	Str_SkillHard,		MENU_CALLBACK(&Menu::setDifficulty),
 	MENU_ENTRY_END
 };
 
@@ -57,13 +60,14 @@ const void* const Menu_ViewScores[] PROGMEM =
 
 // Select slot menu
 const char Str_SelectSlot[] PROGMEM = "CHOOSE A SLOT";
+const char Str_SaveSlot[] PROGMEM = "";
 const char Str_EmptySlot[] PROGMEM = "EMPTY SLOT";
 const void* const Menu_SelectSlot[] PROGMEM =
 {
 	Str_SelectSlot,
-	Str_EmptySlot,		MENU_CALLBACK(&Menu::chooseDifficulty),
-	Str_EmptySlot,		MENU_CALLBACK(&Menu::chooseDifficulty),
-	Str_EmptySlot,		MENU_CALLBACK(&Menu::chooseDifficulty),
+	Str_SaveSlot,		MENU_CALLBACK(&Menu::chooseDifficulty),
+	Str_SaveSlot,		MENU_CALLBACK(&Menu::chooseDifficulty),
+	Str_SaveSlot,		MENU_CALLBACK(&Menu::chooseDifficulty),
 	MENU_ENTRY_END
 };
 
@@ -72,15 +76,54 @@ const void* const Menu_SelectSlot[] PROGMEM =
 const void* const Menu_LoadGame[] PROGMEM =
 {
 	Str_LoadGame,
-	Str_EmptySlot,		MENU_CALLBACK(&Menu::loadSelectedSave),
-	Str_EmptySlot,		MENU_CALLBACK(&Menu::loadSelectedSave),
-	Str_EmptySlot,		MENU_CALLBACK(&Menu::loadSelectedSave),
+	Str_SaveSlot,		MENU_CALLBACK(&Menu::loadSelectedSave),
+	Str_SaveSlot,		MENU_CALLBACK(&Menu::loadSelectedSave),
+	Str_SaveSlot,		MENU_CALLBACK(&Menu::loadSelectedSave),
+	MENU_ENTRY_END
+};
+
+// Help screen
+const void* const Menu_Help[] PROGMEM =
+{
+	Str_Wolfenduino3D,
+	MENU_ENTRY_END
+};
+
+
+const char Str_Overwrite[] PROGMEM = "OVERWRITE THIS SAVE?";
+const char Str_Yes[] PROGMEM = "YES";
+const char Str_No[] PROGMEM = "NO";
+
+// Overwrite dialog menu
+const void* const Menu_OverwriteSlot[] PROGMEM =
+{
+	Str_Overwrite,
+	Str_Yes,		MENU_CALLBACK(&Menu::chooseDifficulty),
+	Str_No,			MENU_CALLBACK(&Menu::chooseNewSlot),
+	MENU_ENTRY_END
+};
+
+const char Str_GameOver[] PROGMEM = "GAME OVER";
+const char Str_FinalScore[] PROGMEM = "FINAL SCORE:";
+
+// Game over menu
+const void* const Menu_GameOver[] PROGMEM =
+{
+	Str_GameOver,
 	MENU_ENTRY_END
 };
 
 void Menu::loadSelectedSave()
 {
-	Platform.playSound(NOWAYSND);
+	engine.save.activeSlot = engine.menu.currentSelection;
+	if (engine.save.saveFile.slots[engine.save.activeSlot].hp)
+	{
+		engine.loadGame();
+	}
+	else
+	{
+		Platform.playSound(NOWAYSND);
+	}
 }
 
 void Menu::toggleSound()
@@ -98,9 +141,24 @@ void Menu::loadGame()
 	engine.menu.switchMenu(Menu_LoadGame);
 }
 
+void Menu::showHelp()
+{
+	engine.menu.switchMenu(Menu_Help);
+}
+
 void Menu::chooseDifficulty()
 {
+	if (engine.menu.currentMenu == Menu_SelectSlot)
+	{
+		engine.save.activeSlot = engine.menu.currentSelection;
+		if (engine.save.saveFile.slots[engine.save.activeSlot].hp)
+		{
+			engine.menu.switchMenu(Menu_OverwriteSlot);
+			return;
+		}
+	}
 	engine.menu.switchMenu(Menu_ChooseDifficulty);
+	engine.menu.currentSelection = 2;
 }
 
 void Menu::viewScores()
@@ -108,44 +166,9 @@ void Menu::viewScores()
 	engine.menu.switchMenu(Menu_ViewScores);
 }
 
-void Menu::continueGame()
+void Menu::setDifficulty()
 {
-	engine.gameState = GameState_Playing;
-}
-
-#ifdef PLATFORM_GAMEBUINO
-extern Gamebuino gb;
-void Menu::quit()
-{
-	gb.changeGame();
-}
-#else
-void Menu::quit()
-{
-}
-#endif
-
-void Menu::skillBaby()
-{
-	engine.difficulty = Difficulty_Baby;
-	engine.startNewGame();
-}
-
-void Menu::skillEasy()
-{
-	engine.difficulty = Difficulty_Easy;
-	engine.startNewGame();
-}
-
-void Menu::skillMedium()
-{
-	engine.difficulty = Difficulty_Medium;
-	engine.startNewGame();
-}
-
-void Menu::skillHard()
-{
-	engine.difficulty = Difficulty_Hard;
+	engine.difficulty = engine.menu.currentSelection;
 	engine.startNewGame();
 }
 
@@ -159,11 +182,24 @@ void Menu::draw()
 	int startY = 20;
 	int itemSpacing = 8;
 
+//	clearDisplay(1);
+//	engine.renderer.drawString(PSTR("MOVE"), 0, 0, 0);
+//	engine.renderer.drawString(PSTR("SHOOT"), 0, 6, 0);
+//	engine.renderer.drawString(PSTR("HOLD TO STRAFE"), 0, 12, 0);
+//	engine.renderer.drawString(PSTR("DOUBLE TAP"), 0, 18, 0);
+//	engine.renderer.drawString(PSTR("TO SWAP WEAPON"), 0, 24, 0);
+//	return;
+
 	if (currentMenu == Menu_Main)
 	{
 		engine.renderer.drawBackground(Data_titleBG);
-		startY += 6;
-		engine.renderer.drawString(PSTR("@JAMESHHOWARD"), DISPLAYWIDTH / 2 - 26, DISPLAYHEIGHT - FONT_HEIGHT - 1, 0);
+		startY += 5;
+		engine.renderer.drawString(PSTR("@JAMESHHOWARD"), DISPLAYWIDTH - 52, DISPLAYHEIGHT - FONT_HEIGHT - 1, 0);
+	}
+	else if (currentMenu == Menu_Help)
+	{
+		engine.renderer.drawBackground(Data_helpBG);
+		return;
 	}
 	else
 	{
@@ -180,15 +216,51 @@ void Menu::draw()
 	int index = 1;
 	int x = 14;
 	int y = startY;
+	int item = 0;
 
 	while(1)
 	{
 		if(pgm_read_ptr(&currentMenu[index]) == 0)
 			break;
 
-		engine.renderer.drawString((const char*)pgm_read_ptr(&currentMenu[index]), x, y, 0);
+		const char* text = (const char*)pgm_read_ptr(&currentMenu[index]);
 
-		if((const char*)pgm_read_ptr(&currentMenu[index]) == Str_Sound)
+		if (text == Str_SaveSlot)
+		{
+			SaveSlot* slot = &engine.save.saveFile.slots[item];
+			if (slot->hp == 0)
+			{
+				engine.renderer.drawString(Str_EmptySlot, x, y, 0);
+			}
+			else
+			{
+				// FLOOR:XX SKILL: NORMAL
+				engine.renderer.drawInt(slot->level + 1, x + 28, y, 0);
+				engine.renderer.drawString(PSTR("FLOOR:"), x, y, 0);
+				engine.renderer.drawString(PSTR("SKILL:"), x + 38, y, 0);
+				switch (slot->difficulty)
+				{
+				case 0:
+					engine.renderer.drawString(PSTR("BABY"), x + 66, y, 0);
+					break;
+				case 1:
+					engine.renderer.drawString(PSTR("EASY"), x + 66, y, 0);
+					break;
+				case 2:
+					engine.renderer.drawString(PSTR("NORMAL"), x + 66, y, 0);
+					break;
+				case 3:
+					engine.renderer.drawString(PSTR("HARD"), x + 66, y, 0);
+					break;
+				}
+			}
+		}
+		else
+		{
+			engine.renderer.drawString(text, x, y, 0);
+		}
+
+		if(text == Str_Sound)
 		{
 			if(Platform.isMuted())
 				engine.renderer.drawString(Str_Off, 40, y, 0);
@@ -197,6 +269,7 @@ void Menu::draw()
 		}
 		index += 2;
 		y += itemSpacing;
+		item++;
 	}
 
 	if (numMenuItems())
@@ -216,6 +289,24 @@ void Menu::draw()
 	if (currentMenu == Menu_ChooseDifficulty)
 	{
 		engine.renderer.drawSprite2D(UI_BJFace_Baby + currentSelection, DISPLAYWIDTH - 30, startY);
+	}
+	else if (currentMenu == Menu_ViewScores)
+	{
+		for (int n = 0; n < 3; n++)
+		{
+			for (int j = 0; j < 3; j++)
+			{
+				engine.renderer.drawGlyph(engine.save.saveFile.scores[n].name[j] - FIRST_FONT_GLYPH, x + 16 + j * 4, y, 0);
+			}
+			engine.renderer.drawLong(engine.save.saveFile.scores[n].score, x + 80, y, 0);
+			y += itemSpacing;
+		}
+	}
+	else if (currentMenu == Menu_GameOver)
+	{
+		engine.renderer.drawSprite2D(UI_BJFace_Dead, 20, startY);
+		engine.renderer.drawString(Str_FinalScore, 64, startY + 8, 0);
+		engine.renderer.drawInt(engine.player.score, 64 + 44, startY + 16, 0);
 	}
 }
 
@@ -241,7 +332,7 @@ void Menu::update()
 			if (Platform.readInput() & Input_Dpad_Up)
 			{
 				currentSelection--;
-				selectionDelta = 3;
+				selectionDelta = 2;
 				if (currentSelection == -1)
 				{
 					currentSelection = numMenuItems() - 1;
@@ -252,7 +343,7 @@ void Menu::update()
 			if (Platform.readInput() & Input_Dpad_Down)
 			{
 				currentSelection++;
-				selectionDelta = -3;
+				selectionDelta = -2;
 				if (currentSelection == numMenuItems())
 				{
 					currentSelection = 0;
@@ -262,9 +353,9 @@ void Menu::update()
 			}
 			if (Platform.readInput() & Input_Btn_B)
 			{
+				Platform.playSound(SHOOTSND);
 				MenuFn fn = (MenuFn)pgm_read_ptr(&currentMenu[currentSelection * 2 + 2]);
 				fn();
-				Platform.playSound(SHOOTSND);
 			}
 		}
 		else

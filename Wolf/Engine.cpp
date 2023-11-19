@@ -5,6 +5,7 @@ Engine engine;
 
 void Engine::init()
 {
+	save.init();
 	menu.init();
 	difficulty = Difficulty_Medium;
 	map.initStreaming();
@@ -28,9 +29,14 @@ void Engine::init()
 
 void Engine::startNewGame()
 {
-	map.currentLevel = 1;
+	map.currentLevel = 0;
 	player.lives = 3;
+	player.score = 0;
+	player.hp = 0;
+	player.init();
+
 	startLevel(false);
+	save.saveStateToActiveSlot();
 	fadeTransition();
 }
 
@@ -44,6 +50,14 @@ void Engine::startLevel(bool resetPlayer)
 	player.inventory.hasKey2 = false;
 	gameState = GameState_StartingLevel;
 	engine.frameCount = 0;
+}
+
+void Engine::loadGame()
+{
+	save.restoreStateFromActiveSlot();
+	startLevel(false);
+	player.onLoad();
+	fadeTransition();
 }
 
 void Engine::startingLevel()
@@ -103,6 +117,7 @@ void Engine::update()
 				map.currentLevel = 1;
 			}
 			startLevel(false);
+			save.saveStateToActiveSlot();
 		}
 		break;
 	case GameState_StartingLevel:
@@ -118,7 +133,7 @@ void Engine::update()
 			if (engine.player.lives == 0)
 			{
 				gameState = GameState_Menu;
-				engine.menu.init();
+				engine.menu.switchMenu(Menu_GameOver);
 			}
 			else
 			{
@@ -276,4 +291,9 @@ Actor* Engine::spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8
 void Engine::fadeTransition()
 {
 	screenFade = -4;
+}
+
+void Engine::finishLevel()
+{
+	gameState = GameState_FinishedLevel;
 }

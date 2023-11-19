@@ -487,7 +487,7 @@ void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction, bool isPlayer)
 	{
 		if (direction != Direction_None)
 		{
-			engine.gameState = GameState_FinishedLevel;
+			engine.finishLevel();
 		}
 		return;
 	}

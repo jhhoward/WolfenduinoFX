@@ -43,6 +43,8 @@ public:
 	void startNewGame();
 	void startLevel(bool resetPlayer = true);
 	void startingLevel();
+	void finishLevel();
+	void loadGame();
 	Actor* spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8_t cellZ);
 	void fadeTransition();
 	
@@ -64,5 +66,7 @@ public:
 };
 
 extern Engine engine;
+
+extern const void* const Menu_GameOver[] PROGMEM;
 
 #endif

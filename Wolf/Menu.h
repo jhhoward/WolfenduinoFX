@@ -23,14 +23,11 @@ public:
 	static void chooseDifficulty();
 	static void loadGame();
 	static void loadSelectedSave();
-	static void quit();
-	static void skillBaby();
-	static void skillEasy();
-	static void skillMedium();
-	static void skillHard();
+	static void setDifficulty();
 	static void viewScores();
 	static void toggleSound();
-	static void continueGame();
+	static void showHelp();
+
 };
 
 #endif

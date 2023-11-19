@@ -14,13 +14,14 @@ struct SaveSlot
 	uint8_t difficulty;
 	uint8_t ammo;
 	uint8_t inventoryFlags;
-	uint32_t score;
+	uint8_t lives;
+	int32_t score;
 };
 
 struct HighScore
 {
 	char name[3];
-	uint32_t score;
+	int32_t score;
 };
 
 struct SaveFile
@@ -33,6 +34,10 @@ class SaveSystem
 {
 public:
 	void init();
+	
+	void saveStateToActiveSlot();
+	void restoreStateFromActiveSlot();
+
 	void save();
 
 	SaveFile saveFile;

@@ -20,6 +20,7 @@ public:
 	void move(int16_t deltaX, int16_t deltaZ);
 	void damage(uint8_t amount);
 	void givePoints(int16_t amount);
+	void onLoad();
 
 	int16_t x, z;
 	angle_t direction;

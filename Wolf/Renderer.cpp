@@ -219,7 +219,6 @@ void Renderer::drawFrame()
 	drawPixel(view.cellX - engine.map.bufferX, view.cellZ - engine.map.bufferZ, 0);
 
 #endif
-
 #if !defined(DEFER_RENDER)
 	for(uint8_t item = renderQueueHead; item != NULL_QUEUE_ITEM; item = renderQueue[item].next)
 	{

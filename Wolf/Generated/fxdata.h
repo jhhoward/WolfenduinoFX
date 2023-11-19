@@ -6,22 +6,26 @@ using uint24_t = __uint24;
 
 // Initialize FX hardware using  FX::begin(FX_DATA_PAGE); in the setup() function.
 
-constexpr uint16_t FX_DATA_PAGE  = 0xfc48;
-constexpr uint24_t FX_DATA_BYTES = 243660;
+constexpr uint16_t FX_DATA_PAGE  = 0xfc34;
+constexpr uint24_t FX_DATA_BYTES = 244652;
+
+constexpr uint16_t FX_SAVE_PAGE  = 0xfff0;
+constexpr uint24_t FX_SAVE_BYTES = 2;
 
 constexpr uint24_t MapData = 0x000000;
 constexpr uint24_t Data_audio = 0x028000;
-constexpr uint24_t Data_pistolSprite = 0x0298DA;
-constexpr uint24_t Data_machinegunSprite = 0x02A203;
-constexpr uint24_t Data_chaingunSprite = 0x02AB02;
-constexpr uint24_t Data_knifeSprite = 0x02BC81;
-constexpr uint24_t Data_itemSprites = 0x02C188;
-constexpr uint24_t Data_guardSprite = 0x02C80E;
-constexpr uint24_t Data_dogSprite = 0x02D9CD;
-constexpr uint24_t Data_ssSprite = 0x02E971;
-constexpr uint24_t Data_bossSprite = 0x02FFA9;
-constexpr uint24_t Data_decorations = 0x031D04;
-constexpr uint24_t Data_blockingDecorations = 0x032963;
-constexpr uint24_t Data_wallTextures = 0x03378C;
-constexpr uint24_t Data_uiSprite = 0x039F8C;
-constexpr uint24_t Data_titleBG = 0x03B3CC;
+constexpr uint24_t Data_pistolSprite = 0x0298BA;
+constexpr uint24_t Data_machinegunSprite = 0x02A1E3;
+constexpr uint24_t Data_chaingunSprite = 0x02AAE2;
+constexpr uint24_t Data_knifeSprite = 0x02BC61;
+constexpr uint24_t Data_itemSprites = 0x02C168;
+constexpr uint24_t Data_guardSprite = 0x02C7EE;
+constexpr uint24_t Data_dogSprite = 0x02D9AD;
+constexpr uint24_t Data_ssSprite = 0x02E951;
+constexpr uint24_t Data_bossSprite = 0x02FF89;
+constexpr uint24_t Data_decorations = 0x031CE4;
+constexpr uint24_t Data_blockingDecorations = 0x032943;
+constexpr uint24_t Data_wallTextures = 0x03376C;
+constexpr uint24_t Data_uiSprite = 0x039F6C;
+constexpr uint24_t Data_titleBG = 0x03B3AC;
+constexpr uint24_t Data_helpBG = 0x03B7AC;

@@ -260,13 +260,26 @@ AudioPattern processDataTones(uint8_t* data, long length)
 
 	for (int n = 0; n < length; n++)
 	{
-		float frequency = 1193181.0f / (data[n] * 60.0f);
+		uint16_t freq;
 		if (data[n] == 0)
 		{
-			frequency = 0.0f;
+			freq = 0;
+
+			//printf("0 - > 0\n");
+		}
+		else
+		{
+			float frequency;
+			frequency = 1193181.0f / (data[n] * 60.0f);
+			freq = (uint16_t)frequency;
+			//printf("%d - > %f -> %d\n", data[n], frequency, freq);
 		}
 
-		uint16_t freq = (uint16_t)frequency;
+		if (freq > 4000)
+		{
+			printf("Clipping frequency of %d Hz\n", freq);
+			freq = 0;
+		}
 
 		if (pattern.data.size() == 0 || pattern.data[pattern.data.size() - 2] != freq)
 		{
@@ -312,7 +325,16 @@ AudioPattern loadData(char* filename)
 	uint8_t* buffer = new uint8_t[fileSize];
 	fread(buffer, 1, fileSize, fs);
 
+	printf("Processing %s..\n", filename);
+
 	pattern = processDataTones(buffer, fileSize);
+
+	//
+	//for (int n = 0; n < pattern.data.size() - 1; n += 2)
+	//{
+	//	printf("%d - %dms\n", pattern.data[n], pattern.data[n + 1]);
+	//}
+	//printf("--\n");
 
 	delete[] buffer;
 

@@ -247,11 +247,6 @@ bool LoadDiskContents()
 
 int main(int, char**)
 {
-	for(int n = 0; n < 256; n++)
-	{
-		WARNING("%d %d\n", n, FixedMath::Sin(n));
-	}
-
 	if (!LoadDiskContents())
 	{
 		return 1;
