@@ -17,6 +17,8 @@ set OUTPUT_FOLDER=Wolf\Generated
 %IMAGE_ENCODER% Assets\ui.png %OUTPUT_FOLDER%\Data_UI Data_uiSprite sprite
 %IMAGE_ENCODER% Assets\title.png %OUTPUT_FOLDER%\Data_TitleBG Data_titleBG background
 %IMAGE_ENCODER% Assets\help.png %OUTPUT_FOLDER%\Data_HelpBG Data_helpBG background
+%IMAGE_ENCODER% Assets\win.png %OUTPUT_FOLDER%\Data_WinBG Data_winBG background
+%IMAGE_ENCODER% Assets\floorComplete.png %OUTPUT_FOLDER%\Data_FloorCompleteBG Data_floorCompleteBG background
 
 set AUDIO_ENCODER=Debug\AudioEncoder.exe
 set AUD=Assets\RawAudio\audio

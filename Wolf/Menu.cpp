@@ -113,6 +113,28 @@ const void* const Menu_GameOver[] PROGMEM =
 	MENU_ENTRY_END
 };
 
+// Win screen
+const void* const Menu_YouWin[] PROGMEM =
+{
+	Str_GameOver,
+	MENU_ENTRY_END
+};
+
+// Floor complete screen
+const void* const Menu_FloorComplete[] PROGMEM =
+{
+	Str_GameOver,
+	MENU_ENTRY_END
+};
+
+// New high score screen
+const char Str_NewHighScore[] PROGMEM = "NEW HIGH SCORE!";
+const void* const Menu_NewHighScore[] PROGMEM =
+{
+	Str_NewHighScore,
+	MENU_ENTRY_END
+};
+
 void Menu::loadSelectedSave()
 {
 	engine.save.activeSlot = engine.menu.currentSelection;
@@ -183,7 +205,7 @@ void Menu::draw()
 	int itemSpacing = 8;
 
 //	clearDisplay(1);
-//	engine.renderer.drawString(PSTR("MOVE"), 0, 0, 0);
+//	engine.renderer.drawString(PSTR("YOU WIN!"), 0, 0, 0);
 //	engine.renderer.drawString(PSTR("SHOOT"), 0, 6, 0);
 //	engine.renderer.drawString(PSTR("HOLD TO STRAFE"), 0, 12, 0);
 //	engine.renderer.drawString(PSTR("DOUBLE TAP"), 0, 18, 0);
@@ -200,6 +222,26 @@ void Menu::draw()
 	{
 		engine.renderer.drawBackground(Data_helpBG);
 		return;
+	}
+	else if (currentMenu == Menu_YouWin)
+	{
+		engine.renderer.drawBackground(Data_winBG);
+		engine.renderer.drawString(PSTR("YOU WIN!"), 76, startY - 2, 0);
+		engine.renderer.drawString(Str_FinalScore, 72, startY + 8, 0);
+		engine.renderer.drawLong(engine.player.score, 72 + 44, startY + 16, 0);
+		return;
+	}
+	else if (currentMenu == Menu_FloorComplete)
+	{
+		engine.renderer.drawBackground(Data_floorCompleteBG);
+		engine.renderer.drawString(PSTR("FLOOR COMPLETED"), 62, 2, 0);
+		int columnX = 62;
+		engine.renderer.drawString(PSTR("KILLS:    %"), columnX + 12, 10, 0);
+		engine.renderer.drawInt(100, columnX + 48, 10, 0);
+		engine.renderer.drawString(PSTR("SECRETS:    %"), columnX + 4, 16, 0);
+		engine.renderer.drawInt(100, columnX + 48, 16, 0);
+		engine.renderer.drawString(PSTR("TREASURE:    %"), columnX, 22, 0);
+		engine.renderer.drawInt(100, columnX + 48, 22, 0);
 	}
 	else
 	{
@@ -306,7 +348,25 @@ void Menu::draw()
 	{
 		engine.renderer.drawSprite2D(UI_BJFace_Dead, 20, startY);
 		engine.renderer.drawString(Str_FinalScore, 64, startY + 8, 0);
-		engine.renderer.drawInt(engine.player.score, 64 + 44, startY + 16, 0);
+		engine.renderer.drawLong(engine.player.score, 64 + 44, startY + 16, 0);
+	}
+	else if (currentMenu == Menu_NewHighScore)
+	{
+		engine.renderer.drawString(Str_FinalScore, 40, 16, 0);
+		engine.renderer.drawLong(engine.player.score, 40 + 44, 22, 0);
+
+		engine.renderer.drawString(PSTR("ENTER YOUR NAME"), 36, 50, 0);
+
+		HighScore* score = &engine.save.saveFile.scores[engine.save.activeSlot];
+		x = 58;
+
+		engine.renderer.drawGlyph('+' - FIRST_FONT_GLYPH, x + 4 * currentSelection, 32 + (selectionDelta < 0 ? -1 : 0), 0);
+		engine.renderer.drawGlyph('*' - FIRST_FONT_GLYPH, x + 4 * currentSelection, 40 + (selectionDelta > 0 ? 1 : 0), 0);
+
+		engine.renderer.drawGlyph(score->name[0] - FIRST_FONT_GLYPH, x, 36, 0);
+		engine.renderer.drawGlyph(score->name[1] - FIRST_FONT_GLYPH, x + 4, 36, 0);
+		engine.renderer.drawGlyph(score->name[2] - FIRST_FONT_GLYPH, x + 8, 36, 0);
+
 	}
 }
 
@@ -319,15 +379,77 @@ void Menu::update()
 		if (selectionDelta < 0)
 			selectionDelta++;
 
-		if (!selectionDelta)
+		if (!selectionDelta && currentMenu != Menu_NewHighScore)
 		{
 			Platform.playSound(MOVEGUN2SND);
 		}
 	}
 
-	if(!debounceInput)
+	if (!debounceInput)
 	{
-		if (numMenuItems())
+		if (currentMenu == Menu_NewHighScore)
+		{
+			if (Platform.readInput() & (Input_Dpad_Left | Input_Btn_A))
+			{
+				if (currentSelection > 0)
+				{
+					currentSelection--;
+					Platform.playSound(MOVEGUN1SND);
+				}
+			}
+			if (Platform.readInput() & (Input_Dpad_Right | Input_Btn_B))
+			{
+				if (currentSelection < 2)
+				{
+					currentSelection++;
+					Platform.playSound(MOVEGUN1SND);
+				}
+				else if (Platform.readInput() & Input_Btn_B)
+				{
+					engine.save.save();
+					switchMenu(Menu_ViewScores);
+					Platform.playSound(SHOOTSND);
+				}
+			}
+			if (Platform.readInput() & Input_Dpad_Up)
+			{
+				HighScore* score = &engine.save.saveFile.scores[engine.save.activeSlot];
+				if (score->name[currentSelection] == ' ')
+				{
+					score->name[currentSelection] = 'Z';
+				}
+				else
+				{
+					score->name[currentSelection]--;
+					if (score->name[currentSelection] < 'A')
+					{
+						score->name[currentSelection] = ' ';
+					}
+				}
+				Platform.playSound(MOVEGUN1SND);
+				selectionDelta = -2;
+			}
+			if (Platform.readInput() & Input_Dpad_Down)
+			{
+				HighScore* score = &engine.save.saveFile.scores[engine.save.activeSlot];
+				if (score->name[currentSelection] == ' ')
+				{
+					score->name[currentSelection] = 'A';
+				}
+				else
+				{
+			
+					score->name[currentSelection]++;
+					if (score->name[currentSelection] > 'Z')
+					{
+						score->name[currentSelection] = ' ';
+					}
+				}
+				Platform.playSound(MOVEGUN1SND);
+				selectionDelta = 2;
+			}
+		}
+		else if (numMenuItems())
 		{
 			if (Platform.readInput() & Input_Dpad_Up)
 			{
@@ -357,22 +479,44 @@ void Menu::update()
 				MenuFn fn = (MenuFn)pgm_read_ptr(&currentMenu[currentSelection * 2 + 2]);
 				fn();
 			}
+
+			if (Platform.readInput() & Input_Btn_A)
+			{
+				if (currentMenu != Menu_Main)
+				{
+					switchMenu(Menu_Main);
+					Platform.playSound(ESCPRESSEDSND);
+				}
+			}
 		}
 		else
 		{
-			if (Platform.readInput() & Input_Btn_B)
+			if (Platform.readInput() & (Input_Btn_A | Input_Btn_B))
 			{
-				switchMenu(Menu_Main);
-				Platform.playSound(ESCPRESSEDSND);
-			}
-		}
+				if (currentMenu == Menu_FloorComplete)
+				{
+					engine.enterNextLevel();
+					Platform.playSound(SHOOTSND);
+				}
+				else if (currentMenu == Menu_GameOver || currentMenu == Menu_YouWin)
+				{
+					engine.save.clearActiveSlot();
 
-		if(Platform.readInput() & Input_Btn_A)
-		{
-			if(currentMenu != Menu_Main)
-			{
-				switchMenu(Menu_Main);
-				Platform.playSound(ESCPRESSEDSND);
+					if (engine.save.trySubmitHighScore(engine.player.score))
+					{
+						switchMenu(Menu_NewHighScore);
+					}
+					else
+					{
+						switchMenu(Menu_ViewScores);
+					}
+					Platform.playSound(SHOOTSND);
+				}
+				else
+				{
+					switchMenu(Menu_Main);
+					Platform.playSound(ESCPRESSEDSND);
+				}
 			}
 		}
 	}

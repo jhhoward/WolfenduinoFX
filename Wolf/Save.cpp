@@ -53,3 +53,43 @@ void SaveSystem::restoreStateFromActiveSlot()
 	engine.player.score = slot->score;
 	engine.player.lives = slot->lives;
 }
+
+void SaveSystem::clearActiveSlot()
+{
+	saveFile.slots[activeSlot].hp = 0;
+	save();
+}
+
+bool SaveSystem::trySubmitHighScore(int32_t score)
+{
+	int insertIndex = -1;
+
+	for (int n = 0; n < 3; n++)
+	{
+		if (score >= saveFile.scores[n].score)
+		{
+			insertIndex = n;
+			break;
+		}
+	}
+
+	if (insertIndex == -1)
+	{
+		return false;
+	}
+
+	for (int n = 2; n > insertIndex; n--)
+	{
+		saveFile.scores[n] = saveFile.scores[n - 1];
+	}
+
+	activeSlot = insertIndex;
+
+	for (int n = 0; n < 3; n++)
+	{
+		saveFile.scores[insertIndex].name[n] = 'A';
+	}
+	saveFile.scores[insertIndex].score = score;
+
+	return true;
+}

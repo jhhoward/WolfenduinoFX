@@ -30,4 +30,8 @@ public:
 
 };
 
+extern const void* const Menu_GameOver[] PROGMEM;
+extern const void* const Menu_YouWin[] PROGMEM;
+extern const void* const Menu_FloorComplete[] PROGMEM;
+
 #endif

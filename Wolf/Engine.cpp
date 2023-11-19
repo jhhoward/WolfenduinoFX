@@ -102,7 +102,7 @@ void Engine::update()
 			menu.update();
 		}
 		break;
-	case GameState_FinishedLevel:
+	case GameState_EnterNextLevel:
 		{
 			if (map.getTile(WORLD_TO_CELL(engine.player.x), WORLD_TO_CELL(engine.player.z)) == Tile_SecretExit)
 			{
@@ -137,6 +137,7 @@ void Engine::update()
 			}
 			else
 			{
+				engine.player.lives--;
 				startLevel();
 			}
 			fadeTransition();
@@ -293,7 +294,21 @@ void Engine::fadeTransition()
 	screenFade = -4;
 }
 
+void Engine::enterNextLevel()
+{
+	gameState = GameState_EnterNextLevel;
+	fadeTransition();
+}
+
 void Engine::finishLevel()
 {
-	gameState = GameState_FinishedLevel;
+	gameState = GameState_Menu;
+	if (map.currentLevel == 8)
+	{
+		menu.switchMenu(Menu_YouWin);
+	}
+	else
+	{
+		menu.switchMenu(Menu_FloorComplete);
+	}
 }

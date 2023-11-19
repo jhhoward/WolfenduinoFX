@@ -106,6 +106,7 @@ enum TileType
 
 	Tile_SecretPushWall,
 	Tile_SecretExit,
+	Tile_CastleExit,
 
 	NUM_TILE_TYPES
 };

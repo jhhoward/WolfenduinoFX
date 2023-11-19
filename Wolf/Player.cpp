@@ -148,6 +148,11 @@ void Player::update()
 
 		engine.map.openDoorsAt(cellX, cellZ, Direction_None);
 
+		if (engine.map.getTile(cellX, cellZ) == Tile_CastleExit)
+		{
+			engine.finishLevel();
+		}
+
 		if(mabs(cos_dir) > mabs(sin_dir))
 		{
 			if(cos_dir > 0)
@@ -360,6 +365,16 @@ void Player::move(int16_t deltaX, int16_t deltaZ)
 
 void Player::updateWeapon()
 {
+	//if (Platform.readInput() & Input_Btn_A)
+	//{
+	//	engine.finishLevel();
+	//}
+	//if (Platform.readInput() & Input_Btn_B)
+	//{
+	//	hp = 1;
+	//	damage(255);
+	//}
+
 	if (Platform.readInput() & Input_Btn_B)
 	{
 		if(!weapon.debounce)
@@ -607,7 +622,6 @@ void Player::damage(uint8_t amount)
 		hp = 0;
 		// Dead
 		Platform.playSound(PLAYERDEATHSND);
-		lives--;
 	}
 	else
 	{

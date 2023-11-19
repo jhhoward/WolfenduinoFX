@@ -22,7 +22,7 @@ enum
 	GameState_Loading,
 	GameState_Playing,
 	GameState_Dead,
-	GameState_FinishedLevel,
+	GameState_EnterNextLevel,
 	GameState_StartingLevel
 };
 
@@ -45,6 +45,7 @@ public:
 	void startingLevel();
 	void finishLevel();
 	void loadGame();
+	void enterNextLevel();
 	Actor* spawnActor(uint8_t spawnId, uint8_t actorType, int8_t cellX, int8_t cellZ);
 	void fadeTransition();
 	
@@ -66,7 +67,5 @@ public:
 };
 
 extern Engine engine;
-
-extern const void* const Menu_GameOver[] PROGMEM;
 
 #endif

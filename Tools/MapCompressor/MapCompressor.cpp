@@ -358,6 +358,10 @@ public:
 				case 22:
 					outTile = Tile_PlayerStart_North + l2 - 19;
 					break;
+
+				case 99:
+					outTile = Tile_CastleExit;
+					break;
 				
 					// Guard
 				case 180:

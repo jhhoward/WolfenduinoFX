@@ -37,6 +37,9 @@ public:
 	
 	void saveStateToActiveSlot();
 	void restoreStateFromActiveSlot();
+	void clearActiveSlot();
+
+	bool trySubmitHighScore(int32_t score);
 
 	void save();
 
