@@ -18,13 +18,14 @@ set OUTPUT_FOLDER=Wolf\Generated
 %IMAGE_ENCODER% Assets\title.png %OUTPUT_FOLDER%\Data_TitleBG Data_titleBG background
 %IMAGE_ENCODER% Assets\help.png %OUTPUT_FOLDER%\Data_HelpBG Data_helpBG background
 %IMAGE_ENCODER% Assets\win.png %OUTPUT_FOLDER%\Data_WinBG Data_winBG background
-%IMAGE_ENCODER% Assets\floorComplete.png %OUTPUT_FOLDER%\Data_FloorCompleteBG Data_floorCompleteBG background
+%IMAGE_ENCODER% Assets\floorComplete1.png %OUTPUT_FOLDER%\Data_FloorCompleteBG1 Data_floorCompleteBG1 background
+%IMAGE_ENCODER% Assets\floorComplete2.png %OUTPUT_FOLDER%\Data_FloorCompleteBG2 Data_floorCompleteBG2 background
 
 set AUDIO_ENCODER=Debug\AudioEncoder.exe
 set AUD=Assets\RawAudio\audio
 
-%AUDIO_ENCODER% %OUTPUT_FOLDER%\Data_Audio %AUD%04.raw %AUD%05.raw %AUD%06.raw %AUD%09.raw %AUD%10.raw %AUD%11.raw %AUD%12.raw %AUD%16.raw %AUD%18.raw %AUD%19.raw %AUD%21.raw %AUD%22.raw %AUD%23.raw %AUD%24.raw %AUD%25.raw %AUD%26.raw %AUD%30.raw %AUD%31.raw %AUD%32.raw %AUD%33.raw %AUD%34.raw %AUD%35.raw %AUD%36.raw %AUD%37.raw %AUD%38.raw %AUD%39.raw %AUD%41.raw %AUD%45.raw %AUD%46.raw %AUD%49.raw %AUD%50.raw %AUD%51.raw %AUD%56.raw %AUD%58.raw %AUD%59.raw %AUD%60.raw %AUD%68.raw
-rem %AUDIO_ENCODER% %OUTPUT_FOLDER%\Data_Audio.h %AUD%
+rem %AUDIO_ENCODER% %OUTPUT_FOLDER%\Data_Audio %AUD%04.raw %AUD%05.raw %AUD%06.raw %AUD%09.raw %AUD%10.raw %AUD%11.raw %AUD%12.raw %AUD%16.raw %AUD%18.raw %AUD%19.raw %AUD%21.raw %AUD%22.raw %AUD%23.raw %AUD%24.raw %AUD%25.raw %AUD%26.raw %AUD%30.raw %AUD%31.raw %AUD%32.raw %AUD%33.raw %AUD%34.raw %AUD%35.raw %AUD%36.raw %AUD%37.raw %AUD%38.raw %AUD%39.raw %AUD%41.raw %AUD%42.raw %AUD%43.raw %AUD%44.raw %AUD%45.raw %AUD%46.raw %AUD%49.raw %AUD%50.raw %AUD%51.raw %AUD%56.raw %AUD%58.raw %AUD%59.raw %AUD%60.raw %AUD%68.raw
+%AUDIO_ENCODER% %OUTPUT_FOLDER%\Data_Audio %AUD%
 
 python fxdata-build.py fxdata.txt
 move fxdata.h Wolf\Generated\fxdata.h

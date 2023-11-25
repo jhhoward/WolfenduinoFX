@@ -568,7 +568,7 @@ public:
 					outTile = Tile_Item_Crown;
 					break;
 				case 56:
-					// 1 up
+					outTile = Tile_Item_1UP;
 					break;
 				case 57:
 					outTile = Tile_BlockingDecoration_Barrel;

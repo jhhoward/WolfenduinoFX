@@ -45,6 +45,7 @@ enum DoorState
 	DoorState_PushEast,
 	DoorState_PushSouth,
 	DoorState_PushWest,
+	DoorState_Pushed,
 	DoorState_FirstPushWallState = DoorState_PushNorth
 };
 
@@ -104,6 +105,10 @@ public:
 	Item items[MAX_ACTIVE_ITEMS];
 
 	int8_t currentLevel;
+
+	uint8_t treasureCount;
+	uint8_t secretCount;
+	uint8_t enemyCount;
 
 	uint8_t m_mapBuffer[MAP_BUFFER_SIZE * MAP_BUFFER_SIZE];
 

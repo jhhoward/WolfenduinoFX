@@ -82,6 +82,10 @@ void Map::init()
 	{
 		items[n].type = 0;
 	}
+
+	enemyCount = 0;
+	treasureCount = 0;
+	secretCount = 0;
 }
 
 void Map::initStreaming()
@@ -241,22 +245,57 @@ void Map::streamData(uint8_t* buffer, uint8_t orientation, int8_t x, int8_t z, i
 
 uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z)
 {
-	/*if (tile >= Tile_FirstDoor && tile <= Tile_LastDoor)
+	if (engine.gameState == GameState_Loading)
 	{
-		uint8_t textureId = 18;
-		if(tile == Tile_Door_Elevator_Horizontal || tile == Tile_Door_Elevator_Vertical)
-			textureId = 12;
-		streamInDoor(tile - Tile_FirstDoor + 1, textureId, x, z);
+		if (tile == Tile_SecretPushWall)
+		{
+			streamInDoor(DoorType_SecretPushWall, metadata - Tile_FirstWall, x, z);
+			secretCount++;
+		}
+		else if (tile >= Tile_FirstTreasure && tile <= Tile_LastTreasure)
+		{
+			treasureCount++;
+		}
+		else if (tile >= Tile_FirstActor && tile <= Tile_LastActor)
+		{
+			switch (tile)
+			{
+			case Tile_Actor_Guard_Hard:
+				if (engine.difficulty < Difficulty_Hard)
+					break;
+			case Tile_Actor_Guard_Medium:
+				if (engine.difficulty < Difficulty_Medium)
+					break;
+			case Tile_Actor_Guard_Easy:
+				enemyCount++;
+				break;
+			case Tile_Actor_SS_Hard:
+				if (engine.difficulty < Difficulty_Hard)
+					break;
+			case Tile_Actor_SS_Medium:
+				if (engine.difficulty < Difficulty_Medium)
+					break;
+			case Tile_Actor_SS_Easy:
+				enemyCount++;
+				break;
+			case Tile_Actor_Dog_Hard:
+				if (engine.difficulty < Difficulty_Hard)
+					break;
+			case Tile_Actor_Dog_Medium:
+				if (engine.difficulty < Difficulty_Medium)
+					break;
+			case Tile_Actor_Dog_Easy:
+				enemyCount++;
+				break;
+			case Tile_Actor_Boss:
+				enemyCount++;
+				break;
+			}
+		}
 	}
-	else*/ 
 
 	if (tile >= Tile_FirstItem && tile <= Tile_LastItem)
 	{
-		//if(!isItemCollected(metadata))
-		//{
-		//	placeItem(tile, x, z, metadata);
-		//}
-		//
 		if (isItemCollected(metadata))
 		{
 			return Tile_Empty;
@@ -304,10 +343,6 @@ uint8_t Map::streamIn(uint8_t tile, uint8_t metadata, int8_t x, int8_t z)
 	}
 	else if(tile == Tile_SecretPushWall)
 	{
-		if(engine.gameState == GameState_Loading)
-		{
-			streamInDoor(DoorType_SecretPushWall, metadata - Tile_FirstWall, x, z);
-		}
 		return Tile_Empty;
 	}
 
@@ -487,6 +522,7 @@ void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction, bool isPlayer)
 	{
 		if (direction != Direction_None)
 		{
+			Platform.playSound(LEVELDONESND);
 			engine.finishLevel();
 		}
 		return;
@@ -530,10 +566,6 @@ void Map::openDoorsAt(int8_t x, int8_t z, int8_t direction, bool isPlayer)
 				}
 				return;
 			}
-			if ((door->type == DoorType_Locked2Horizontal || door->type == DoorType_Locked2Horizontal) && !engine.player.inventory.hasKey2)
-			{
-				return;
-			}
 
 			if (door->state != DoorState_Opening && door->open == 0)
 			{
@@ -563,7 +595,8 @@ void Door::update()
 			z += offZ;
 			if(!engine.map.isValid(x + offX, z + offZ) || engine.map.isSolid(x + offX, z + offZ))
 			{
-				state = DoorState_Idle;
+				state = DoorState_Pushed;
+				engine.player.secretsFound++;
 			}
 		}
 		break;

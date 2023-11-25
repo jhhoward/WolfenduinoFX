@@ -222,6 +222,7 @@ void Actor::damage(int amount)
 	{
 		switchState(ActorState_Dying);
 		engine.map.markActorKilled(spawnId);
+		engine.player.enemiesKilled++;
 
 		switch (type)
 		{

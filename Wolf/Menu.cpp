@@ -197,7 +197,59 @@ void Menu::setDifficulty()
 void Menu::init()
 {
 	switchMenu(Menu_Main);
+//	switchMenu(Menu_FloorComplete);
+//	engine.map.enemyCount = 10;
+//	engine.map.secretCount = 10;
+//	engine.map.treasureCount = 10;
+//	engine.player.enemiesKilled = 6;
+//	engine.player.secretsFound = 10;
+//	engine.player.treasureCollected = 0;
 }
+
+#define PERCENT100AMT	10000
+
+void Menu::printStat(const char* name, uint8_t num, uint8_t count, int x, int y, uint8_t startTime)
+{
+	if (currentSelection >= startTime)
+	{
+		int statX = 110;
+		int progress = (100 * (currentSelection - startTime)) / 16;
+		int percent = (100 * num) / count;
+		int endTime = startTime + (16 * percent) / 100;
+		if (percent > progress)
+		{
+			percent = progress;
+		}
+		engine.renderer.drawString(name, x, y, 0);
+
+		if (progress >= 0)
+		{
+			engine.renderer.drawInt(percent, statX, y, 0);
+
+			if (currentSelection < endTime)
+			{
+				Platform.playSound(ENDBONUS1SND);
+			}
+			else if (currentSelection == endTime)
+			{
+				if (percent == 100)
+				{
+					Platform.playSound(PERCENT100SND);
+					engine.player.givePoints(PERCENT100AMT);
+				}
+				else if (percent == 0)
+				{
+					Platform.playSound(NOBONUSSND);
+				}
+				else
+				{
+					Platform.playSound(ENDBONUS2SND);
+				}
+			}
+		}
+	}
+}
+
 
 void Menu::draw()
 {
@@ -233,15 +285,17 @@ void Menu::draw()
 	}
 	else if (currentMenu == Menu_FloorComplete)
 	{
-		engine.renderer.drawBackground(Data_floorCompleteBG);
+		engine.renderer.drawBackground(engine.frameCount & 16 ? Data_floorComplete1BG : Data_floorComplete2BG);
 		engine.renderer.drawString(PSTR("FLOOR COMPLETED"), 62, 2, 0);
 		int columnX = 62;
-		engine.renderer.drawString(PSTR("KILLS:    %"), columnX + 12, 10, 0);
-		engine.renderer.drawInt(100, columnX + 48, 10, 0);
-		engine.renderer.drawString(PSTR("SECRETS:    %"), columnX + 4, 16, 0);
-		engine.renderer.drawInt(100, columnX + 48, 16, 0);
-		engine.renderer.drawString(PSTR("TREASURE:    %"), columnX, 22, 0);
-		engine.renderer.drawInt(100, columnX + 48, 22, 0);
+
+		printStat(PSTR("KILLS:    %"), engine.player.enemiesKilled, engine.map.enemyCount, columnX + 12, 10, 16);
+		printStat(PSTR("SECRETS:    %"), engine.player.secretsFound, engine.map.secretCount, columnX + 4, 16, 50);
+		printStat(PSTR("TREASURE:    %"), engine.player.treasureCollected, engine.map.treasureCount, columnX, 22, 92);
+		if (engine.frameCount & 1 && currentSelection < 127)
+		{
+			currentSelection++;
+		}
 	}
 	else
 	{
@@ -495,8 +549,15 @@ void Menu::update()
 			{
 				if (currentMenu == Menu_FloorComplete)
 				{
-					engine.enterNextLevel();
-					Platform.playSound(SHOOTSND);
+					if (currentSelection == 127)
+					{
+						engine.enterNextLevel();
+					}
+					else
+					{
+						currentSelection = 127;
+					}
+					//Platform.playSound(SHOOTSND);
 				}
 				else if (currentMenu == Menu_GameOver || currentMenu == Menu_YouWin)
 				{

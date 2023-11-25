@@ -21,8 +21,8 @@ void ArduboyPlatform::playSound(uint8_t id)
 
 void setup() {
   arduboy.boot();
-  arduboy.flashlight();
-  arduboy.systemButtons();
+  //arduboy.flashlight();
+  //arduboy.systemButtons();
   //arduboy.bootLogo();
   arduboy.setFrameRate(TARGET_FRAMERATE);
   arduboy.audio.begin();

@@ -28,6 +28,8 @@ public:
 	static void toggleSound();
 	static void showHelp();
 
+	void printStat(const char* name, uint8_t num, uint8_t count, int x, int y, uint8_t startTime);
+
 };
 
 extern const void* const Menu_GameOver[] PROGMEM;

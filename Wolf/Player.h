@@ -20,6 +20,7 @@ public:
 	void move(int16_t deltaX, int16_t deltaZ);
 	void damage(uint8_t amount);
 	void givePoints(int16_t amount);
+	void giveLife();
 	void onLoad();
 
 	int16_t x, z;
@@ -32,6 +33,10 @@ public:
 	uint32_t score;
 	uint8_t lives;
 	int8_t blinkKeyTimer;
+
+	uint8_t enemiesKilled;
+	uint8_t treasureCollected;
+	uint8_t secretsFound;
 
 	union
 	{

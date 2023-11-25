@@ -16,7 +16,8 @@ raw_t Data_uiSprite = "Wolf/Generated/Data_UI.bin"
 raw_t Data_titleBG = "Wolf/Generated/Data_TitleBG.bin"
 raw_t Data_helpBG = "Wolf/Generated/Data_HelpBG.bin"
 raw_t Data_winBG = "Wolf/Generated/Data_WinBG.bin"
-raw_t Data_floorCompleteBG = "Wolf/Generated/Data_FloorCompleteBG.bin"
+raw_t Data_floorComplete1BG = "Wolf/Generated/Data_FloorCompleteBG1.bin"
+raw_t Data_floorComplete2BG = "Wolf/Generated/Data_FloorCompleteBG2.bin"
 
 savesection
 

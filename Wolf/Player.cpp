@@ -150,6 +150,7 @@ void Player::update()
 
 		if (engine.map.getTile(cellX, cellZ) == Tile_CastleExit)
 		{
+			Platform.playSound(YEAHSND);
 			engine.finishLevel();
 		}
 
@@ -484,6 +485,9 @@ void Player::init()
 	weapon.debounce = false;
 	weapon.shooting = false;
 	blinkKeyTimer = 0;
+	enemiesKilled = 0;
+	treasureCollected = 0;
+	secretsFound = 0;
 
 	// Find player start tile
 	for(int8_t j = 0; j < MAP_SIZE; j += MAP_BUFFER_SIZE)
@@ -642,6 +646,12 @@ void Player::heal(uint8_t amount)
 
 void Player::givePoints(int16_t amount)
 {
+	const uint32_t EXTRAPOINTS = 40000;
+	if ((score / EXTRAPOINTS) != ((score + amount) / EXTRAPOINTS))
+	{
+		giveLife();
+	}
+
 	score += amount;
 }
 
@@ -714,20 +724,29 @@ bool Player::collectItem(uint8_t itemType)
 	case Tile_Item_Cross:
 		Platform.playSound(BONUS1SND);
 		givePoints(100);
+		treasureCollected++;
 		return true;
 	case Tile_Item_Chalice:
 		Platform.playSound(BONUS2SND);
 		givePoints(500);
+		treasureCollected++;
 		return true;
 	case Tile_Item_Bible:
 		Platform.playSound(BONUS3SND);
 		givePoints(1000);
+		treasureCollected++;
 		return true;
 	case Tile_Item_Crown:
 		Platform.playSound(BONUS4SND);
 		givePoints(5000);
+		treasureCollected++;
 		return true;
-
+	case Tile_Item_1UP:
+		treasureCollected++;
+		heal(99);
+		giveAmmo(25);
+		giveLife();
+		return true;
 	}
 
 	return false;
@@ -759,4 +778,11 @@ void Player::collectItems(int8_t cellX, int8_t cellZ)
 			engine.renderer.damageIndicator = -5;
 		}
 	}
+}
+
+void Player::giveLife()
+{
+	Platform.playSound(BONUS1UPSND);
+	if(lives < 9)
+		lives++;
 }
