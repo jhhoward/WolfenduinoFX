@@ -11,6 +11,7 @@ Featuring:
 * A high score table
 
 You can watch a video of Wolfenduino running on actual hardware here:
+
 [![Video demo](https://img.youtube.com/vi/gl89uwLA_j8/0.jpg)](https://www.youtube.com/watch?v=gl89uwLA_j8 "Video demo")
 
 
