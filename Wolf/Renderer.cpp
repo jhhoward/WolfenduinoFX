@@ -403,16 +403,16 @@ void Renderer::drawFloorAndCeiling()
 				{
 					if (((x >> 1) & 1) == (y & 1))
 					{
-						clearPixel(x, y);
+						setPixel(x, y);
 					}
 					else
 					{
-						setPixel(x, y);
+						clearPixel(x, y);
 					}
 				}
 				else
 				{
-					clearPixel(x, y);
+					setPixel(x, y);
 				}
 			}
 			else
