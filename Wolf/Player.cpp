@@ -630,7 +630,7 @@ void Player::damage(uint8_t amount)
 	else
 	{
 		hp -= amount;
-		Platform.playSound(TAKEDAMAGESND);
+		//Platform.playSound(TAKEDAMAGESND);
 	}
 }
 
