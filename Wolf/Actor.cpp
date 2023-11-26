@@ -117,8 +117,8 @@ void Actor::update()
 	case ActorState_Shooting:
 		if(updateFrame)
 		{
-			shootPlayer();
 			switchState(ActorState_Recoiling);
+			shootPlayer();
 		}
 		break;
 	case ActorState_Recoiling:
@@ -153,7 +153,7 @@ void Actor::update()
 		}
 		break;
 	case ActorState_Injured:
-		if(updateFrame)
+		if (updateFrame)
 		{
 			switchState(ActorState_Active);
 		}
@@ -280,25 +280,8 @@ void Actor::switchState(uint8_t newState)
 		break;
 	case ActorState_Aiming:
 	case ActorState_Recoiling:
-		frame = 3;
-		break;
 	case ActorState_Shooting:
-		frame = 4;
-		switch (type)
-		{
-		case ActorType_Dog:
-			Platform.playSound(DOGATTACKSND);
-			break;
-		case ActorType_Guard:
-			Platform.playSound(NAZIFIRESND);
-			break;
-		case ActorType_SS:
-			Platform.playSound(SSFIRESND);
-			break;
-		case ActorType_Boss:
-			Platform.playSound(BOSSFIRESND);
-			break;
-		}
+		frame = 3;
 		break;
 	default:
 		break;
@@ -493,6 +476,24 @@ bool Actor::shouldShootPlayer(bool movementSucceeded)
 
 void Actor::shootPlayer()
 {
+	switch (type)
+	{
+	case ActorType_Dog:
+		Platform.playSound(DOGATTACKSND);
+		break;
+	case ActorType_Guard:
+		Platform.playSound(NAZIFIRESND);
+		break;
+	case ActorType_SS:
+		Platform.playSound(SSFIRESND);
+		break;
+	case ActorType_Boss:
+		Platform.playSound(BOSSFIRESND);
+		break;
+	}
+
+	frame = 4;
+
 	if(engine.map.isClearLine(x, z, engine.player.x, engine.player.z))
 	{
 		int8_t dist = getPlayerCellDistance();
