@@ -593,7 +593,8 @@ void Door::update()
 
 			x += offX;
 			z += offZ;
-			if(!engine.map.isValid(x + offX, z + offZ) || engine.map.isSolid(x + offX, z + offZ))
+			uint8_t tile = engine.map.getTile(x + offX, z + offZ);
+			if(tile == MAP_OUT_OF_BOUNDS || (tile >= Tile_FirstBlockingDecoration && tile <= Tile_LastBlockingDecoration) || (tile >= Tile_FirstWall && tile <= Tile_LastWall))
 			{
 				state = DoorState_Pushed;
 				engine.player.secretsFound++;
