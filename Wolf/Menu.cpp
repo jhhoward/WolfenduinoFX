@@ -197,7 +197,7 @@ void Menu::setDifficulty()
 void Menu::init()
 {
 	switchMenu(Menu_Main);
-//	switchMenu(Menu_FloorComplete);
+	//	switchMenu(Menu_FloorComplete);
 //	engine.map.enemyCount = 10;
 //	engine.map.secretCount = 10;
 //	engine.map.treasureCount = 10;
@@ -465,7 +465,7 @@ void Menu::update()
 					Platform.playSound(SHOOTSND);
 				}
 			}
-			if (Platform.readInput() & Input_Dpad_Up)
+			if (Platform.readInput() & Input_Dpad_Down)
 			{
 				HighScore* score = &engine.save.saveFile.scores[engine.save.activeSlot];
 				if (score->name[currentSelection] == ' ')
@@ -481,9 +481,9 @@ void Menu::update()
 					}
 				}
 				Platform.playSound(MOVEGUN1SND);
-				selectionDelta = -2;
+				selectionDelta = 2;
 			}
-			if (Platform.readInput() & Input_Dpad_Down)
+			if (Platform.readInput() & Input_Dpad_Up)
 			{
 				HighScore* score = &engine.save.saveFile.scores[engine.save.activeSlot];
 				if (score->name[currentSelection] == ' ')
@@ -500,7 +500,7 @@ void Menu::update()
 					}
 				}
 				Platform.playSound(MOVEGUN1SND);
-				selectionDelta = 2;
+				selectionDelta = -2;
 			}
 		}
 		else if (numMenuItems())
@@ -561,7 +561,8 @@ void Menu::update()
 				}
 				else if (currentMenu == Menu_GameOver || currentMenu == Menu_YouWin)
 				{
-					engine.save.clearActiveSlot();
+					if(currentMenu == Menu_YouWin)
+						engine.save.clearActiveSlot();
 
 					if (engine.save.trySubmitHighScore(engine.player.score))
 					{
